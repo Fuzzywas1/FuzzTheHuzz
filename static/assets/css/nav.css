@@ -6,19 +6,17 @@
       "opsz" 48;
 }
 
-/* 🌌 NAV CONTAINER */
 .f-nav {
+   position: fixed;
    top: 0;
    left: 0;
    right: 0;
 
-   position: fixed;
-   z-index: 100;
+   margin: 12px;
+   padding: 0 18px;
 
-   margin: 15px;
-   padding: 0 25px;
-
-   min-height: 10vh;
+   height: 60px;              /* 🔥 FIXED HEIGHT */
+   min-height: 60px;
 
    display: flex;
    align-items: center;
@@ -26,18 +24,14 @@
 
    background: rgba(10, 12, 25, 0.55);
    backdrop-filter: blur(16px);
-   -webkit-backdrop-filter: blur(16px);
 
-   border-radius: 16px;
+   border-radius: 14px;
+
    border: 1px solid rgba(0, 198, 255, 0.15);
 
-   box-shadow:
-      0 0 20px rgba(0, 198, 255, 0.08),
-      inset 0 0 20px rgba(255, 255, 255, 0.02);
+   box-shadow: 0 0 20px rgba(0, 198, 255, 0.08);
 
-   transition: 0.3s ease;
-
-   animation: navFadeIn 1s ease-out;
+   z-index: 100;
 }
 
 /* 🌠 NAV FADE */
