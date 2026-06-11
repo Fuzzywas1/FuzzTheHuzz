@@ -29,10 +29,10 @@ document.addEventListener("DOMContentLoaded", () => {
     /* 🌠 SPACE HUD NAVBAR */
     const html = `
       <div id="icon-container">
-        <a class="icon" href="/./">
-          <img alt="nav" id="INImg" src="${LogoUrl}"/>
-        </a>
-      </div>
+  <a class="icon" href="/./">
+    <span class="logo-text">FuzzTheHuzz</span>
+  </a>
+</div>
 
       <div class="f-nav-right">
 
