@@ -2,77 +2,133 @@
 @import url("https://fonts.googleapis.com/css2?family=Poppins&display=swap");
 
 :root {
-   /* Background Variables */
-   --background-image: url("/./assets/media/background/full-main.png"); /* Background Image */
-   --backdrop-filter: blur(10px) brightness(80%); /* Nav Backdrop filter */
-   --background-nav: rgba(255, 255, 255, 0.02); /* Nav Background */
-   --background-color: #222; /* Main Background Color */
-   --background-input: #4545459e; /* Input Field Background Color */
-   --background-column: #353535; /* Background for Apps Container */
-   --background-settings: #2a2a2a; /* Settings Card Background */
-   --background-buttons: #333; /* Button Background Color */
-   --tab-active-background: #444; /* Accent Color for Tabs */
-   --tab-inactive-background: ; /* Background Color for Tabs Not In Use */
-   --slider-active-background: #4caf50; /* Active Slider Background Color */
-   --slider-inactive-background: #ccc; /*  Slider Background Color */
-   --nav-image: url("/./assets/media/favicon/main.png"); /* Nav Logo */
-   /* Text Variables */
-   --text-primary: #fff; /* Primary Text Color */
-   --text-dark: #555; /* Dark Text Color for Error Page, Scrollbar, and Particles */
-   --text-placeholder: #aaa; /* Placeholder Text Color */
-   /* Other Variables */
-   --save-button: #4caf50; /* Save Button, Typically Green */
-   --reset-button: #f44336; /* Reset Button, Typically Red */
-   --import-button: #009688; /* Import Button, Typically Teal */
-   --export-button: #ea76cb; /* Export Button, Typically Pink */
+   /* 🌌 SPACE THEME (FuzzTheHuzz Upgrade) */
+   --background-image: radial-gradient(circle at top, #050510, #000000);
+   --backdrop-filter: blur(14px) brightness(70%);
+
+   --background-nav: rgba(10, 12, 25, 0.65);
+   --background-color: #050510;
+
+   --background-input: rgba(255, 255, 255, 0.06);
+   --background-column: rgba(255, 255, 255, 0.04);
+   --background-settings: rgba(255, 255, 255, 0.05);
+   --background-buttons: linear-gradient(90deg, #00c6ff, #7b2ff7);
+
+   --tab-active-background: rgba(0, 198, 255, 0.25);
+   --tab-inactive-background: rgba(255, 255, 255, 0.03);
+
+   --slider-active-background: #00c6ff;
+   --slider-inactive-background: #333;
+
+   --nav-image: url("/./assets/media/favicon/main.png");
+
+   /* ✨ TEXT */
+   --text-primary: #ffffff;
+   --text-dark: #8a8a8a;
+   --text-placeholder: rgba(255, 255, 255, 0.4);
+
+   /* 🌠 ACTION COLORS */
+   --save-button: #00c6ff;
+   --reset-button: #ff4d6d;
+   --import-button: #7b2ff7;
+   --export-button: #00ffcc;
 }
 
+/* 🌠 SCROLLBAR */
 ::-webkit-scrollbar {
    width: 6px;
    background-color: var(--background-color);
 }
 
 ::-webkit-scrollbar-track {
-   -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
-   border-radius: 10px;
    background-color: var(--background-color);
 }
 
 ::-webkit-scrollbar-thumb {
    border-radius: 10px;
-   -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
-   background-color: var(--text-primary);
+   background-color: rgba(255,255,255,0.2);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-   background-color: var(--text-dark);
+   background-color: rgba(255,255,255,0.4);
 }
 
+/* 🌌 BASE BODY */
 body {
    font-family: "Inter", sans-serif;
+   margin: 0;
    text-decoration: none;
+
    background: var(--background-image);
    height: 100%;
+
    background-position: center;
    background-repeat: no-repeat;
    background-size: cover;
    background-attachment: fixed;
+
+   overflow: hidden;
 }
 
+/* 🌠 STAR LAYER SUPPORT */
+body::before {
+   content: "";
+   position: fixed;
+   top: 0;
+   left: 0;
+   width: 200%;
+   height: 200%;
+   background-image: radial-gradient(white 1px, transparent 1px);
+   background-size: 50px 50px;
+   opacity: 0.12;
+   animation: starDrift 80s linear infinite;
+   pointer-events: none;
+   z-index: 0;
+}
+
+@keyframes starDrift {
+   from { transform: translateY(0px); }
+   to { transform: translateY(-1000px); }
+}
+
+/* ✨ INPUT PLACEHOLDER */
 ::placeholder {
    color: var(--text-placeholder);
    opacity: 1;
 }
 
+/* 🌌 MAIN UI WRAPPER */
 .main {
-   letter-spacing: 0px;
    font-family: "Inter", sans-serif;
-   width: 99%;
+   width: 100%;
    display: flex;
    flex-direction: column;
    justify-content: center;
    align-items: center;
-   top: 0%;
+
    position: absolute;
-   z-index: 99;
+   top: 0;
+   z-index: 10;
+
+   animation: fadeIn 1.2s ease-out;
+}
+
+/* 🌠 FADE IN */
+@keyframes fadeIn {
+   from {
+      opacity: 0;
+      transform: translateY(20px);
+   }
+   to {
+      opacity: 1;
+      transform: translateY(0);
+   }
+}
+
+/* 🌌 OPTIONAL GLASS EFFECT */
+.glass {
+   background: rgba(255, 255, 255, 0.05);
+   backdrop-filter: blur(12px);
+   border-radius: 16px;
+   border: 1px solid rgba(255, 255, 255, 0.1);
 }
