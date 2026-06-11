@@ -135,3 +135,31 @@ body::before {
    border-radius: 16px;
    border: 1px solid rgba(255, 255, 255, 0.1);
 }
+.settings,
+.settings * {
+   color: var(--text-primary);
+}
+
+/* 🌌 Settings container readability */
+.settings-container,
+.settings-card,
+.settings-box {
+   background: rgba(10, 12, 25, 0.75) !important;
+   backdrop-filter: blur(14px);
+   border: 1px solid rgba(0, 198, 255, 0.15);
+   border-radius: 12px;
+}
+
+/* 🔘 Inputs inside settings */
+.settings input,
+.settings select {
+   background: rgba(255, 255, 255, 0.08) !important;
+   color: white !important;
+   border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* ✨ Dropdown options visibility fix */
+.settings option {
+   background: #0b0f1a;
+   color: white;
+}
