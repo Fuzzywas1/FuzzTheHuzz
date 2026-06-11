@@ -6,164 +6,168 @@
       "opsz" 48;
 }
 
-.f-nav #icon-container {
+/* 🌌 NAV CONTAINER */
+.f-nav {
+   top: 0;
+   left: 0;
+   right: 0;
+
+   position: fixed;
+   z-index: 100;
+
+   margin: 15px;
+   padding: 0 25px;
+
+   min-height: 10vh;
+
    display: flex;
    align-items: center;
+   justify-content: space-between;
+
+   background: rgba(10, 12, 25, 0.55);
+   backdrop-filter: blur(16px);
+   -webkit-backdrop-filter: blur(16px);
+
+   border-radius: 16px;
+   border: 1px solid rgba(0, 198, 255, 0.15);
+
+   box-shadow:
+      0 0 20px rgba(0, 198, 255, 0.08),
+      inset 0 0 20px rgba(255, 255, 255, 0.02);
+
+   transition: 0.3s ease;
+
+   animation: navFadeIn 1s ease-out;
 }
 
+/* 🌠 NAV FADE */
+@keyframes navFadeIn {
+   from {
+      opacity: 0;
+      transform: translateY(-10px);
+   }
+   to {
+      opacity: 1;
+      transform: translateY(0);
+   }
+}
+
+/* 🌌 LEFT LOGO / ICON */
+.f-nav .icon {
+   font-size: 28px;
+   font-family: "Inter", sans-serif;
+   font-weight: 700;
+
+   color: var(--text-primary);
+   text-transform: uppercase;
+
+   cursor: pointer;
+   text-decoration: none;
+
+   transition: 0.3s ease;
+
+   text-shadow:
+      0 0 10px rgba(0, 198, 255, 0.4);
+}
+
+.f-nav .icon:hover {
+   transform: translateY(-2px) scale(1.05);
+   text-shadow:
+      0 0 20px rgba(0, 198, 255, 0.8),
+      0 0 40px rgba(123, 47, 247, 0.4);
+}
+
+/* 🌠 RIGHT NAV AREA */
+.f-nav-right {
+   display: flex;
+   align-items: center;
+   gap: 15px;
+
+   font-family: "Inter", sans-serif;
+   font-weight: 600;
+
+   text-transform: uppercase;
+}
+
+/* 🌌 NAV LINKS (NO MORE “GAMES TAB STYLE”) */
+.f-nav-right .navbar-link {
+   color: var(--text-primary);
+   text-decoration: none;
+
+   font-size: 14px;
+   letter-spacing: 1px;
+
+   cursor: pointer;
+
+   padding: 8px 12px;
+   border-radius: 10px;
+
+   transition: 0.3s ease;
+
+   position: relative;
+}
+
+/* ✨ HOVER EFFECT (SPACE GLOW) */
+.f-nav-right .navbar-link:hover {
+   transform: translateY(-2px);
+
+   background: rgba(0, 198, 255, 0.08);
+   box-shadow:
+      0 0 15px rgba(0, 198, 255, 0.2);
+}
+
+/* 🌠 REMOVE "GAMES TAB" VISUALLY (if it still exists) */
+.f-nav-right .navbar-link[href*="games"] {
+   display: none !important;
+}
+
+/* 🌌 ICONS */
+.navbar-icon {
+   margin-right: 5px;
+   transition: 0.2s ease;
+}
+
+.navbar-link:hover .navbar-icon {
+   transform: rotate(10deg) scale(1.1);
+}
+
+/* ⚙️ SETTINGS SPIN */
+.navbar-link:hover > .settings-icon {
+   animation: spin 0.6s ease;
+}
+
+@keyframes spin {
+   from { transform: rotate(0deg); }
+   to { transform: rotate(360deg); }
+}
+
+/* 📱 MOBILE */
+@media (max-width: 768px) {
+   .f-nav {
+      padding: 0 15px;
+   }
+
+   .f-nav-right .navbar-link {
+      font-size: 12px;
+      padding: 6px 8px;
+   }
+}
+
+/* 📱 SMALL SCREEN CLEANUP */
+@media (orientation: portrait) {
+   .f-nav {
+      margin: 10px;
+   }
+
+   .f-nav-right .navbar-link {
+      font-size: 3vw;
+   }
+}
+
+/* 🌌 OPTIONAL LOGO IMAGE SUPPORT */
 img {
    width: 100%;
    height: 100%;
    padding-top: 5px;
-}
-
-.f-nav-container {
-   min-width: 5vw;
-   min-height: 10vh;
-   display: inline;
-}
-
-.f-nav {
-   top: 0;
-   letter-spacing: 2px;
-   font-size: 22px;
-   left: 0;
-   right: 0;
-   min-height: 10vh;
-   padding: 0 25px;
-   box-sizing: border-box;
-   background-color: var(--background-nav);
-   box-shadow: 0 0 15px 2px rgba(0, 0, 0, 0.5);
-   -webkit-backdrop-filter: var(--backdrop-filter);
-   backdrop-filter: var(--backdrop-filter);
-   transition: 0.35s ease;
-   border-radius: 15px;
-   width: fill;
-   margin: 15px;
-   z-index: 100;
-   position: fixed;
-}
-
-.f-nav .icon:hover {
-   transform: translateY(-15%) scale(1.03);
-   font-weight: 800;
-}
-
-.f-nav .icon {
-   position: absolute;
-   float: left;
-   text-transform: uppercase;
-   font-size: 30px;
-   font-family: "Inter", sans-serif;
-   cursor: pointer;
-   color: var(--text-primary);
-   font-weight: 600;
-   margin-left: 5px;
-   font-style: normal;
-   text-decoration: none;
-   transition: all 0.2s ease;
-   height: 5vh;
-   top: 18%;
-}
-
-.f-nav-right {
-   position: absolute;
-   top: 50%;
-   transform: translateY(-50%);
-   text-transform: uppercase;
-   font-size: 18px;
-   color: var(--text-primary);
-   font-weight: 600;
-   right: 2%;
-}
-
-.f-nav-right .navbar-link {
-   margin-left: 10px;
-   text-transform: uppercase;
-   cursor: pointer;
-   color: var(--text-primary);
-   font-weight: 800;
-   right: 2%;
-   font-family: "Inter", sans-serif;
-   font-style: normal;
-   text-decoration: none;
-   transition: all 0.2s ease;
-   transform: translateX(0%);
-}
-
-@media (orientation: portrait) {
-   .f-nav-right .navbar-link {
-      margin-left: 10px;
-      text-transform: uppercase;
-      font-size: 2.5vw;
-      cursor: pointer;
-      color: var(--text-primary);
-      font-weight: 800;
-      right: 2%;
-      font-family: "Inter", sans-serif;
-      font-style: normal;
-      text-decoration: none;
-      transition: all 0.2s ease;
-      transform: translateX(0%);
-   }
-   .f-nav-right .navbar-link:hover {
-      text-transform: uppercase;
-      cursor: pointer;
-      font-weight: 800;
-      font-family: "Inter", sans-serif;
-      font-style: normal;
-      font-size: 3vw;
-      transform: translateX(-20%);
-   }
-}
-
-.f-nav-right .navbar-link:hover {
-   text-transform: uppercase;
-   cursor: pointer;
-   font-weight: 800;
-   font-family: "Inter", sans-serif;
-   font-style: normal;
-   font-size: 3vh;
-   transform: translateX(-20%);
-}
-
-.navbar-icon {
-   margin-right: 5px;
-   transition: all 0.2s ease;
-}
-
-.navbar-link {
-   margin-right: 5px;
-}
-
-.navbar-link:hover > .settings-icon {
-   animation: spin 0.5s;
-   animation-timing-function: cubic-bezier(0, 1.04, 0.91, 0.99);
-}
-
-@media (max-width: 768px) {
-   .f-nav-right .navbar-link an {
-      display: none;
-   }
-   .f-nav-right .fa-solid {
-      display: inline;
-   }
-   .f-nav-right .navbar-link {
-      font-size: 4.5vw;
-   }
-}
-
-@keyframes spin {
-   from {
-      transform: rotate(0deg);
-   }
-   to {
-      transform: rotate(360deg);
-   }
-}
-
-@media (orientation: portrait) {
-   img {
-      height: 40px;
-   }
+   filter: drop-shadow(0 0 10px rgba(0,198,255,0.2));
 }
