@@ -1,5 +1,5 @@
 body {
-   background-color: var(--background-image);
+   background: var(--background-image);
    font-family: "Inter", sans-serif;
    color: var(--text-primary);
    margin: 0;
@@ -7,6 +7,8 @@ body {
    letter-spacing: 0px;
    overflow-x: hidden;
 }
+
+/* 🌌 SETTINGS LAYOUT */
 
 .settings-container {
    display: flex;
@@ -19,25 +21,35 @@ body {
 .settings-title {
    display: block;
    font-size: 70px;
-   margin-block-start: 0.67em;
-   margin-block-end: 0.67em;
-   margin-inline-start: 0px;
-   margin-inline-end: 0px;
    font-weight: bold;
+   margin: 0.67em 0;
+   text-align: center;
 }
 
+/* 🌌 SETTINGS CARDS */
+
 .settings-card {
-   background-color: var(--background-settings);
-   border-radius: 10px;
+   background: rgba(15, 20, 35, 0.85);
+   backdrop-filter: blur(12px);
+   border: 1px solid rgba(0, 198, 255, 0.12);
+   border-radius: 14px;
+
    padding: 20px;
-   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
    width: 400px;
+
    transition: all 0.3s ease;
+
+   box-shadow:
+      0 0 20px rgba(0, 0, 0, 0.2),
+      0 0 30px rgba(0, 198, 255, 0.04);
 }
 
 .settings-card:hover {
-   transform: translatey(-5px);
-   box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2);
+   transform: translateY(-5px);
+
+   box-shadow:
+      0 0 30px rgba(0, 198, 255, 0.08),
+      0 8px 20px rgba(0, 0, 0, 0.25);
 }
 
 .settings-card h3 {
@@ -52,6 +64,8 @@ body {
 a {
    color: var(--text-primary);
 }
+
+/* 🌌 SWITCHES */
 
 .switch {
    position: relative;
@@ -73,7 +87,9 @@ a {
    left: 0;
    right: 0;
    bottom: 0;
+
    background-color: var(--slider-inactive-background);
+
    transition: 0.4s;
    border-radius: 34px;
 }
@@ -81,11 +97,15 @@ a {
 .slider-round:before {
    position: absolute;
    content: "";
+
    height: 26px;
    width: 26px;
+
    left: 4px;
    bottom: 4px;
-   background-color: var(--text-primary);
+
+   background-color: white;
+
    transition: 0.4s;
    border-radius: 50%;
 }
@@ -98,87 +118,138 @@ input:checked + .slider-round:before {
    transform: translateX(26px);
 }
 
+/* 🌌 INPUTS */
+
 input {
    padding: 15px;
    border-radius: 10px;
-   background: var(--background-input);
+
+   background: rgba(20, 25, 45, 0.95);
+
    text-align: center;
    font-size: 20px;
-   border: none;
+
+   border: 1px solid rgba(255, 255, 255, 0.08);
    outline: none;
-   color: var(--text-primary);
+
+   color: white;
 }
+
+input::placeholder {
+   color: rgba(255,255,255,0.5);
+}
+
+/* 🌌 KEY INPUT */
 
 .key-form {
    padding: 15px;
    width: 92.5%;
+
    border-radius: 10px;
-   background: var(--background-buttons);
+
+   background: rgba(20, 25, 45, 0.95);
+
    text-align: center;
    font-size: 20px;
-   border: none;
+
+   border: 1px solid rgba(255,255,255,0.08);
    outline: none;
-   color: var(--text-primary);
+
+   color: white;
+
    margin-top: 10px;
 }
 
+/* 🌌 BUTTONS */
+
+button,
 .key-button {
    cursor: pointer;
-   border: 2px;
-   font-size: 20px;
-   transition: 0.2s;
+
    margin-top: 10px;
-   background-color: var(--background-buttons);
+
+   background: rgba(20, 25, 45, 0.95);
+
+   border: 1px solid rgba(0, 198, 255, 0.15);
+
    border-radius: 10px;
-   color: var(--text-primary);
+
+   color: white;
+
+   transition: all 0.25s ease;
+
    height: 50px;
-   width: 50%;
    padding: 10px;
+
    text-align: center;
 }
 
 button {
-   cursor: pointer;
-   border: 2px;
-   transition: 0.2s;
-   margin-top: 10px;
-   background-color: var(--background-buttons);
-   border-radius: 10px;
-   color: var(--text-primary);
-   height: 50px;
    width: 35%;
-   padding: 10px;
-   text-align: center;
 }
+
+.key-button {
+   width: 50%;
+   font-size: 20px;
+}
+
+button:hover,
+.key-button:hover {
+   transform: translateY(-2px);
+
+   box-shadow:
+      0 0 15px rgba(0, 198, 255, 0.2);
+}
+
+/* 🌌 DROPDOWNS */
 
 select {
    padding: 15px;
    width: 100%;
+
    border-radius: 10px;
-   background: var(--background-buttons);
-   color: var(--text-primary);
+
+   background: rgba(20, 25, 45, 0.95);
+
+   color: white;
+
    font-size: 20px;
-   border: 0px;
+
+   border: 1px solid rgba(0, 198, 255, 0.15);
+
    outline: none;
+
+   color-scheme: dark;
 }
+
+option {
+   background: #0b1020;
+   color: white;
+}
+
+/* BUTTON GROUP */
 
 #buttonLayer {
    width: 400px;
+
    display: flex;
    justify-content: center;
+
    gap: 10px;
 }
 
 #buttonLayer > .key-button {
    flex-grow: 1;
-   padding: 10px;
    box-sizing: border-box;
 }
+
+/* RESPONSIVE */
 
 @media screen and (max-width: 768px) {
    .settings-container {
       padding: 25% 20px 20px 20px;
    }
+
    .settings-card {
       width: 100%;
       max-width: 400px;
@@ -212,6 +283,8 @@ select {
    }
 }
 
+/* MISC */
+
 #last-updated {
    margin-top: -3%;
 }
@@ -228,5 +301,5 @@ select {
 }
 
 #warning {
-   color: red;
+   color: #ff4d6d;
 }
