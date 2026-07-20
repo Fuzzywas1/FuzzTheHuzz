@@ -619,19 +619,63 @@ app.post("/api/ai/chat", requireApiAuth, async (req, res) => {
     });
   }
 
-  const cleanedMessages = messages
-    .filter((message) => {
-      return (
-        message &&
-        ["user", "assistant"].includes(message.role) &&
-        typeof message.content === "string"
-      );
-    })
-    .map((message) => ({
-      role: message.role,
-      content: message.content.trim().slice(0, 12000),
-    }))
-    .filter((message) => message.content.length > 0);
+  const cleanedMessages = [];
+
+  for (const message of messages) {
+    if (
+      !message ||
+      !["user", "assistant"].includes(message.role) ||
+      typeof message.content !== "string"
+    ) {
+      continue;
+    }
+
+    const text = message.content.trim().slice(0, 12000);
+
+    if (!text) {
+      continue;
+    }
+
+    if (message.role === "assistant") {
+      cleanedMessages.push({
+        role: "assistant",
+        content: text,
+      });
+
+      continue;
+    }
+
+    const content = [
+      {
+        type: "input_text",
+        text,
+      },
+    ];
+
+    if (message.image?.dataUrl) {
+      const imageUrl = String(message.image.dataUrl);
+
+      if (
+        imageUrl.length > 12_000_000 ||
+        !/^data:image\/(png|jpeg|webp|gif);base64,/i.test(imageUrl)
+      ) {
+        return res.status(400).json({
+          error: "The attached image is invalid or too large.",
+        });
+      }
+
+      content.push({
+        type: "input_image",
+        image_url: imageUrl,
+        detail: "auto",
+      });
+    }
+
+    cleanedMessages.push({
+      role: "user",
+      content,
+    });
+  }
 
   if (cleanedMessages.length === 0) {
     return res.status(400).json({
@@ -648,7 +692,7 @@ app.post("/api/ai/chat", requireApiAuth, async (req, res) => {
     const stream = await openai.responses.create({
       model: "gpt-5-mini",
       instructions:
-        "You are Fuzz AI, the helpful AI assistant built into FuzzTheHuzz. Give clear, accurate, natural answers. Use markdown when helpful. Do not claim to be ChatGPT.",
+        "You are Fuzz AI, the helpful AI assistant built into FuzzTheHuzz. Give clear, accurate, natural answers. Analyze attached images when provided. Use markdown when helpful. Do not claim to be ChatGPT.",
       input: cleanedMessages,
       max_output_tokens: 2000,
       store: false,
@@ -661,13 +705,16 @@ app.post("/api/ai/chat", requireApiAuth, async (req, res) => {
       }
 
       if (event.type === "response.failed") {
-        console.error("OpenAI response failed:", event.response?.error);
+        console.error(
+          "OpenAI response failed:",
+          event.response?.error,
+        );
       }
     }
 
     res.end();
   } catch (error) {
-    console.error("Fuzz AI streaming request failed:", error);
+    console.error("Fuzz AI image request failed:", error);
 
     if (!res.headersSent) {
       return res.status(500).json({

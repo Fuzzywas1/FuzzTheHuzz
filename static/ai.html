@@ -32,11 +32,21 @@
         <section id="chat-messages" class="chat-messages" aria-live="polite"></section>
 
         <form id="chat-form" class="chat-composer">
-            <textarea id="chat-input" rows="1" maxlength="12000" placeholder="Message Fuzz AI" required></textarea>
-
-            <button id="send-button" type="submit" aria-label="Send message">
-                <i class="fa-solid fa-arrow-up"></i>
-            </button>
+            <div id="image-preview-area" class="image-preview-area"></div>
+        
+            <div class="composer-row">
+                <input id="image-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden />
+        
+                <button id="attach-button" class="attach-button" type="button" aria-label="Attach image" title="Attach image">
+                    <i class="fa-solid fa-paperclip"></i>
+                </button>
+        
+                <textarea id="chat-input" rows="1" maxlength="12000" placeholder="Message Fuzz AI"></textarea>
+        
+                <button id="send-button" class="send-button" type="submit" aria-label="Send message">
+                    <i class="fa-solid fa-arrow-up"></i>
+                </button>
+            </div>
         </form>
     </main>
 </body>
