@@ -11,7 +11,7 @@ import cors from "cors";
 import express from "express";
 import mime from "mime";
 import fetch from "node-fetch";
-
+import OpenAI from "openai";
 import { supabaseAdmin } from "./lib/supabaseAdmin.js";
 
 console.log(chalk.yellow("🚀 Starting server..."));
@@ -57,6 +57,13 @@ const supabasePublic = createClient(
   },
 );
 
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+if (!process.env.OPENAI_API_KEY) {
+  throw new Error("Missing OPENAI_API_KEY in the .env file.");
+}
 /* -------------------------------------------------------
    AUTH COOKIE HELPERS
 ------------------------------------------------------- */
@@ -200,6 +207,28 @@ async function requirePageAuth(req, res, next) {
   }
 }
 
+async function requireApiAuth(req, res, next) {
+  try {
+    const auth = await getAuthenticatedUser(req, res);
+
+    if (!auth) {
+      return res.status(401).json({
+        error: "You must be signed in to use Fuzz AI.",
+      });
+    }
+
+    req.auth = auth;
+    return next();
+  } catch (error) {
+    console.error("API authentication failed:", error);
+
+    clearAuthCookies(req, res);
+
+    return res.status(401).json({
+      error: "Your login session is no longer valid.",
+    });
+  }
+}
 /* -------------------------------------------------------
    SUPABASE CONNECTION TEST
 
@@ -570,6 +599,84 @@ app.post("/api/auth/signup", async (req, res) => {
     return res.status(500).json({
       error: "Account creation failed. Please try again.",
     });
+  }
+});
+
+app.post("/api/ai/chat", requireApiAuth, async (req, res) => {
+  const messages = Array.isArray(req.body.messages)
+    ? req.body.messages
+    : [];
+
+  if (messages.length === 0) {
+    return res.status(400).json({
+      error: "Send at least one message.",
+    });
+  }
+
+  if (messages.length > 30) {
+    return res.status(400).json({
+      error: "This conversation is too long. Start a new chat.",
+    });
+  }
+
+  const cleanedMessages = messages
+    .filter((message) => {
+      return (
+        message &&
+        ["user", "assistant"].includes(message.role) &&
+        typeof message.content === "string"
+      );
+    })
+    .map((message) => ({
+      role: message.role,
+      content: message.content.trim().slice(0, 12000),
+    }))
+    .filter((message) => message.content.length > 0);
+
+  if (cleanedMessages.length === 0) {
+    return res.status(400).json({
+      error: "No valid messages were provided.",
+    });
+  }
+
+  res.status(200);
+  res.setHeader("Content-Type", "text/plain; charset=utf-8");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+
+  try {
+    const stream = await openai.responses.create({
+      model: "gpt-5-mini",
+      instructions:
+        "You are Fuzz AI, the helpful AI assistant built into FuzzTheHuzz. Give clear, accurate, natural answers. Use markdown when helpful. Do not claim to be ChatGPT.",
+      input: cleanedMessages,
+      max_output_tokens: 2000,
+      store: false,
+      stream: true,
+    });
+
+    for await (const event of stream) {
+      if (event.type === "response.output_text.delta") {
+        res.write(event.delta);
+      }
+
+      if (event.type === "response.failed") {
+        console.error("OpenAI response failed:", event.response?.error);
+      }
+    }
+
+    res.end();
+  } catch (error) {
+    console.error("Fuzz AI streaming request failed:", error);
+
+    if (!res.headersSent) {
+      return res.status(500).json({
+        error: "Fuzz AI could not generate a response.",
+      });
+    }
+
+    res.write("\n\nFuzz AI could not finish the response.");
+    res.end();
   }
 });
 

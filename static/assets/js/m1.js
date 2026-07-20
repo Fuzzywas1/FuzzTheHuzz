@@ -36,7 +36,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
       <div class="f-nav-right">
 
-        <!-- 🌌 GAMES TAB REMOVED (frontend only) -->
+       <a class="navbar-link" href="/./ai">
+  <i class="fa-solid fa-robot navbar-icon"></i>
+  <span>Fuzz AI</span>
+</a>
 
         <a class="navbar-link" href="/./b">
           <i class="fa-solid fa-phone navbar-icon"></i>
@@ -53,6 +56,11 @@ document.addEventListener("DOMContentLoaded", () => {
           <i class="fa-solid fa-gear navbar-icon settings-icon"></i>
           <span>Settings</span>
         </a>
+
+        <a class="navbar-link" href="#" id="logout-btn">
+  <i class="fa-solid fa-right-from-bracket navbar-icon"></i>
+  <span>Logout</span>
+</a>
 
       </div>
     `;
@@ -157,3 +165,27 @@ function themeChange(select) {
   localStorage.setItem("theme", value);
   location.reload();
 }
+
+document.addEventListener("click", async (event) => {
+  const logoutButton = event.target.closest("#logout-btn");
+
+  if (!logoutButton) {
+    return;
+  }
+
+  event.preventDefault();
+
+  try {
+    await fetch("/api/auth/logout", {
+      method: "POST",
+      credentials: "same-origin",
+    });
+  } catch (error) {
+    console.error(error);
+  }
+
+  localStorage.clear();
+  sessionStorage.clear();
+
+  window.location.href = "/login";
+});
