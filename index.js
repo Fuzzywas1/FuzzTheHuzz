@@ -229,6 +229,22 @@ async function requireApiAuth(req, res, next) {
     });
   }
 }
+
+async function getOwnedChat(chatId, userId) {
+  const { data: chat, error } = await supabaseAdmin
+    .from("ai_chats")
+    .select("id, user_id, title, created_at, updated_at")
+    .eq("id", chatId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return chat;
+}
+
 /* -------------------------------------------------------
    SUPABASE CONNECTION TEST
 
@@ -601,6 +617,316 @@ app.post("/api/auth/signup", async (req, res) => {
     });
   }
 });
+
+/* -------------------------------------------------------
+   FUZZ AI SAVED CHATS
+------------------------------------------------------- */
+
+/*
+ * List the signed-in user's conversations.
+ */
+app.get("/api/ai/chats", requireApiAuth, async (req, res) => {
+  try {
+    const userId = req.auth.user.id;
+
+    const { data: chats, error } = await supabaseAdmin
+      .from("ai_chats")
+      .select("id, title, created_at, updated_at")
+      .eq("user_id", userId)
+      .order("updated_at", {
+        ascending: false,
+      });
+
+    if (error) {
+      throw error;
+    }
+
+    return res.json({
+      chats: chats || [],
+    });
+  } catch (error) {
+    console.error("Could not load AI chats:", error);
+
+    return res.status(500).json({
+      error: "Your saved chats could not be loaded.",
+    });
+  }
+});
+
+/*
+ * Create a new conversation.
+ */
+app.post("/api/ai/chats", requireApiAuth, async (req, res) => {
+  try {
+    const userId = req.auth.user.id;
+
+    const requestedTitle = String(req.body.title || "")
+      .trim()
+      .slice(0, 80);
+
+    const title = requestedTitle || "New chat";
+
+    const { data: chat, error } = await supabaseAdmin
+      .from("ai_chats")
+      .insert({
+        user_id: userId,
+        title,
+      })
+      .select("id, title, created_at, updated_at")
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return res.status(201).json({
+      chat,
+    });
+  } catch (error) {
+    console.error("Could not create AI chat:", error);
+
+    return res.status(500).json({
+      error: "A new chat could not be created.",
+    });
+  }
+});
+
+/*
+ * Open one conversation and load all of its messages.
+ */
+app.get(
+  "/api/ai/chats/:chatId",
+  requireApiAuth,
+  async (req, res) => {
+    try {
+      const userId = req.auth.user.id;
+      const chatId = String(req.params.chatId || "");
+
+      const chat = await getOwnedChat(chatId, userId);
+
+      if (!chat) {
+        return res.status(404).json({
+          error: "That chat could not be found.",
+        });
+      }
+
+      const { data: messages, error } = await supabaseAdmin
+        .from("ai_messages")
+        .select(
+          "id, role, content, has_image, image_name, created_at",
+        )
+        .eq("chat_id", chatId)
+        .eq("user_id", userId)
+        .order("created_at", {
+          ascending: true,
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      return res.json({
+        chat,
+        messages: messages || [],
+      });
+    } catch (error) {
+      console.error("Could not open AI chat:", error);
+
+      return res.status(500).json({
+        error: "That conversation could not be loaded.",
+      });
+    }
+  },
+);
+
+/*
+ * Rename one conversation.
+ */
+app.patch(
+  "/api/ai/chats/:chatId",
+  requireApiAuth,
+  async (req, res) => {
+    try {
+      const userId = req.auth.user.id;
+      const chatId = String(req.params.chatId || "");
+      const title = String(req.body.title || "")
+        .trim()
+        .slice(0, 80);
+
+      if (!title) {
+        return res.status(400).json({
+          error: "Enter a chat title.",
+        });
+      }
+
+      const chat = await getOwnedChat(chatId, userId);
+
+      if (!chat) {
+        return res.status(404).json({
+          error: "That chat could not be found.",
+        });
+      }
+
+      const { data: updatedChat, error } = await supabaseAdmin
+        .from("ai_chats")
+        .update({
+          title,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", chatId)
+        .eq("user_id", userId)
+        .select("id, title, created_at, updated_at")
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return res.json({
+        chat: updatedChat,
+      });
+    } catch (error) {
+      console.error("Could not rename AI chat:", error);
+
+      return res.status(500).json({
+        error: "That chat could not be renamed.",
+      });
+    }
+  },
+);
+
+/*
+ * Delete one conversation and all of its messages.
+ * The database cascade handles message deletion.
+ */
+app.delete(
+  "/api/ai/chats/:chatId",
+  requireApiAuth,
+  async (req, res) => {
+    try {
+      const userId = req.auth.user.id;
+      const chatId = String(req.params.chatId || "");
+
+      const chat = await getOwnedChat(chatId, userId);
+
+      if (!chat) {
+        return res.status(404).json({
+          error: "That chat could not be found.",
+        });
+      }
+
+      const { error } = await supabaseAdmin
+        .from("ai_chats")
+        .delete()
+        .eq("id", chatId)
+        .eq("user_id", userId);
+
+      if (error) {
+        throw error;
+      }
+
+      return res.json({
+        success: true,
+      });
+    } catch (error) {
+      console.error("Could not delete AI chat:", error);
+
+      return res.status(500).json({
+        error: "That chat could not be deleted.",
+      });
+    }
+  },
+);
+
+/*
+ * Save a user or assistant message to an owned conversation.
+ */
+app.post(
+  "/api/ai/chats/:chatId/messages",
+  requireApiAuth,
+  async (req, res) => {
+    try {
+      const userId = req.auth.user.id;
+      const chatId = String(req.params.chatId || "");
+      const role = String(req.body.role || "");
+      const content = String(req.body.content || "")
+        .trim()
+        .slice(0, 30000);
+
+      const hasImage = req.body.hasImage === true;
+      const imageName = hasImage
+        ? String(req.body.imageName || "")
+            .trim()
+            .slice(0, 255) || null
+        : null;
+
+      if (!["user", "assistant"].includes(role)) {
+        return res.status(400).json({
+          error: "Invalid message role.",
+        });
+      }
+
+      if (!content) {
+        return res.status(400).json({
+          error: "The message cannot be empty.",
+        });
+      }
+
+      const chat = await getOwnedChat(chatId, userId);
+
+      if (!chat) {
+        return res.status(404).json({
+          error: "That chat could not be found.",
+        });
+      }
+
+      const { data: message, error: messageError } =
+        await supabaseAdmin
+          .from("ai_messages")
+          .insert({
+            chat_id: chatId,
+            user_id: userId,
+            role,
+            content,
+            has_image: hasImage,
+            image_name: imageName,
+          })
+          .select(
+            "id, role, content, has_image, image_name, created_at",
+          )
+          .single();
+
+      if (messageError) {
+        throw messageError;
+      }
+
+      const { error: updateError } = await supabaseAdmin
+        .from("ai_chats")
+        .update({
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", chatId)
+        .eq("user_id", userId);
+
+      if (updateError) {
+        console.error(
+          "Chat timestamp could not be updated:",
+          updateError,
+        );
+      }
+
+      return res.status(201).json({
+        message,
+      });
+    } catch (error) {
+      console.error("Could not save AI message:", error);
+
+      return res.status(500).json({
+        error: "The message could not be saved.",
+      });
+    }
+  },
+);
 
 app.post("/api/ai/chat", requireApiAuth, async (req, res) => {
   const messages = Array.isArray(req.body.messages)
