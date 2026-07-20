@@ -12,38 +12,44 @@ import express from "express";
 import mime from "mime";
 import fetch from "node-fetch";
 import OpenAI from "openai";
+
 import { supabaseAdmin } from "./lib/supabaseAdmin.js";
 
 console.log(chalk.yellow("🚀 Starting server..."));
 
 const __dirname = process.cwd();
-const server = http.createServer();
 const app = express();
+const server = http.createServer();
 
-/*
- * Codespaces and most hosting providers place Express behind
- * an HTTPS reverse proxy. This allows secure cookies to work.
- */
 app.set("trust proxy", 1);
 
+const PORT = Number(process.env.PORT) || 8080;
 const bareServer = createBareServer("/ca/");
-const PORT = process.env.PORT || 8080;
 
 const CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
 const cache = new Map();
 
-/* -------------------------------------------------------
-   SUPABASE CLIENT
-------------------------------------------------------- */
+/* =======================================================
+   ENVIRONMENT
+======================================================= */
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+const openaiApiKey = process.env.OPENAI_API_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
-    "Missing SUPABASE_URL or SUPABASE_ANON_KEY in the .env file.",
+    "Missing SUPABASE_URL or SUPABASE_ANON_KEY.",
   );
 }
+
+if (!openaiApiKey) {
+  throw new Error("Missing OPENAI_API_KEY.");
+}
+
+/* =======================================================
+   CLIENTS
+======================================================= */
 
 const supabasePublic = createClient(
   supabaseUrl,
@@ -58,21 +64,61 @@ const supabasePublic = createClient(
 );
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: openaiApiKey,
 });
 
-if (!process.env.OPENAI_API_KEY) {
-  throw new Error("Missing OPENAI_API_KEY in the .env file.");
-}
-/* -------------------------------------------------------
+/* =======================================================
+   GENERAL MIDDLEWARE
+======================================================= */
+
+app.use(cookieParser());
+
+app.use(
+  express.json({
+    limit: "15mb",
+  }),
+);
+
+app.use(
+  express.urlencoded({
+    extended: true,
+    limit: "15mb",
+  }),
+);
+
+/*
+ * The Bare server is handled before Express at the bottom of
+ * this file. This CORS middleware is only a fallback.
+ */
+app.use(
+  "/ca",
+  cors({
+    origin: true,
+    credentials: true,
+  }),
+);
+
+/* =======================================================
+   HEALTH CHECK
+======================================================= */
+
+app.get("/health", (_req, res) => {
+  res.status(200).json({
+    success: true,
+    service: "FuzzTheHuzz",
+  });
+});
+
+/* =======================================================
    AUTH COOKIE HELPERS
-------------------------------------------------------- */
+======================================================= */
 
 const ACCESS_COOKIE = "fuzz_access_token";
 const REFRESH_COOKIE = "fuzz_refresh_token";
 
 function isSecureRequest(req) {
-  const forwardedProtocol = req.get("x-forwarded-proto") || "";
+  const forwardedProtocol =
+    req.get("x-forwarded-proto") || "";
 
   return (
     req.secure ||
@@ -91,33 +137,32 @@ function getCookieOptions(req) {
   };
 }
 
-function clearAuthCookies(req, res) {
-  const options = {
+function getClearCookieOptions(req) {
+  return {
     httpOnly: true,
     secure: isSecureRequest(req),
     sameSite: "lax",
     path: "/",
   };
+}
+
+function clearAuthCookies(req, res) {
+  const options = getClearCookieOptions(req);
 
   res.clearCookie(ACCESS_COOKIE, options);
   res.clearCookie(REFRESH_COOKIE, options);
 }
 
-/* -------------------------------------------------------
-   EXPRESS MIDDLEWARE
-------------------------------------------------------- */
-
-app.use(cookieParser());
-app.use(express.json({ limit: "1mb" }));
-app.use(express.urlencoded({ extended: true }));
-
-/* -------------------------------------------------------
-   AUTHENTICATED USER LOOKUP
-------------------------------------------------------- */
+/* =======================================================
+   AUTH LOOKUP
+======================================================= */
 
 async function getAuthenticatedUser(req, res) {
-  let accessToken = req.cookies[ACCESS_COOKIE];
-  const refreshToken = req.cookies[REFRESH_COOKIE];
+  let accessToken =
+    req.cookies?.[ACCESS_COOKIE] || "";
+
+  const refreshToken =
+    req.cookies?.[REFRESH_COOKIE] || "";
 
   if (!accessToken) {
     return null;
@@ -125,14 +170,13 @@ async function getAuthenticatedUser(req, res) {
 
   let {
     data: { user },
-    error,
+    error: userError,
   } = await supabasePublic.auth.getUser(accessToken);
 
   /*
-   * Try refreshing the Supabase session when the access token
-   * has expired but a refresh token is still available.
+   * Refresh an expired access token.
    */
-  if ((!user || error) && refreshToken) {
+  if ((!user || userError) && refreshToken) {
     const {
       data: refreshedData,
       error: refreshError,
@@ -142,9 +186,11 @@ async function getAuthenticatedUser(req, res) {
     });
 
     if (!refreshError && refreshedData.session) {
-      accessToken = refreshedData.session.access_token;
+      accessToken =
+        refreshedData.session.access_token;
 
-      const cookieOptions = getCookieOptions(req);
+      const cookieOptions =
+        getCookieOptions(req);
 
       res.cookie(
         ACCESS_COOKIE,
@@ -159,23 +205,29 @@ async function getAuthenticatedUser(req, res) {
       );
 
       user = refreshedData.user;
-      error = null;
+      userError = null;
     }
   }
 
-  if (!user || error) {
+  if (!user || userError) {
     clearAuthCookies(req, res);
     return null;
   }
 
-  const { data: profile, error: profileError } =
-    await supabaseAdmin
-      .from("profiles")
-      .select("username, role, banned")
-      .eq("id", user.id)
-      .maybeSingle();
+  const {
+    data: profile,
+    error: profileError,
+  } = await supabaseAdmin
+    .from("profiles")
+    .select("username, role, banned")
+    .eq("id", user.id)
+    .maybeSingle();
 
-  if (profileError || !profile || profile.banned) {
+  if (
+    profileError ||
+    !profile ||
+    profile.banned === true
+  ) {
     clearAuthCookies(req, res);
     return null;
   }
@@ -189,67 +241,64 @@ async function getAuthenticatedUser(req, res) {
 
 async function requirePageAuth(req, res, next) {
   try {
-    const auth = await getAuthenticatedUser(req, res);
+    const auth =
+      await getAuthenticatedUser(req, res);
 
     if (!auth) {
-      const nextPath = encodeURIComponent(req.originalUrl);
+      const nextPath =
+        encodeURIComponent(req.originalUrl);
 
-      return res.redirect(`/login?next=${nextPath}`);
+      return res.redirect(
+        `/login?next=${nextPath}`,
+      );
     }
 
     req.auth = auth;
     return next();
   } catch (error) {
-    console.error("Page authentication failed:", error);
+    console.error(
+      "Page authentication failed:",
+      error,
+    );
 
     clearAuthCookies(req, res);
+
     return res.redirect("/login");
   }
 }
 
 async function requireApiAuth(req, res, next) {
   try {
-    const auth = await getAuthenticatedUser(req, res);
+    const auth =
+      await getAuthenticatedUser(req, res);
 
     if (!auth) {
       return res.status(401).json({
-        error: "You must be signed in to use Fuzz AI.",
+        error:
+          "You must be signed in to use this feature.",
       });
     }
 
     req.auth = auth;
     return next();
   } catch (error) {
-    console.error("API authentication failed:", error);
+    console.error(
+      "API authentication failed:",
+      error,
+    );
 
     clearAuthCookies(req, res);
 
     return res.status(401).json({
-      error: "Your login session is no longer valid.",
+      error:
+        "Your login session is no longer valid.",
     });
   }
 }
 
-async function getOwnedChat(chatId, userId) {
-  const { data: chat, error } = await supabaseAdmin
-    .from("ai_chats")
-    .select("id, user_id, title, created_at, updated_at")
-    .eq("id", chatId)
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (error) {
-    throw error;
-  }
-
-  return chat;
-}
-
-/* -------------------------------------------------------
-   SUPABASE CONNECTION TEST
-
-   This can be removed after authentication is complete.
-------------------------------------------------------- */
+/* =======================================================
+   AUTH ROUTES
+======================================================= */
 
 app.get("/api/setup-test", async (_req, res) => {
   try {
@@ -259,35 +308,37 @@ app.get("/api/setup-test", async (_req, res) => {
       .limit(1);
 
     if (error) {
-      console.error("Supabase setup test failed:", error);
-
-      return res.status(500).json({
-        connected: false,
-        error: error.message,
-      });
+      throw error;
     }
 
     return res.json({
       connected: true,
-      message: "FuzzTheHuzz is connected to Supabase.",
+      message:
+        "FuzzTheHuzz is connected to Supabase.",
     });
   } catch (error) {
-    console.error("Supabase setup test crashed:", error);
+    console.error(
+      "Supabase setup test failed:",
+      error,
+    );
 
     return res.status(500).json({
       connected: false,
-      error: "Server configuration error.",
+      error:
+        error.message ||
+        "Supabase connection failed.",
     });
   }
 });
 
-/* -------------------------------------------------------
-   CREATE SECURE SERVER SESSION
-------------------------------------------------------- */
-
 app.post("/api/auth/session", async (req, res) => {
-  const accessToken = String(req.body.accessToken || "");
-  const refreshToken = String(req.body.refreshToken || "");
+  const accessToken = String(
+    req.body.accessToken || "",
+  );
+
+  const refreshToken = String(
+    req.body.refreshToken || "",
+  );
 
   if (!accessToken || !refreshToken) {
     return res.status(400).json({
@@ -299,7 +350,9 @@ app.post("/api/auth/session", async (req, res) => {
     const {
       data: { user },
       error: userError,
-    } = await supabasePublic.auth.getUser(accessToken);
+    } = await supabasePublic.auth.getUser(
+      accessToken,
+    );
 
     if (userError || !user) {
       clearAuthCookies(req, res);
@@ -309,26 +362,31 @@ app.post("/api/auth/session", async (req, res) => {
       });
     }
 
-    const { data: profile, error: profileError } =
-      await supabaseAdmin
-        .from("profiles")
-        .select("username, role, banned")
-        .eq("id", user.id)
-        .maybeSingle();
+    const {
+      data: profile,
+      error: profileError,
+    } = await supabaseAdmin
+      .from("profiles")
+      .select("username, role, banned")
+      .eq("id", user.id)
+      .maybeSingle();
 
     if (profileError || !profile) {
       return res.status(403).json({
-        error: "Your profile could not be found.",
+        error:
+          "Your account profile could not be found.",
       });
     }
 
-    if (profile.banned) {
+    if (profile.banned === true) {
       return res.status(403).json({
-        error: "This account has been disabled.",
+        error:
+          "This account has been disabled.",
       });
     }
 
-    const cookieOptions = getCookieOptions(req);
+    const cookieOptions =
+      getCookieOptions(req);
 
     res.cookie(
       ACCESS_COOKIE,
@@ -352,22 +410,23 @@ app.post("/api/auth/session", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Session creation failed:", error);
+    console.error(
+      "Session creation failed:",
+      error,
+    );
 
     clearAuthCookies(req, res);
 
     return res.status(500).json({
-      error: "The secure login session could not be created.",
+      error:
+        "The secure login session could not be created.",
     });
   }
 });
 
-/* -------------------------------------------------------
-   LOGOUT
-------------------------------------------------------- */
-
 app.post("/api/auth/logout", async (req, res) => {
-  const accessToken = req.cookies[ACCESS_COOKIE];
+  const accessToken =
+    req.cookies?.[ACCESS_COOKIE];
 
   try {
     if (accessToken) {
@@ -377,7 +436,10 @@ app.post("/api/auth/logout", async (req, res) => {
       );
     }
   } catch (error) {
-    console.error("Logout warning:", error);
+    console.error(
+      "Logout warning:",
+      error,
+    );
   }
 
   clearAuthCookies(req, res);
@@ -387,25 +449,34 @@ app.post("/api/auth/logout", async (req, res) => {
   });
 });
 
-/* -------------------------------------------------------
-   ACCOUNT SIGNUP
-------------------------------------------------------- */
-
 app.post("/api/auth/signup", async (req, res) => {
   const email = String(req.body.email || "")
     .trim()
     .toLowerCase();
 
-  const password = String(req.body.password || "");
-  const username = String(req.body.username || "").trim();
+  const password = String(
+    req.body.password || "",
+  );
 
-  const inviteCode = String(req.body.inviteCode || "")
+  const username = String(
+    req.body.username || "",
+  ).trim();
+
+  const inviteCode = String(
+    req.body.inviteCode || "",
+  )
     .trim()
     .toUpperCase();
 
-  const usernamePattern = /^[A-Za-z0-9_]{3,20}$/;
+  const usernamePattern =
+    /^[A-Za-z0-9_]{3,20}$/;
 
-  if (!email || !password || !username || !inviteCode) {
+  if (
+    !email ||
+    !password ||
+    !username ||
+    !inviteCode
+  ) {
     return res.status(400).json({
       error: "Please complete every field.",
     });
@@ -420,7 +491,8 @@ app.post("/api/auth/signup", async (req, res) => {
 
   if (password.length < 8) {
     return res.status(400).json({
-      error: "Password must be at least 8 characters.",
+      error:
+        "Password must be at least 8 characters.",
     });
   }
 
@@ -428,10 +500,6 @@ app.post("/api/auth/signup", async (req, res) => {
   let claimedInviteId = null;
 
   try {
-    /*
-     * Prevent duplicate usernames.
-     * This is case-insensitive.
-     */
     const {
       data: existingUsername,
       error: usernameError,
@@ -447,13 +515,11 @@ app.post("/api/auth/signup", async (req, res) => {
 
     if (existingUsername) {
       return res.status(409).json({
-        error: "That username is already taken.",
+        error:
+          "That username is already taken.",
       });
     }
 
-    /*
-     * Check for an available one-time invite code.
-     */
     const {
       data: availableInvite,
       error: inviteLookupError,
@@ -475,21 +541,20 @@ app.post("/api/auth/signup", async (req, res) => {
       });
     }
 
-    /*
-     * Create the Supabase authentication user.
-     */
-    const { data: signupData, error: signupError } =
-      await supabasePublic.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            username,
-          },
-          emailRedirectTo:
-            `${req.protocol}://${req.get("host")}/verified`,
+    const {
+      data: signupData,
+      error: signupError,
+    } = await supabasePublic.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          username,
         },
-      });
+        emailRedirectTo:
+          `${req.protocol}://${req.get("host")}/verified`,
+      },
+    });
 
     if (signupError) {
       return res.status(400).json({
@@ -497,30 +562,27 @@ app.post("/api/auth/signup", async (req, res) => {
       });
     }
 
-    /*
-     * Supabase can return an empty identities array when an
-     * account with the email already exists.
-     */
     if (
-      Array.isArray(signupData.user?.identities) &&
+      Array.isArray(
+        signupData.user?.identities,
+      ) &&
       signupData.user.identities.length === 0
     ) {
       return res.status(409).json({
-        error: "An account with that email already exists.",
+        error:
+          "An account with that email already exists.",
       });
     }
 
-    createdUserId = signupData.user?.id;
+    createdUserId =
+      signupData.user?.id || null;
 
     if (!createdUserId) {
-      return res.status(500).json({
-        error: "The account could not be created.",
-      });
+      throw new Error(
+        "Supabase did not return a user ID.",
+      );
     }
 
-    /*
-     * Claim the invite code. Only an unused code can be updated.
-     */
     const {
       data: claimedCodes,
       error: inviteClaimError,
@@ -538,29 +600,34 @@ app.post("/api/auth/signup", async (req, res) => {
       throw inviteClaimError;
     }
 
-    if (!claimedCodes || claimedCodes.length !== 1) {
-      await supabaseAdmin.auth.admin.deleteUser(createdUserId);
+    if (
+      !claimedCodes ||
+      claimedCodes.length !== 1
+    ) {
+      await supabaseAdmin.auth.admin.deleteUser(
+        createdUserId,
+      );
+
       createdUserId = null;
 
       return res.status(409).json({
         error:
-          "That invite code was just used by someone else. Please use another code.",
+          "That invite code was used by someone else.",
       });
     }
 
-    claimedInviteId = claimedCodes[0].id;
+    claimedInviteId =
+      claimedCodes[0].id;
 
-    /*
-     * Create the user's public profile.
-     */
-    const { error: profileError } = await supabaseAdmin
-      .from("profiles")
-      .insert({
-        id: createdUserId,
-        username,
-        role: "user",
-        banned: false,
-      });
+    const { error: profileError } =
+      await supabaseAdmin
+        .from("profiles")
+        .insert({
+          id: createdUserId,
+          username,
+          role: "user",
+          banned: false,
+        });
 
     if (profileError) {
       throw profileError;
@@ -574,9 +641,6 @@ app.post("/api/auth/signup", async (req, res) => {
   } catch (error) {
     console.error("Signup error:", error);
 
-    /*
-     * Undo a partially created authentication account.
-     */
     if (createdUserId) {
       const { error: deleteError } =
         await supabaseAdmin.auth.admin.deleteUser(
@@ -585,17 +649,14 @@ app.post("/api/auth/signup", async (req, res) => {
 
       if (deleteError) {
         console.error(
-          "Could not roll back Auth user:",
+          "Could not remove partial user:",
           deleteError,
         );
       }
     }
 
-    /*
-     * Make the invite code available again when signup fails.
-     */
     if (claimedInviteId) {
-      const { error: restoreInviteError } =
+      const { error: restoreError } =
         await supabaseAdmin
           .from("invite_codes")
           .update({
@@ -604,113 +665,161 @@ app.post("/api/auth/signup", async (req, res) => {
           })
           .eq("id", claimedInviteId);
 
-      if (restoreInviteError) {
+      if (restoreError) {
         console.error(
-          "Could not restore the invite code:",
-          restoreInviteError,
+          "Could not restore invite:",
+          restoreError,
         );
       }
     }
 
     return res.status(500).json({
-      error: "Account creation failed. Please try again.",
+      error:
+        "Account creation failed. Please try again.",
     });
   }
 });
 
-/* -------------------------------------------------------
-   FUZZ AI SAVED CHATS
-------------------------------------------------------- */
+/* =======================================================
+   SAVED CHAT HELPERS
+======================================================= */
 
-/*
- * List the signed-in user's conversations.
- */
-app.get("/api/ai/chats", requireApiAuth, async (req, res) => {
-  try {
-    const userId = req.auth.user.id;
-
-    const { data: chats, error } = await supabaseAdmin
+async function getOwnedChat(chatId, userId) {
+  const { data: chat, error } =
+    await supabaseAdmin
       .from("ai_chats")
-      .select("id, title, created_at, updated_at")
+      .select(
+        "id, user_id, title, created_at, updated_at",
+      )
+      .eq("id", chatId)
       .eq("user_id", userId)
-      .order("updated_at", {
-        ascending: false,
+      .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return chat;
+}
+
+/* =======================================================
+   SAVED CHAT ROUTES
+======================================================= */
+
+app.get(
+  "/api/ai/chats",
+  requireApiAuth,
+  async (req, res) => {
+    try {
+      const userId = req.auth.user.id;
+
+      const { data: chats, error } =
+        await supabaseAdmin
+          .from("ai_chats")
+          .select(
+            "id, title, created_at, updated_at",
+          )
+          .eq("user_id", userId)
+          .order("updated_at", {
+            ascending: false,
+          });
+
+      if (error) {
+        throw error;
+      }
+
+      return res.json({
+        chats: chats || [],
       });
+    } catch (error) {
+      console.error(
+        "Could not load AI chats:",
+        error,
+      );
 
-    if (error) {
-      throw error;
+      return res.status(500).json({
+        error:
+          "Your saved chats could not be loaded.",
+      });
     }
+  },
+);
 
-    return res.json({
-      chats: chats || [],
-    });
-  } catch (error) {
-    console.error("Could not load AI chats:", error);
+app.post(
+  "/api/ai/chats",
+  requireApiAuth,
+  async (req, res) => {
+    try {
+      const userId = req.auth.user.id;
 
-    return res.status(500).json({
-      error: "Your saved chats could not be loaded.",
-    });
-  }
-});
+      const requestedTitle = String(
+        req.body.title || "",
+      )
+        .trim()
+        .slice(0, 80);
 
-/*
- * Create a new conversation.
- */
-app.post("/api/ai/chats", requireApiAuth, async (req, res) => {
-  try {
-    const userId = req.auth.user.id;
+      const title =
+        requestedTitle || "New chat";
 
-    const requestedTitle = String(req.body.title || "")
-      .trim()
-      .slice(0, 80);
+      const { data: chat, error } =
+        await supabaseAdmin
+          .from("ai_chats")
+          .insert({
+            user_id: userId,
+            title,
+          })
+          .select(
+            "id, title, created_at, updated_at",
+          )
+          .single();
 
-    const title = requestedTitle || "New chat";
+      if (error) {
+        throw error;
+      }
 
-    const { data: chat, error } = await supabaseAdmin
-      .from("ai_chats")
-      .insert({
-        user_id: userId,
-        title,
-      })
-      .select("id, title, created_at, updated_at")
-      .single();
+      return res.status(201).json({
+        chat,
+      });
+    } catch (error) {
+      console.error(
+        "Could not create AI chat:",
+        error,
+      );
 
-    if (error) {
-      throw error;
+      return res.status(500).json({
+        error:
+          "A new chat could not be created.",
+      });
     }
+  },
+);
 
-    return res.status(201).json({
-      chat,
-    });
-  } catch (error) {
-    console.error("Could not create AI chat:", error);
-
-    return res.status(500).json({
-      error: "A new chat could not be created.",
-    });
-  }
-});
-
-/*
- * Open one conversation and load all of its messages.
- */
 app.get(
   "/api/ai/chats/:chatId",
   requireApiAuth,
   async (req, res) => {
     try {
       const userId = req.auth.user.id;
-      const chatId = String(req.params.chatId || "");
+      const chatId = String(
+        req.params.chatId || "",
+      );
 
-      const chat = await getOwnedChat(chatId, userId);
+      const chat = await getOwnedChat(
+        chatId,
+        userId,
+      );
 
       if (!chat) {
         return res.status(404).json({
-          error: "That chat could not be found.",
+          error:
+            "That chat could not be found.",
         });
       }
 
-      const { data: messages, error } = await supabaseAdmin
+      const {
+        data: messages,
+        error: messagesError,
+      } = await supabaseAdmin
         .from("ai_messages")
         .select(
           "id, role, content, has_image, image_name, created_at",
@@ -721,8 +830,8 @@ app.get(
           ascending: true,
         });
 
-      if (error) {
-        throw error;
+      if (messagesError) {
+        throw messagesError;
       }
 
       return res.json({
@@ -730,26 +839,32 @@ app.get(
         messages: messages || [],
       });
     } catch (error) {
-      console.error("Could not open AI chat:", error);
+      console.error(
+        "Could not open AI chat:",
+        error,
+      );
 
       return res.status(500).json({
-        error: "That conversation could not be loaded.",
+        error:
+          "That conversation could not be loaded.",
       });
     }
   },
 );
 
-/*
- * Rename one conversation.
- */
 app.patch(
   "/api/ai/chats/:chatId",
   requireApiAuth,
   async (req, res) => {
     try {
       const userId = req.auth.user.id;
-      const chatId = String(req.params.chatId || "");
-      const title = String(req.body.title || "")
+      const chatId = String(
+        req.params.chatId || "",
+      );
+
+      const title = String(
+        req.body.title || "",
+      )
         .trim()
         .slice(0, 80);
 
@@ -759,23 +874,31 @@ app.patch(
         });
       }
 
-      const chat = await getOwnedChat(chatId, userId);
+      const existingChat =
+        await getOwnedChat(chatId, userId);
 
-      if (!chat) {
+      if (!existingChat) {
         return res.status(404).json({
-          error: "That chat could not be found.",
+          error:
+            "That chat could not be found.",
         });
       }
 
-      const { data: updatedChat, error } = await supabaseAdmin
+      const {
+        data: updatedChat,
+        error,
+      } = await supabaseAdmin
         .from("ai_chats")
         .update({
           title,
-          updated_at: new Date().toISOString(),
+          updated_at:
+            new Date().toISOString(),
         })
         .eq("id", chatId)
         .eq("user_id", userId)
-        .select("id, title, created_at, updated_at")
+        .select(
+          "id, title, created_at, updated_at",
+        )
         .single();
 
       if (error) {
@@ -786,32 +909,36 @@ app.patch(
         chat: updatedChat,
       });
     } catch (error) {
-      console.error("Could not rename AI chat:", error);
+      console.error(
+        "Could not rename AI chat:",
+        error,
+      );
 
       return res.status(500).json({
-        error: "That chat could not be renamed.",
+        error:
+          "That chat could not be renamed.",
       });
     }
   },
 );
 
-/*
- * Delete one conversation and all of its messages.
- * The database cascade handles message deletion.
- */
 app.delete(
   "/api/ai/chats/:chatId",
   requireApiAuth,
   async (req, res) => {
     try {
       const userId = req.auth.user.id;
-      const chatId = String(req.params.chatId || "");
+      const chatId = String(
+        req.params.chatId || "",
+      );
 
-      const chat = await getOwnedChat(chatId, userId);
+      const existingChat =
+        await getOwnedChat(chatId, userId);
 
-      if (!chat) {
+      if (!existingChat) {
         return res.status(404).json({
-          error: "That chat could not be found.",
+          error:
+            "That chat could not be found.",
         });
       }
 
@@ -829,38 +956,55 @@ app.delete(
         success: true,
       });
     } catch (error) {
-      console.error("Could not delete AI chat:", error);
+      console.error(
+        "Could not delete AI chat:",
+        error,
+      );
 
       return res.status(500).json({
-        error: "That chat could not be deleted.",
+        error:
+          "That chat could not be deleted.",
       });
     }
   },
 );
 
-/*
- * Save a user or assistant message to an owned conversation.
- */
 app.post(
   "/api/ai/chats/:chatId/messages",
   requireApiAuth,
   async (req, res) => {
     try {
       const userId = req.auth.user.id;
-      const chatId = String(req.params.chatId || "");
-      const role = String(req.body.role || "");
-      const content = String(req.body.content || "")
+      const chatId = String(
+        req.params.chatId || "",
+      );
+
+      const role = String(
+        req.body.role || "",
+      );
+
+      const content = String(
+        req.body.content || "",
+      )
         .trim()
         .slice(0, 30000);
 
-      const hasImage = req.body.hasImage === true;
+      const hasImage =
+        req.body.hasImage === true;
+
       const imageName = hasImage
-        ? String(req.body.imageName || "")
+        ? String(
+            req.body.imageName || "",
+          )
             .trim()
             .slice(0, 255) || null
         : null;
 
-      if (!["user", "assistant"].includes(role)) {
+      if (
+        !["user", "assistant"].includes(
+          role,
+        )
+      ) {
         return res.status(400).json({
           error: "Invalid message role.",
         });
@@ -868,49 +1012,58 @@ app.post(
 
       if (!content) {
         return res.status(400).json({
-          error: "The message cannot be empty.",
+          error:
+            "The message cannot be empty.",
         });
       }
 
-      const chat = await getOwnedChat(chatId, userId);
+      const chat = await getOwnedChat(
+        chatId,
+        userId,
+      );
 
       if (!chat) {
         return res.status(404).json({
-          error: "That chat could not be found.",
+          error:
+            "That chat could not be found.",
         });
       }
 
-      const { data: message, error: messageError } =
-        await supabaseAdmin
-          .from("ai_messages")
-          .insert({
-            chat_id: chatId,
-            user_id: userId,
-            role,
-            content,
-            has_image: hasImage,
-            image_name: imageName,
-          })
-          .select(
-            "id, role, content, has_image, image_name, created_at",
-          )
-          .single();
+      const {
+        data: message,
+        error: messageError,
+      } = await supabaseAdmin
+        .from("ai_messages")
+        .insert({
+          chat_id: chatId,
+          user_id: userId,
+          role,
+          content,
+          has_image: hasImage,
+          image_name: imageName,
+        })
+        .select(
+          "id, role, content, has_image, image_name, created_at",
+        )
+        .single();
 
       if (messageError) {
         throw messageError;
       }
 
-      const { error: updateError } = await supabaseAdmin
-        .from("ai_chats")
-        .update({
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", chatId)
-        .eq("user_id", userId);
+      const { error: updateError } =
+        await supabaseAdmin
+          .from("ai_chats")
+          .update({
+            updated_at:
+              new Date().toISOString(),
+          })
+          .eq("id", chatId)
+          .eq("user_id", userId);
 
       if (updateError) {
         console.error(
-          "Chat timestamp could not be updated:",
+          "Could not update chat timestamp:",
           updateError,
         );
       }
@@ -919,162 +1072,214 @@ app.post(
         message,
       });
     } catch (error) {
-      console.error("Could not save AI message:", error);
+      console.error(
+        "Could not save AI message:",
+        error,
+      );
 
       return res.status(500).json({
-        error: "The message could not be saved.",
+        error:
+          "The message could not be saved.",
       });
     }
   },
 );
 
-app.post("/api/ai/chat", requireApiAuth, async (req, res) => {
-  const messages = Array.isArray(req.body.messages)
-    ? req.body.messages
-    : [];
+/* =======================================================
+   FUZZ AI STREAMING
+======================================================= */
 
-  if (messages.length === 0) {
-    return res.status(400).json({
-      error: "Send at least one message.",
-    });
-  }
+app.post(
+  "/api/ai/chat",
+  requireApiAuth,
+  async (req, res) => {
+    const messages = Array.isArray(
+      req.body.messages,
+    )
+      ? req.body.messages
+      : [];
 
-  if (messages.length > 30) {
-    return res.status(400).json({
-      error: "This conversation is too long. Start a new chat.",
-    });
-  }
-
-  const cleanedMessages = [];
-
-  for (const message of messages) {
-    if (
-      !message ||
-      !["user", "assistant"].includes(message.role) ||
-      typeof message.content !== "string"
-    ) {
-      continue;
-    }
-
-    const text = message.content.trim().slice(0, 12000);
-
-    if (!text) {
-      continue;
-    }
-
-    if (message.role === "assistant") {
-      cleanedMessages.push({
-        role: "assistant",
-        content: text,
+    if (messages.length === 0) {
+      return res.status(400).json({
+        error:
+          "Send at least one message.",
       });
-
-      continue;
     }
 
-    const content = [
-      {
-        type: "input_text",
-        text,
-      },
-    ];
+    if (messages.length > 30) {
+      return res.status(400).json({
+        error:
+          "This conversation is too long. Start a new chat.",
+      });
+    }
 
-    if (message.image?.dataUrl) {
-      const imageUrl = String(message.image.dataUrl);
+    const cleanedMessages = [];
 
+    for (const message of messages) {
       if (
-        imageUrl.length > 12_000_000 ||
-        !/^data:image\/(png|jpeg|webp|gif);base64,/i.test(imageUrl)
+        !message ||
+        !["user", "assistant"].includes(
+          message.role,
+        ) ||
+        typeof message.content !== "string"
       ) {
-        return res.status(400).json({
-          error: "The attached image is invalid or too large.",
+        continue;
+      }
+
+      const text = message.content
+        .trim()
+        .slice(0, 12000);
+
+      if (!text) {
+        continue;
+      }
+
+      if (message.role === "assistant") {
+        cleanedMessages.push({
+          role: "assistant",
+          content: text,
+        });
+
+        continue;
+      }
+
+      const content = [
+        {
+          type: "input_text",
+          text,
+        },
+      ];
+
+      if (message.image?.dataUrl) {
+        const imageUrl = String(
+          message.image.dataUrl,
+        );
+
+        if (
+          imageUrl.length > 12_000_000 ||
+          !/^data:image\/(png|jpeg|webp|gif);base64,/i.test(
+            imageUrl,
+          )
+        ) {
+          return res.status(400).json({
+            error:
+              "The attached image is invalid or too large.",
+          });
+        }
+
+        content.push({
+          type: "input_image",
+          image_url: imageUrl,
+          detail: "auto",
         });
       }
 
-      content.push({
-        type: "input_image",
-        image_url: imageUrl,
-        detail: "auto",
+      cleanedMessages.push({
+        role: "user",
+        content,
       });
     }
 
-    cleanedMessages.push({
-      role: "user",
-      content,
-    });
-  }
-
-  if (cleanedMessages.length === 0) {
-    return res.status(400).json({
-      error: "No valid messages were provided.",
-    });
-  }
-
-  res.status(200);
-  res.setHeader("Content-Type", "text/plain; charset=utf-8");
-  res.setHeader("Cache-Control", "no-cache, no-transform");
-  res.setHeader("X-Content-Type-Options", "nosniff");
-
-  try {
-    const stream = await openai.responses.create({
-      model: "gpt-5-mini",
-      instructions:
-        "You are Fuzz AI, the helpful AI assistant built into FuzzTheHuzz. Give clear, accurate, natural answers. Analyze attached images when provided. Use markdown when helpful. Do not claim to be ChatGPT.",
-      input: cleanedMessages,
-      max_output_tokens: 2000,
-      store: false,
-      stream: true,
-    });
-
-    for await (const event of stream) {
-      if (event.type === "response.output_text.delta") {
-        res.write(event.delta);
-      }
-
-      if (event.type === "response.failed") {
-        console.error(
-          "OpenAI response failed:",
-          event.response?.error,
-        );
-      }
-    }
-
-    res.end();
-  } catch (error) {
-    console.error("Fuzz AI image request failed:", error);
-
-    if (!res.headersSent) {
-      return res.status(500).json({
-        error: "Fuzz AI could not generate a response.",
+    if (cleanedMessages.length === 0) {
+      return res.status(400).json({
+        error:
+          "No valid messages were provided.",
       });
     }
 
-    res.write("\n\nFuzz AI could not finish the response.");
-    res.end();
-  }
-});
+    res.status(200);
 
-/* -------------------------------------------------------
+    res.setHeader(
+      "Content-Type",
+      "text/plain; charset=utf-8",
+    );
+
+    res.setHeader(
+      "Cache-Control",
+      "no-cache, no-transform",
+    );
+
+    res.setHeader(
+      "X-Content-Type-Options",
+      "nosniff",
+    );
+
+    try {
+      const stream =
+        await openai.responses.create({
+          model: "gpt-5-mini",
+          instructions:
+            "You are Fuzz AI, the helpful AI assistant built into FuzzTheHuzz. Give clear, accurate, natural answers. Analyze attached images when provided. Use markdown when helpful. Do not claim to be ChatGPT.",
+          input: cleanedMessages,
+          max_output_tokens: 2000,
+          store: false,
+          stream: true,
+        });
+
+      for await (const event of stream) {
+        if (
+          event.type ===
+          "response.output_text.delta"
+        ) {
+          res.write(event.delta);
+        }
+
+        if (
+          event.type ===
+          "response.failed"
+        ) {
+          console.error(
+            "OpenAI response failed:",
+            event.response?.error,
+          );
+        }
+      }
+
+      return res.end();
+    } catch (error) {
+      console.error(
+        "Fuzz AI request failed:",
+        error,
+      );
+
+      if (!res.headersSent) {
+        return res.status(500).json({
+          error:
+            "Fuzz AI could not generate a response.",
+        });
+      }
+
+      res.write(
+        "\n\nFuzz AI could not finish the response.",
+      );
+
+      return res.end();
+    }
+  },
+);
+
+/* =======================================================
    REMOTE ASSET CACHE
-------------------------------------------------------- */
+======================================================= */
 
 app.get("/e/*", async (req, res, next) => {
   try {
-    if (cache.has(req.path)) {
-      const {
-        data,
-        contentType,
-        timestamp,
-      } = cache.get(req.path);
+    const existing = cache.get(req.path);
 
-      if (Date.now() - timestamp > CACHE_TTL) {
-        cache.delete(req.path);
-      } else {
+    if (existing) {
+      if (
+        Date.now() - existing.timestamp <=
+        CACHE_TTL
+      ) {
         res.writeHead(200, {
-          "Content-Type": contentType,
+          "Content-Type":
+            existing.contentType,
         });
 
-        return res.end(data);
+        return res.end(existing.data);
       }
+
+      cache.delete(req.path);
     }
 
     const baseUrls = {
@@ -1086,12 +1291,14 @@ app.get("/e/*", async (req, res, next) => {
         "https://raw.githubusercontent.com/3v1/V5-Retro/master/",
     };
 
-    let reqTarget;
+    let reqTarget = null;
 
-    for (const [prefix, baseUrl] of Object.entries(baseUrls)) {
+    for (const [prefix, baseUrl] of
+      Object.entries(baseUrls)) {
       if (req.path.startsWith(prefix)) {
         reqTarget =
-          baseUrl + req.path.slice(prefix.length);
+          baseUrl +
+          req.path.slice(prefix.length);
 
         break;
       }
@@ -1111,11 +1318,11 @@ app.get("/e/*", async (req, res, next) => {
       await asset.arrayBuffer(),
     );
 
-    const extension = path.extname(reqTarget);
-    const binaryExtensions = [".unityweb"];
+    const extension =
+      path.extname(reqTarget);
 
     const contentType =
-      binaryExtensions.includes(extension)
+      extension === ".unityweb"
         ? "application/octet-stream"
         : mime.getType(extension) ||
           "application/octet-stream";
@@ -1132,7 +1339,10 @@ app.get("/e/*", async (req, res, next) => {
 
     return res.end(data);
   } catch (error) {
-    console.error("Error fetching asset:", error);
+    console.error(
+      "Remote asset error:",
+      error,
+    );
 
     return res
       .status(500)
@@ -1140,85 +1350,12 @@ app.get("/e/*", async (req, res, next) => {
   }
 });
 
-/* -------------------------------------------------------
-   BARE SERVER CORS
-------------------------------------------------------- */
+/* =======================================================
+   STATIC FILES
 
-app.use("/ca", cors({ origin: true }));
-
-/* -------------------------------------------------------
-   WEBSITE PAGE ROUTES
-------------------------------------------------------- */
-
-const publicRoutes = [
-  {
-    path: "/login",
-    file: "login.html",
-  },
-  {
-    path: "/signup",
-    file: "signup.html",
-  },
-  {
-    path: "/verified",
-    file: "verified.html",
-  },
-];
-
-const protectedRoutes = [
-  {
-    path: "/b",
-    file: "apps.html",
-  },
-  {
-    path: "/a",
-    file: "games.html",
-  },
-  {
-    path: "/play.html",
-    file: "games.html",
-  },
-  {
-    path: "/c",
-    file: "settings.html",
-  },
-  {
-    path: "/d",
-    file: "tabs.html",
-  },
-  {
-    path: "/ai",
-    file: "ai.html",
-  },
-  {
-    path: "/",
-    file: "index.html",
-  },
-];
-
-publicRoutes.forEach((route) => {
-  app.get(route.path, (_req, res) => {
-    res.sendFile(
-      path.join(__dirname, "static", route.file),
-    );
-  });
-});
-
-protectedRoutes.forEach((route) => {
-  app.get(
-    route.path,
-    requirePageAuth,
-    (_req, res) => {
-      res.sendFile(
-        path.join(__dirname, "static", route.file),
-      );
-    },
-  );
-});
-
-/* -------------------------------------------------------
-   PREVENT DIRECT HTML AUTH BYPASS
-------------------------------------------------------- */
+   Protect private HTML before static serving, but keep
+   sw.js, bundles, CSS, JavaScript and proxy resources public.
+======================================================= */
 
 const protectedHtmlFiles = new Set([
   "/index.html",
@@ -1229,7 +1366,7 @@ const protectedHtmlFiles = new Set([
   "/ai.html",
 ]);
 
-app.use(async (req, res, next) => {
+app.use((req, res, next) => {
   if (!protectedHtmlFiles.has(req.path)) {
     return next();
   }
@@ -1237,64 +1374,187 @@ app.use(async (req, res, next) => {
   return requirePageAuth(req, res, next);
 });
 
-/*
- * Static files must be served after the protected HTML check.
- * CSS, JavaScript, images, and public auth pages still work.
- */
 app.use(
-  express.static(path.join(__dirname, "static")),
+  express.static(
+    path.join(__dirname, "static"),
+    {
+      index: false,
+      fallthrough: true,
+      setHeaders(res, filePath) {
+        if (
+          filePath.endsWith("sw.js") ||
+          filePath.includes(
+            `${path.sep}mathematics${path.sep}`,
+          )
+        ) {
+          res.setHeader(
+            "Cache-Control",
+            "no-store, no-cache, must-revalidate",
+          );
+        }
+      },
+    },
+  ),
 );
 
-/* -------------------------------------------------------
-   404 AND ERROR HANDLERS
-------------------------------------------------------- */
+/* =======================================================
+   PAGE ROUTES
+======================================================= */
+
+const publicRoutes = [
+  {
+    route: "/login",
+    file: "login.html",
+  },
+  {
+    route: "/signup",
+    file: "signup.html",
+  },
+  {
+    route: "/verified",
+    file: "verified.html",
+  },
+];
+
+const protectedRoutes = [
+  {
+    route: "/",
+    file: "index.html",
+  },
+  {
+    route: "/b",
+    file: "apps.html",
+  },
+  {
+    route: "/a",
+    file: "games.html",
+  },
+  {
+    route: "/play.html",
+    file: "games.html",
+  },
+  {
+    route: "/c",
+    file: "settings.html",
+  },
+  {
+    route: "/d",
+    file: "tabs.html",
+  },
+  {
+    route: "/ai",
+    file: "ai.html",
+  },
+];
+
+for (const route of publicRoutes) {
+  app.get(route.route, (_req, res) => {
+    return res.sendFile(
+      path.join(
+        __dirname,
+        "static",
+        route.file,
+      ),
+    );
+  });
+}
+
+for (const route of protectedRoutes) {
+  app.get(
+    route.route,
+    requirePageAuth,
+    (_req, res) => {
+      return res.sendFile(
+        path.join(
+          __dirname,
+          "static",
+          route.file,
+        ),
+      );
+    },
+  );
+}
+
+/* =======================================================
+   ERRORS
+======================================================= */
 
 app.use((_req, res) => {
-  res
+  return res
     .status(404)
     .sendFile(
-      path.join(__dirname, "static", "404.html"),
+      path.join(
+        __dirname,
+        "static",
+        "404.html",
+      ),
     );
 });
 
 app.use((error, _req, res, _next) => {
-  console.error(error.stack || error);
+  console.error(
+    error?.stack || error,
+  );
 
-  res
+  return res
     .status(500)
     .sendFile(
-      path.join(__dirname, "static", "404.html"),
+      path.join(
+        __dirname,
+        "static",
+        "404.html",
+      ),
     );
 });
 
-/* -------------------------------------------------------
-   HTTP AND BARE SERVER HANDLING
-------------------------------------------------------- */
+/* =======================================================
+   BARE SERVER + HTTP SERVER
+======================================================= */
 
 server.on("request", (req, res) => {
+  /*
+   * Bare requests must be handled before Express.
+   */
   if (bareServer.shouldRoute(req)) {
-    bareServer.routeRequest(req, res);
-  } else {
-    app(req, res);
+    return bareServer.routeRequest(
+      req,
+      res,
+    );
   }
+
+  return app(req, res);
 });
 
-server.on("upgrade", (req, socket, head) => {
-  if (bareServer.shouldRoute(req)) {
-    bareServer.routeUpgrade(req, socket, head);
-  } else {
+server.on(
+  "upgrade",
+  (req, socket, head) => {
+    if (bareServer.shouldRoute(req)) {
+      return bareServer.routeUpgrade(
+        req,
+        socket,
+        head,
+      );
+    }
+
     socket.end();
-  }
+  },
+);
+
+server.on("error", (error) => {
+  console.error(
+    "Server failed to start:",
+    error,
+  );
+
+  process.exitCode = 1;
 });
 
 server.on("listening", () => {
   console.log(
     chalk.green(
-      `🌍 Server is running on http://localhost:${PORT}`,
+      `🌍 Server is running on port ${PORT}`,
     ),
   );
 });
 
-server.listen({
-  port: PORT,
-});
+server.listen(PORT, "0.0.0.0");
