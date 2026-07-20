@@ -899,8 +899,7 @@ function renderChatList() {
       document.createElement("p");
 
     empty.className = "empty-chat-list";
-    empty.textContent =
-      "No saved chats yet.";
+    empty.textContent = "No saved chats yet.";
 
     container.appendChild(empty);
     return;
@@ -908,24 +907,29 @@ function renderChatList() {
 
   loadedChats.forEach((chat) => {
     const item =
-      document.createElement("button");
-
-    item.type = "button";
+      document.createElement("div");
 
     item.className =
       currentChatId === chat.id
         ? "chat-item active"
         : "chat-item";
 
+    const titleButton =
+      document.createElement("button");
+
+    titleButton.type = "button";
+    titleButton.className =
+      "chat-item-title-button";
+
     const title =
-      document.createElement("div");
+      document.createElement("span");
 
     title.className = "chat-item-title";
     title.textContent = chat.title;
 
-    item.appendChild(title);
+    titleButton.appendChild(title);
 
-    item.addEventListener("click", () => {
+    titleButton.addEventListener("click", () => {
       if (
         requestInProgress ||
         currentChatId === chat.id
@@ -935,6 +939,80 @@ function renderChatList() {
 
       openChat(chat.id);
     });
+
+    const actions =
+      document.createElement("div");
+
+    actions.className = "chat-item-actions";
+
+    const renameButton =
+      document.createElement("button");
+
+    renameButton.type = "button";
+    renameButton.className =
+      "chat-action-button";
+
+    renameButton.title = "Rename chat";
+    renameButton.setAttribute(
+      "aria-label",
+      "Rename chat",
+    );
+
+    renameButton.innerHTML =
+      '<i class="fa-solid fa-pen"></i>';
+
+    renameButton.addEventListener(
+      "click",
+      async (event) => {
+        event.stopPropagation();
+
+        if (requestInProgress) {
+          return;
+        }
+
+        await renameChat(chat);
+      },
+    );
+
+    const deleteButton =
+      document.createElement("button");
+
+    deleteButton.type = "button";
+
+    deleteButton.className =
+      "chat-action-button delete-chat-button";
+
+    deleteButton.title = "Delete chat";
+    deleteButton.setAttribute(
+      "aria-label",
+      "Delete chat",
+    );
+
+    deleteButton.innerHTML =
+      '<i class="fa-solid fa-trash"></i>';
+
+    deleteButton.addEventListener(
+      "click",
+      async (event) => {
+        event.stopPropagation();
+
+        if (requestInProgress) {
+          return;
+        }
+
+        await deleteChat(chat);
+      },
+    );
+
+    actions.append(
+      renameButton,
+      deleteButton,
+    );
+
+    item.append(
+      titleButton,
+      actions,
+    );
 
     container.appendChild(item);
   });
@@ -1210,6 +1288,136 @@ function createTitleFromMessage(message) {
   }
 
   return `${cleaned.slice(0, 39).trim()}...`;
+}
+
+async function renameChat(chat) {
+  const newTitle = window.prompt(
+    "Rename chat:",
+    chat.title,
+  );
+
+  if (newTitle === null) {
+    return;
+  }
+
+  const cleanedTitle = newTitle
+    .trim()
+    .slice(0, 80);
+
+  if (!cleanedTitle) {
+    showTemporaryComposerError(
+      "Chat titles cannot be empty.",
+    );
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `/api/ai/chats/${encodeURIComponent(
+        chat.id,
+      )}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          title: cleanedTitle,
+        }),
+      },
+    );
+
+    const result =
+      await response.json().catch(() => ({
+        error:
+          "The server returned an invalid response.",
+      }));
+
+    if (!response.ok || !result.chat) {
+      throw new Error(
+        result.error ||
+          "The chat could not be renamed.",
+      );
+    }
+
+    loadedChats = loadedChats.map(
+      (existingChat) => {
+        return existingChat.id === chat.id
+          ? result.chat
+          : existingChat;
+      },
+    );
+
+    renderChatList();
+  } catch (error) {
+    console.error(
+      "Rename chat failed:",
+      error,
+    );
+
+    showTemporaryComposerError(
+      error.message ||
+        "The chat could not be renamed.",
+    );
+  }
+}
+
+async function deleteChat(chat) {
+  const confirmed = window.confirm(
+    `Delete "${chat.title}"? This cannot be undone.`,
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `/api/ai/chats/${encodeURIComponent(
+        chat.id,
+      )}`,
+      {
+        method: "DELETE",
+        credentials: "same-origin",
+      },
+    );
+
+    const result =
+      await response.json().catch(() => ({
+        error:
+          "The server returned an invalid response.",
+      }));
+
+    if (!response.ok) {
+      throw new Error(
+        result.error ||
+          "The chat could not be deleted.",
+      );
+    }
+
+    loadedChats = loadedChats.filter(
+      (existingChat) =>
+        existingChat.id !== chat.id,
+    );
+
+    if (currentChatId === chat.id) {
+      startNewChat();
+    } else {
+      renderChatList();
+    }
+  } catch (error) {
+    console.error(
+      "Delete chat failed:",
+      error,
+    );
+
+    showTemporaryComposerError(
+      error.message ||
+        "The chat could not be deleted.",
+    );
+  }
 }
 
 function escapeHtml(value) {
