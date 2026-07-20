@@ -26,48 +26,52 @@
 <body>
     <div class="f-nav"></div>
 
-    <main id="ai-page" class="ai-page">
-        <div class="ai-toolbar">
+    <main id="ai-page" class="ai-layout">
+        <aside class="chat-sidebar">
             <button id="new-chat-button" class="new-chat-button" type="button">
-                <i class="fa-solid fa-pen-to-square"></i>
+                <i class="fa-solid fa-plus"></i>
                 <span>New Chat</span>
             </button>
-        </div>
 
-        <section id="welcome-screen" class="ai-welcome">
-            <div class="welcome-icon">
-                <i class="fa-solid fa-robot"></i>
-            </div>
+            <div id="chat-list" class="chat-list" aria-label="Saved chats"></div>
+        </aside>
 
-            <h1>Fuzz AI</h1>
-            <p>What can I help you with?</p>
+        <section class="chat-main">
+            <section id="welcome-screen" class="ai-welcome">
+                <div class="welcome-icon">
+                    <i class="fa-solid fa-robot"></i>
+                </div>
+
+                <h1>Fuzz AI</h1>
+                <p>What can I help you with?</p>
+            </section>
+
+            <section id="chat-messages" class="chat-messages" aria-live="polite"></section>
+
+            <form id="chat-form" class="chat-composer">
+                <div id="image-preview-area" class="image-preview-area"></div>
+
+                <div class="composer-row">
+                    <input id="image-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden />
+
+                    <button id="attach-button" class="composer-button attach-button" type="button"
+                        aria-label="Attach image" title="Attach image">
+                        <i class="fa-solid fa-paperclip"></i>
+                    </button>
+
+                    <textarea id="chat-input" rows="1" maxlength="12000" placeholder="Message Fuzz AI"></textarea>
+
+                    <button id="send-button" class="composer-button send-button" type="submit" aria-label="Send message"
+                        title="Send message">
+                        <i class="fa-solid fa-arrow-up"></i>
+                    </button>
+                </div>
+
+                <p class="composer-hint">
+                    Fuzz AI can make mistakes. Check important information.
+                </p>
+            </form>
         </section>
-
-        <section id="chat-messages" class="chat-messages" aria-live="polite"></section>
-
-        <form id="chat-form" class="chat-composer">
-            <div id="image-preview-area" class="image-preview-area"></div>
-
-            <div class="composer-row">
-                <input id="image-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden />
-
-                <button id="attach-button" class="composer-button attach-button" type="button" aria-label="Attach image"
-                    title="Attach image">
-                    <i class="fa-solid fa-paperclip"></i>
-                </button>
-
-                <textarea id="chat-input" rows="1" maxlength="12000" placeholder="Message Fuzz AI"></textarea>
-
-                <button id="send-button" class="composer-button send-button" type="submit" aria-label="Send message"
-                    title="Send message">
-                    <i class="fa-solid fa-arrow-up"></i>
-                </button>
-            </div>
-
-            <p class="composer-hint">
-                Fuzz AI can make mistakes. Check important information.
-            </p>
-        </form>
 
         <div id="drop-overlay" class="drop-overlay" aria-hidden="true">
             <div class="drop-card">
