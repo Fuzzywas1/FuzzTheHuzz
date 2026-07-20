@@ -16,6 +16,7 @@
   "license": "GPL-3.0-or-later",
   "dependencies": {
     "@nebula-services/bare-server-node": "^2.0.4",
+    "@supabase/supabase-js": "^2.110.7",
     "chalk": "^5.4.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
