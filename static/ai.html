@@ -16,6 +16,9 @@
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
+
     <script src="/assets/js/m1.js" defer></script>
     <script src="/assets/js/ai.js" defer></script>
 </head>
@@ -23,8 +26,19 @@
 <body>
     <div class="f-nav"></div>
 
-    <main class="ai-page">
+    <main id="ai-page" class="ai-page">
+        <div class="ai-toolbar">
+            <button id="new-chat-button" class="new-chat-button" type="button">
+                <i class="fa-solid fa-pen-to-square"></i>
+                <span>New Chat</span>
+            </button>
+        </div>
+
         <section id="welcome-screen" class="ai-welcome">
+            <div class="welcome-icon">
+                <i class="fa-solid fa-robot"></i>
+            </div>
+
             <h1>Fuzz AI</h1>
             <p>What can I help you with?</p>
         </section>
@@ -33,21 +47,35 @@
 
         <form id="chat-form" class="chat-composer">
             <div id="image-preview-area" class="image-preview-area"></div>
-        
+
             <div class="composer-row">
                 <input id="image-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden />
-        
-                <button id="attach-button" class="attach-button" type="button" aria-label="Attach image" title="Attach image">
+
+                <button id="attach-button" class="composer-button attach-button" type="button" aria-label="Attach image"
+                    title="Attach image">
                     <i class="fa-solid fa-paperclip"></i>
                 </button>
-        
+
                 <textarea id="chat-input" rows="1" maxlength="12000" placeholder="Message Fuzz AI"></textarea>
-        
-                <button id="send-button" class="send-button" type="submit" aria-label="Send message">
+
+                <button id="send-button" class="composer-button send-button" type="submit" aria-label="Send message"
+                    title="Send message">
                     <i class="fa-solid fa-arrow-up"></i>
                 </button>
             </div>
+
+            <p class="composer-hint">
+                Fuzz AI can make mistakes. Check important information.
+            </p>
         </form>
+
+        <div id="drop-overlay" class="drop-overlay" aria-hidden="true">
+            <div class="drop-card">
+                <i class="fa-solid fa-image"></i>
+                <strong>Drop your image here</strong>
+                <span>PNG, JPEG, WebP, or GIF</span>
+            </div>
+        </div>
     </main>
 </body>
 
