@@ -1,3 +1,4 @@
+import "dotenv/config";
 import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
@@ -11,6 +12,7 @@ import mime from "mime";
 import fetch from "node-fetch";
 // import { setupMasqr } from "./Masqr.js";
 import config from "./config.js";
+import { supabaseAdmin } from "./lib/supabaseAdmin.js";
 
 console.log(chalk.yellow("🚀 Starting server..."));
 
@@ -92,6 +94,35 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(express.static(path.join(__dirname, "static")));
 app.use("/ca", cors({ origin: true }));
+
+app.get("/api/setup-test", async (_req, res) => {
+  try {
+    const { error } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .limit(1);
+
+    if (error) {
+      console.error("Supabase setup test failed:", error);
+      return res.status(500).json({
+        connected: false,
+        error: error.message,
+      });
+    }
+
+    return res.json({
+      connected: true,
+      message: "FuzzTheHuzz is connected to Supabase.",
+    });
+  } catch (error) {
+    console.error("Supabase setup test crashed:", error);
+
+    return res.status(500).json({
+      connected: false,
+      error: "Server configuration error.",
+    });
+  }
+});
 
 const routes = [
   { path: "/b", file: "apps.html" },
