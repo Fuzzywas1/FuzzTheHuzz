@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#050814" />
+  <title>Feature Unavailable · Fuzz</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      color: #f4f7ff;
+      background:
+        radial-gradient(circle at 25% 15%, rgba(82,96,235,.18), transparent 34%),
+        linear-gradient(145deg, #03050d, #070a19, #02040a);
+    }
+    .card {
+      width: min(560px, calc(100vw - 34px));
+      padding: 32px;
+      border: 1px solid rgba(149,162,255,.2);
+      border-radius: 24px;
+      background: rgba(8,12,27,.9);
+      box-shadow: 0 35px 100px rgba(0,0,0,.5);
+      text-align: center;
+      backdrop-filter: blur(18px);
+    }
+    .icon {
+      display: grid;
+      width: 58px;
+      height: 58px;
+      margin: 0 auto 20px;
+      place-items: center;
+      border: 1px solid rgba(248,200,90,.2);
+      border-radius: 18px;
+      color: #f9d984;
+      background: rgba(248,200,90,.07);
+      font-size: 24px;
+    }
+    h1 { margin: 0 0 10px; font-size: 34px; letter-spacing: -.04em; }
+    p { margin: 0; color: #a6afc7; font-size: 13px; line-height: 1.65; }
+    a {
+      display: inline-flex;
+      min-height: 40px;
+      align-items: center;
+      justify-content: center;
+      margin-top: 22px;
+      padding: 0 16px;
+      border: 1px solid rgba(145,155,255,.34);
+      border-radius: 11px;
+      color: white;
+      background: linear-gradient(135deg, #6878f4, #7956e8);
+      font-size: 11px;
+      font-weight: 800;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="icon">!</div>
+    <h1 id="feature-title">Feature unavailable</h1>
+    <p id="feature-copy">This part of FuzzTheHuzz is temporarily disabled. Please check back later.</p>
+    <a href="/">Return home</a>
+  </main>
+
+  <script>
+    const names = {
+      ai: "Fuzz AI",
+      proxy: "Proxy browsing",
+      apps: "Apps",
+      games: "Games",
+      registrations: "Account registration",
+      imageUploads: "AI image uploads",
+    };
+
+    const feature = new URLSearchParams(location.search).get("feature") || "feature";
+    const name = names[feature] || "This feature";
+    document.getElementById("feature-title").textContent = `${name} is unavailable`;
+    document.getElementById("feature-copy").textContent =
+      `${name} has been temporarily disabled by an administrator. Please check back later.`;
+  </script>
+</body>
+</html>

@@ -189,3 +189,44 @@ document.addEventListener("click", async (event) => {
 
   window.location.href = "/login";
 });
+
+document.addEventListener(
+  "keydown",
+  async (event) => {
+    if (
+      !event.ctrlKey ||
+      !event.shiftKey ||
+      event.key.toLowerCase() !== "o"
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+
+    try {
+      const response = await fetch(
+        "/api/account/me",
+        {
+          credentials: "same-origin",
+        },
+      );
+
+      if (!response.ok) {
+        return;
+      }
+
+      const account =
+        await response.json();
+
+      if (account.role === "owner") {
+        window.location.href =
+          "/admin";
+      }
+    } catch (error) {
+      console.error(
+        "Owner shortcut failed:",
+        error,
+      );
+    }
+  },
+);

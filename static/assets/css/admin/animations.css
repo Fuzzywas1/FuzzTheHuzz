@@ -1,0 +1,69 @@
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.page-section {
+  animation: fade-up 260ms ease both;
+}
+
+.stat-card,
+.panel,
+.metric-card {
+  animation: fade-up 320ms ease both;
+}
+
+.stat-card:nth-child(2),
+.metric-card:nth-child(2) {
+  animation-delay: 35ms;
+}
+
+.stat-card:nth-child(3),
+.metric-card:nth-child(3) {
+  animation-delay: 70ms;
+}
+
+.stat-card:nth-child(4),
+.metric-card:nth-child(4) {
+  animation-delay: 105ms;
+}
+
+.toast {
+  animation: toast-in 220ms ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

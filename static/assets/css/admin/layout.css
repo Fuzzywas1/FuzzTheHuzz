@@ -1,0 +1,248 @@
+.admin-shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  min-height: 100vh;
+}
+
+.sidebar {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 22px 16px 16px;
+  border-right: 1px solid var(--border);
+  background:
+    linear-gradient(180deg, rgba(8, 12, 25, 0.93), rgba(5, 8, 18, 0.86)),
+    rgba(4, 6, 14, 0.86);
+  box-shadow: 16px 0 50px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(24px);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 54px;
+  padding: 8px 10px 22px;
+}
+
+.brand-mark {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgba(156, 132, 255, 0.42);
+  border-radius: 14px;
+  color: white;
+  background:
+    linear-gradient(145deg, rgba(128, 144, 255, 0.92), rgba(124, 58, 237, 0.82));
+  box-shadow:
+    0 12px 30px rgba(86, 66, 220, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.brand-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.brand-copy strong {
+  letter-spacing: -0.02em;
+  font-size: 15px;
+}
+
+.brand-copy small {
+  color: var(--text-faint);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.nav-item {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: 45px;
+  align-items: center;
+  gap: 12px;
+  padding: 0 13px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: var(--text-soft);
+  background: transparent;
+  text-align: left;
+  transition:
+    color var(--transition),
+    border-color var(--transition),
+    background var(--transition),
+    transform var(--transition);
+}
+
+.nav-item:hover {
+  color: var(--text);
+  background: var(--bg-hover);
+  transform: translateX(2px);
+}
+
+.nav-item.is-active {
+  color: white;
+  border-color: rgba(127, 140, 255, 0.2);
+  background:
+    linear-gradient(90deg, rgba(127, 140, 255, 0.15), rgba(127, 140, 255, 0.05));
+  box-shadow: inset 3px 0 0 rgba(140, 151, 255, 0.85);
+}
+
+.nav-icon {
+  display: grid;
+  width: 21px;
+  place-items: center;
+  color: #a9b5ff;
+  font-size: 18px;
+}
+
+.nav-item span:last-child {
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.nav-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 8px 8px;
+  color: var(--text-faint);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.nav-divider::after {
+  height: 1px;
+  flex: 1;
+  content: "";
+  background: var(--border);
+}
+
+.sidebar-footer {
+  padding-top: 14px;
+}
+
+.account-card {
+  display: flex;
+  min-height: 60px;
+  align-items: center;
+  gap: 10px;
+  padding: 9px;
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.account-avatar {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(127, 140, 255, 0.28);
+  border-radius: 12px;
+  background: linear-gradient(145deg, #26305e, #191e3b);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.account-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.account-copy strong,
+.account-copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-copy strong {
+  font-size: 12px;
+}
+
+.account-copy span {
+  color: var(--text-faint);
+  font-size: 10px;
+  text-transform: capitalize;
+}
+
+.workspace {
+  min-width: 0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.topbar {
+  display: flex;
+  height: var(--topbar-height);
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 22px 28px 20px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(4, 7, 16, 0.68);
+  backdrop-filter: blur(24px);
+}
+
+.eyebrow {
+  margin-bottom: 5px;
+  color: #7782a2;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.topbar h1 {
+  letter-spacing: -0.04em;
+  font-size: 26px;
+  line-height: 1.15;
+}
+
+.page-subtitle {
+  margin-top: 5px;
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.content {
+  height: calc(100vh - var(--topbar-height));
+  overflow: auto;
+  padding: 24px 28px 42px;
+  outline: none;
+}
+
+.page-section {
+  width: 100%;
+  max-width: 1680px;
+  margin: 0 auto;
+}

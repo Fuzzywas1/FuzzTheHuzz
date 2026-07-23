@@ -1,35 +1,228 @@
 <!doctype html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8" />
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#050814" />
+  <title>Fuzz Control</title>
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <title>Fuzz Control</title>
-
-    <link rel="stylesheet" href="/assets/css/global.css" />
-
-    <link rel="stylesheet" href="/assets/css/nav.css" />
-
-    <script src="/assets/js/m1.js" defer></script>
+  <link
+    rel="stylesheet"
+    href="/assets/css/admin/admin.css?v=5"
+  />
 </head>
 
 <body>
-    <div class="f-nav"></div>
+  <div class="space-backdrop" aria-hidden="true">
+    <div class="space-orb space-orb-one"></div>
+    <div class="space-orb space-orb-two"></div>
+    <div class="space-grid"></div>
+  </div>
 
-    <main style="
-      min-height: 100vh;
-      padding: 130px 30px 60px;
-      color: white;
-      text-align: center;
-    ">
-        <h1>Fuzz Control</h1>
+  <div class="admin-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#dashboard" aria-label="Fuzz Control dashboard">
+        <span class="brand-mark">F</span>
 
-        <p>
-            The owner panel is connected.
-        </p>
-    </main>
+        <span class="brand-copy">
+          <strong>Fuzz Control</strong>
+          <small>Owner console</small>
+        </span>
+      </a>
+
+      <nav class="sidebar-nav" aria-label="Control panel">
+        <button class="nav-item is-active" data-route="dashboard" type="button">
+          <span class="nav-icon">⌂</span>
+          <span>Dashboard</span>
+        </button>
+
+        <button class="nav-item" data-route="users" type="button">
+          <span class="nav-icon">◎</span>
+          <span>Users</span>
+        </button>
+
+        <button class="nav-item" data-route="activity" type="button">
+          <span class="nav-icon">◌</span>
+          <span>Activity</span>
+        </button>
+
+        <button class="nav-item" data-route="security" type="button">
+          <span class="nav-icon">⊙</span>
+          <span>Security Center</span>
+          <span class="nav-count is-hidden" id="security-nav-count">0</span>
+        </button>
+
+        <button class="nav-item" data-route="limits" type="button">
+          <span class="nav-icon">⌁</span>
+          <span>Limits & Abuse</span>
+        </button>
+
+        <button class="nav-item" data-route="history" type="button">
+          <span class="nav-icon">⌕</span>
+          <span>History</span>
+        </button>
+
+        <button class="nav-item" data-route="invites" type="button">
+          <span class="nav-icon">◇</span>
+          <span>Invite Codes</span>
+        </button>
+
+        <button class="nav-item" data-route="announcements" type="button">
+          <span class="nav-icon">◒</span>
+          <span>Announcements</span>
+        </button>
+
+        <div class="nav-divider">
+          <span>Intelligence</span>
+        </div>
+
+        <button class="nav-item" data-route="ai" type="button">
+          <span class="nav-icon">✦</span>
+          <span>Fuzz AI</span>
+        </button>
+
+        <button class="nav-item" data-route="proxy" type="button">
+          <span class="nav-icon">◈</span>
+          <span>Proxy</span>
+        </button>
+
+        <button class="nav-item" data-route="analytics" type="button">
+          <span class="nav-icon">⌁</span>
+          <span>Analytics</span>
+        </button>
+
+        <button class="nav-item" data-route="settings" type="button">
+          <span class="nav-icon">⚙</span>
+          <span>Settings</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="account-card">
+          <div class="account-avatar" id="account-avatar">F</div>
+
+          <div class="account-copy">
+            <strong id="account-name">Loading...</strong>
+            <span id="account-role">Owner</span>
+          </div>
+
+          <button
+            class="icon-button"
+            id="logout-button"
+            type="button"
+            aria-label="Sign out"
+            title="Sign out"
+          >
+            ↗
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <section class="workspace">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">FuzzTheHuzz administration</p>
+          <h1 id="page-title">Dashboard</h1>
+          <p class="page-subtitle" id="page-subtitle">
+            A live overview of your platform.
+          </p>
+        </div>
+
+        <div class="topbar-actions">
+          <button
+            class="notification-trigger"
+            id="notification-button"
+            type="button"
+            aria-label="Open security notifications"
+            title="Security notifications"
+          >
+            <span class="notification-bell">◉</span>
+            <span class="notification-count is-hidden" id="notification-count">0</span>
+          </button>
+
+          <button
+            class="command-trigger"
+            id="command-trigger"
+            type="button"
+          >
+            <span>Search control panel</span>
+            <kbd>Ctrl K</kbd>
+          </button>
+
+          <button
+            class="button button-secondary"
+            id="refresh-button"
+            type="button"
+          >
+            <span class="button-icon">↻</span>
+            Refresh
+          </button>
+
+          <div class="online-pill" title="Server connection">
+            <span class="online-dot"></span>
+            Online
+          </div>
+        </div>
+      </header>
+
+      <main class="content" id="app-view" tabindex="-1">
+        <div class="page-loading">
+          <span class="spinner"></span>
+          <p>Loading Fuzz Control...</p>
+        </div>
+      </main>
+    </section>
+  </div>
+
+  <div
+    class="command-overlay"
+    id="command-overlay"
+    aria-hidden="true"
+  >
+    <div
+      class="command-palette"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="command-title"
+    >
+      <div class="command-input-wrap">
+        <span class="command-search-icon">⌕</span>
+
+        <input
+          id="command-input"
+          type="search"
+          autocomplete="off"
+          placeholder="Search pages or users..."
+          aria-label="Search control panel"
+        />
+
+        <kbd>Esc</kbd>
+      </div>
+
+      <div class="command-results" id="command-results">
+        <div class="command-empty">
+          <strong id="command-title">Quick navigation</strong>
+          <span>Start typing to search Fuzz Control.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div
+    class="toast-region"
+    id="toast-region"
+    aria-live="polite"
+    aria-atomic="true"
+  ></div>
+
+  <script
+    type="module"
+    src="/assets/js/admin/main.js"
+  ></script>
 </body>
-
 </html>

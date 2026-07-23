@@ -1,0 +1,158 @@
+:root {
+  --bg: #03050d;
+  --bg-elevated: rgba(10, 14, 29, 0.82);
+  --bg-soft: rgba(255, 255, 255, 0.035);
+  --bg-hover: rgba(255, 255, 255, 0.065);
+  --surface: rgba(10, 14, 29, 0.78);
+  --surface-strong: rgba(13, 18, 38, 0.94);
+  --surface-muted: rgba(255, 255, 255, 0.025);
+  --border: rgba(255, 255, 255, 0.085);
+  --border-strong: rgba(126, 151, 255, 0.24);
+  --text: #f4f7ff;
+  --text-soft: #a6afc7;
+  --text-faint: #6f7890;
+  --primary: #7f8cff;
+  --primary-bright: #9b7bff;
+  --cyan: #50d7ff;
+  --green: #47e6a7;
+  --yellow: #f8c85a;
+  --red: #ff6c87;
+  --purple: #bd74ff;
+  --shadow: 0 22px 70px rgba(0, 0, 0, 0.38);
+  --radius-xl: 24px;
+  --radius-lg: 18px;
+  --radius-md: 13px;
+  --radius-sm: 9px;
+  --sidebar-width: 252px;
+  --topbar-height: 112px;
+  --transition: 170ms ease;
+  --font:
+    Inter,
+    ui-sans-serif,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 1180px;
+  min-height: 100%;
+  background: var(--bg);
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  overflow: hidden;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 22% 10%, rgba(74, 89, 222, 0.14), transparent 34%),
+    radial-gradient(circle at 92% 4%, rgba(109, 54, 255, 0.12), transparent 30%),
+    linear-gradient(145deg, #03050d 0%, #050715 48%, #02040a 100%);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  color: inherit;
+  font: inherit;
+}
+
+button,
+select {
+  cursor: pointer;
+}
+
+button {
+  border: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+::selection {
+  color: white;
+  background: rgba(127, 140, 255, 0.45);
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.015);
+}
+
+::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 99px;
+  background: rgba(166, 175, 199, 0.25);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(166, 175, 199, 0.38);
+  background-clip: padding-box;
+}
+
+.space-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.space-grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.17;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: linear-gradient(to bottom, black, transparent 90%);
+}
+
+.space-orb {
+  position: absolute;
+  width: 520px;
+  height: 520px;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.12;
+}
+
+.space-orb-one {
+  top: -240px;
+  left: 12%;
+  background: #4f64ff;
+}
+
+.space-orb-two {
+  right: -220px;
+  bottom: -270px;
+  background: #7e35ff;
+}

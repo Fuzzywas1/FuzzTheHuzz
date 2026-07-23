@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#050814" />
+  <title>Fuzz Maintenance</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      color: #f4f7ff;
+      background:
+        radial-gradient(circle at 20% 10%, rgba(82, 96, 235, .2), transparent 34%),
+        radial-gradient(circle at 86% 16%, rgba(123, 63, 255, .15), transparent 30%),
+        linear-gradient(145deg, #03050d, #06091a 52%, #02040a);
+    }
+
+    body::before {
+      position: fixed;
+      inset: 0;
+      content: "";
+      opacity: .18;
+      background-image:
+        linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+      background-size: 62px 62px;
+      mask-image: linear-gradient(to bottom, black, transparent 90%);
+    }
+
+    .card {
+      position: relative;
+      z-index: 1;
+      width: min(620px, calc(100vw - 34px));
+      padding: 34px;
+      overflow: hidden;
+      border: 1px solid rgba(149, 162, 255, .22);
+      border-radius: 26px;
+      background: rgba(8, 12, 27, .86);
+      box-shadow: 0 35px 110px rgba(0,0,0,.55);
+      backdrop-filter: blur(20px);
+    }
+
+    .card::before {
+      position: absolute;
+      inset: 0 0 auto;
+      height: 1px;
+      content: "";
+      background: linear-gradient(90deg, transparent, rgba(160,170,255,.6), transparent);
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: #aeb7d1;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .mark {
+      display: grid;
+      width: 34px;
+      height: 34px;
+      place-items: center;
+      border: 1px solid rgba(127,140,255,.32);
+      border-radius: 11px;
+      color: white;
+      background: linear-gradient(135deg, #6878f4, #7956e8);
+      box-shadow: 0 10px 28px rgba(92,78,225,.25);
+      font-size: 15px;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 34px;
+      padding: 7px 10px;
+      border: 1px solid rgba(248,200,90,.2);
+      border-radius: 99px;
+      color: #f9d984;
+      background: rgba(248,200,90,.07);
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #f8c85a;
+      box-shadow: 0 0 16px rgba(248,200,90,.9);
+    }
+
+    h1 {
+      margin: 18px 0 10px;
+      font-size: clamp(30px, 6vw, 48px);
+      letter-spacing: -.045em;
+      line-height: 1.02;
+    }
+
+    p {
+      margin: 0;
+      color: #a6afc7;
+      font-size: 14px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+    }
+
+    .end-time {
+      display: none;
+      margin-top: 20px;
+      padding: 14px 16px;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 14px;
+      background: rgba(255,255,255,.03);
+      color: #c7cfe4;
+      font-size: 11px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    button, a {
+      min-height: 40px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 15px;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 11px;
+      color: #f4f7ff;
+      background: rgba(255,255,255,.045);
+      font: inherit;
+      font-size: 11px;
+      font-weight: 750;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    button:hover, a:hover { background: rgba(255,255,255,.08); }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="brand"><span class="mark">F</span> FuzzTheHuzz</div>
+    <div class="status"><span class="dot"></span> Scheduled maintenance</div>
+    <h1>We’ll be right back.</h1>
+    <p id="maintenance-message">Fuzz is temporarily undergoing maintenance. Please check back soon.</p>
+    <div class="end-time" id="maintenance-end"></div>
+
+    <div class="actions">
+      <button id="check-again" type="button">Check again</button>
+      <a href="/login">Staff sign in</a>
+    </div>
+  </main>
+
+  <script>
+    async function loadStatus() {
+      try {
+        const response = await fetch("/api/platform/config", {
+          credentials: "same-origin",
+          cache: "no-store",
+        });
+        const payload = await response.json();
+        const maintenance = payload.maintenance || {};
+
+        if (!maintenance.active || maintenance.bypass) {
+          window.location.replace("/");
+          return;
+        }
+
+        document.getElementById("maintenance-message").textContent =
+          maintenance.message || "Fuzz is temporarily undergoing maintenance. Please check back soon.";
+
+        const end = document.getElementById("maintenance-end");
+        if (maintenance.endAt) {
+          const formatted = new Intl.DateTimeFormat("en-US", {
+            dateStyle: "medium",
+            timeStyle: "short",
+          }).format(new Date(maintenance.endAt));
+          end.textContent = `Expected to reopen: ${formatted}`;
+          end.style.display = "block";
+        } else {
+          end.style.display = "none";
+        }
+      } catch {
+        // Keep the fallback maintenance message visible.
+      }
+    }
+
+    document.getElementById("check-again").addEventListener("click", loadStatus);
+    loadStatus();
+  </script>
+</body>
+</html>

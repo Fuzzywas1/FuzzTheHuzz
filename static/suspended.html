@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#050814" />
+  <title>Account Suspended · FuzzTheHuzz</title>
+
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      color: #f4f7ff;
+      background:
+        radial-gradient(circle at 18% 8%, rgba(248, 200, 90, .13), transparent 34%),
+        radial-gradient(circle at 88% 12%, rgba(127, 140, 255, .13), transparent 31%),
+        linear-gradient(145deg, #03050d, #060817 52%, #02040a);
+    }
+
+    body::before {
+      position: fixed;
+      inset: 0;
+      content: "";
+      opacity: .18;
+      background-image:
+        linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: linear-gradient(to bottom, black, transparent 92%);
+      pointer-events: none;
+    }
+
+    .card {
+      position: relative;
+      z-index: 1;
+      width: min(620px, calc(100vw - 32px));
+      padding: 30px;
+      border: 1px solid rgba(248, 200, 90, .23);
+      border-radius: 24px;
+      background: rgba(8, 12, 27, .91);
+      box-shadow: 0 35px 110px rgba(0, 0, 0, .58);
+      backdrop-filter: blur(22px);
+    }
+
+    .symbol {
+      display: grid;
+      width: 52px;
+      height: 52px;
+      place-items: center;
+      margin-bottom: 20px;
+      border: 1px solid rgba(248, 200, 90, .28);
+      border-radius: 16px;
+      color: #fff0bd;
+      background: rgba(248, 200, 90, .09);
+      font-size: 24px;
+      font-weight: 800;
+    }
+
+    .eyebrow {
+      margin: 0 0 7px;
+      color: #f8c85a;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 5vw, 42px);
+      letter-spacing: -.04em;
+    }
+
+    .intro {
+      margin: 13px 0 0;
+      color: #a6afc7;
+      font-size: 14px;
+      line-height: 1.65;
+    }
+
+    .details {
+      display: grid;
+      gap: 10px;
+      margin: 24px 0;
+      padding: 16px;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 16px;
+      background: rgba(255,255,255,.025);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 130px minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .row span {
+      color: #6f7890;
+      font-size: 11px;
+    }
+
+    .row strong {
+      color: #f4f7ff;
+      font-size: 12px;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+
+    .countdown {
+      color: #fff0bd !important;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    button,
+    a {
+      display: inline-flex;
+      min-height: 42px;
+      align-items: center;
+      justify-content: center;
+      padding: 0 16px;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 12px;
+      color: #f4f7ff;
+      background: rgba(255,255,255,.045);
+      font: inherit;
+      font-size: 12px;
+      font-weight: 750;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    button:hover,
+    a:hover { background: rgba(255,255,255,.08); }
+
+    .primary {
+      border-color: rgba(248, 200, 90, .25);
+      color: #fff0bd;
+      background: rgba(248, 200, 90, .09);
+    }
+
+    .loading {
+      color: #a6afc7;
+    }
+
+    @media (max-width: 560px) {
+      .card { padding: 22px; }
+      .row { grid-template-columns: 1fr; gap: 4px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="symbol">!</div>
+    <p class="eyebrow">Account restriction</p>
+    <h1>Temporarily suspended</h1>
+    <p class="intro" id="intro">
+      Loading your account status...
+    </p>
+
+    <section class="details" id="details" hidden>
+      <div class="row">
+        <span>Account</span>
+        <strong id="username">—</strong>
+      </div>
+      <div class="row">
+        <span>Reason</span>
+        <strong id="reason">—</strong>
+      </div>
+      <div class="row">
+        <span>Suspended until</span>
+        <strong id="until">—</strong>
+      </div>
+      <div class="row">
+        <span>Time remaining</span>
+        <strong class="countdown" id="countdown">—</strong>
+      </div>
+    </section>
+
+    <div class="actions">
+      <button class="primary" id="check-again" type="button">
+        Check again
+      </button>
+      <button id="logout" type="button">
+        Sign out
+      </button>
+    </div>
+  </main>
+
+  <script>
+    let suspendedUntil = null;
+    let timer = null;
+
+    function formatRemaining(milliseconds) {
+      if (milliseconds <= 0) return "Suspension expired";
+
+      const totalSeconds = Math.ceil(milliseconds / 1000);
+      const days = Math.floor(totalSeconds / 86400);
+      const hours = Math.floor((totalSeconds % 86400) / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+
+      const parts = [];
+      if (days) parts.push(`${days}d`);
+      if (hours || days) parts.push(`${hours}h`);
+      if (minutes || hours || days) parts.push(`${minutes}m`);
+      parts.push(`${seconds}s`);
+      return parts.join(" ");
+    }
+
+    function updateCountdown() {
+      if (!suspendedUntil) return;
+
+      const remaining = suspendedUntil.getTime() - Date.now();
+      document.getElementById("countdown").textContent = formatRemaining(remaining);
+
+      if (remaining <= 0) {
+        clearInterval(timer);
+        window.setTimeout(loadStatus, 900);
+      }
+    }
+
+    async function loadStatus() {
+      document.getElementById("intro").textContent = "Checking your account status...";
+
+      try {
+        const response = await fetch("/api/auth/suspension", {
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+        });
+
+        if (response.status === 401) {
+          window.location.replace("/login");
+          return;
+        }
+
+        const payload = await response.json();
+
+        if (!payload.suspended) {
+          window.location.replace("/");
+          return;
+        }
+
+        const suspension = payload.suspension || {};
+        suspendedUntil = new Date(suspension.suspendedUntil);
+
+        document.getElementById("intro").textContent =
+          "You cannot use protected FuzzTheHuzz features until this suspension ends or an administrator removes it.";
+        document.getElementById("username").textContent = payload.user?.username || "Unknown";
+        document.getElementById("reason").textContent = suspension.reason || "No reason was provided.";
+        document.getElementById("until").textContent = Number.isFinite(suspendedUntil.getTime())
+          ? suspendedUntil.toLocaleString()
+          : "Unknown";
+        document.getElementById("details").hidden = false;
+
+        clearInterval(timer);
+        updateCountdown();
+        timer = window.setInterval(updateCountdown, 1000);
+      } catch (error) {
+        document.getElementById("intro").textContent =
+          "Your suspension status could not be loaded. Check your connection and try again.";
+      }
+    }
+
+    document.getElementById("check-again").addEventListener("click", loadStatus);
+    document.getElementById("logout").addEventListener("click", async () => {
+      try {
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: "{}",
+        });
+      } finally {
+        window.location.replace("/login");
+      }
+    });
+
+    loadStatus();
+  </script>
+</body>
+</html>
