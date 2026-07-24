@@ -18,8 +18,8 @@ if (!inFrame && !navigator.userAgent.includes("Firefox") && localStorage.getItem
       const style = iframe.style;
       const link = doc.createElement("link");
 
-      const name = localStorage.getItem("name") || "My Drive - Google Drive";
-      const icon = localStorage.getItem("icon") || "https://ssl.gstatic.com/docs/doclist/images/drive_2022q3_32dp.png";
+      const name = localStorage.getItem("name") || "Home";
+      const icon = localStorage.getItem("icon") || "/assets/media/favicon/classroom.png";
 
       doc.title = name;
       link.rel = "icon";
@@ -167,20 +167,25 @@ document.addEventListener("DOMContentLoaded", event => {
 });
 // Splash texts
 const SplashT = [
-  "If you have this website, then don't share it with anyone else",
+  "Search the web, open your apps, or jump into Fuzz AI.",
+  "Everything you need, all in one place.",
+  "Type a question, search, or paste a URL.",
+  "Your space to browse, create, and explore.",
 ];
 
 let SplashI = Math.floor(Math.random() * SplashT.length);
 const SplashE = document.getElementById("splash");
 
 function US() {
+  if (!SplashE) return;
   SplashI = (SplashI + 1) % SplashT.length;
   SplashE.innerText = SplashT[SplashI];
 }
 
-SplashE.innerText = SplashT[SplashI];
-
-SplashE.addEventListener("click", US);
+if (SplashE) {
+  SplashE.innerText = SplashT[SplashI];
+  SplashE.addEventListener("click", US);
+}
 // Random URL
 function getRandomUrl() {
   const randomUrls = [

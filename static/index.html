@@ -1,162 +1,189 @@
 <!doctype html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="referrer" content="no-referrer" />
   <meta http-equiv="X-Content-Type-Options" content="nosniff" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#050713" />
 
-  <link rel="shortcut icon" href="favicon.png" />
+  <link id="tab-favicon" rel="shortcut icon" href="/assets/media/favicon/classroom.png" />
   <title>Home</title>
 
-  <link rel="stylesheet" href="/assets/css/global.css" />
-  <link rel="stylesheet" href="/assets/css/h.css" />
-  <link rel="stylesheet" href="/assets/css/nav.css" />
+  <link rel="stylesheet" href="/assets/css/global.css?v=6" />
+  <link rel="stylesheet" href="/assets/css/h.css?v=7" />
+  <link rel="stylesheet" href="/assets/css/nav.css?v=6" />
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+  />
 
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
-  <!-- optional analytics only -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-CQ2VHTSDMR"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-CQ2VHTSDMR');
+    function gtag() {
+      window.dataLayer.push(arguments);
+    }
+    gtag("js", new Date());
+    gtag("config", "G-CQ2VHTSDMR");
   </script>
-
-  <style>
-    /* 🌌 SPACE BACKGROUND */
-    body {
-      margin: 0;
-      overflow: hidden;
-      background: radial-gradient(circle at center, #050510, #000000);
-      font-family: Arial, sans-serif;
-      color: white;
-    }
-
-    #stars {
-      position: fixed;
-      width: 100%;
-      height: 100%;
-      z-index: -2;
-    }
-
-    /* 🌠 MAIN UI */
-    .main {
-      text-align: center;
-      margin-top: 15vh;
-      animation: fadeIn 1.2s ease-out;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* ✨ TITLE */
-    .title {
-      font-size: 50px;
-      text-shadow:
-        0 0 10px #00c6ff,
-        0 0 25px #7b2ff7;
-      animation: float 3s ease-in-out infinite;
-    }
-
-    @keyframes float {
-      0%,100% { transform: translateY(0); }
-      50% { transform: translateY(-8px); }
-    }
-
-    /* 🔍 SEARCH BAR */
-    #input {
-      margin-top: 20px;
-      width: 320px;
-      padding: 12px;
-      border-radius: 12px;
-      border: 1px solid rgba(0,200,255,0.4);
-      background: rgba(255,255,255,0.05);
-      color: white;
-      outline: none;
-      transition: 0.3s;
-    }
-
-    #input:focus {
-      box-shadow: 0 0 20px rgba(0,200,255,0.6);
-      transform: scale(1.03);
-    }
-  </style>
 </head>
 
-<body>
-
-  <canvas id="stars"></canvas>
+<body class="home-page">
+  <canvas id="stars" aria-hidden="true"></canvas>
+  <div class="home-grid" aria-hidden="true"></div>
+  <div class="home-glow home-glow-one" aria-hidden="true"></div>
+  <div class="home-glow home-glow-two" aria-hidden="true"></div>
 
   <div class="f-nav"></div>
 
-  <div class="main">
-    <h1 class="title">FuzzTheHuzz</h1>
+  <main class="home-main">
+    <section class="home-hero" aria-labelledby="home-title">
 
-    <p id="splash"></p>
+      <h1 id="home-title" class="home-title">
+        <span>Fuzz</span><strong>TheHuzz</strong>
+      </h1>
 
-    <div class="search-container">
-      <form id="fv" method="POST">
-        <input id="input" class="truncate" placeholder="Search or enter a URL" type="text" />
-      </form>
-    </div>
-  </div>
+      <p id="splash" class="home-subtitle">
+        Search the web, open your apps, or jump into Fuzz AI.
+      </p>
 
-  <!-- CORE PROXY SCRIPTS (KEEP THESE) -->
-  <script src="assets/js/index-3.js"></script>
-  <script src="/assets/js/h1.js"></script>
-  <script src="./assets/mathematics/bundle.js"></script>
-  <script src="./assets/mathematics/config.js"></script>
-  <script src="/assets/js/m1.js"></script>
+      <div class="home-search-card">
+        <form id="fv" class="home-search-form" method="POST" autocomplete="off">
+          <label class="sr-only" for="input">Search or enter a URL</label>
+          <i class="fa-solid fa-magnifying-glass home-search-icon" aria-hidden="true"></i>
+          <input
+            id="input"
+            class="home-search-input"
+            name="query"
+            placeholder="Search or enter a URL"
+            type="text"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button class="home-search-button" type="submit" aria-label="Search">
+            <span>Go</span>
+            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+          </button>
+        </form>
 
-  <!-- 🌠 STAR ANIMATION -->
+        <div class="home-search-footer">
+          <span><kbd>Enter</kbd> to search</span>
+          <span class="home-search-divider"></span>
+          <span>URLs open directly</span>
+        </div>
+      </div>
+
+      <nav class="home-actions" aria-label="Quick actions">
+        <a class="home-action" href="/ai">
+          <span class="home-action-icon">
+            <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+          </span>
+          <span class="home-action-copy">
+            <strong>Fuzz AI</strong>
+            <small>Ask, create, and explore</small>
+          </span>
+          <i class="fa-solid fa-chevron-right home-action-arrow" aria-hidden="true"></i>
+        </a>
+
+        <a class="home-action" href="/b">
+          <span class="home-action-icon">
+            <i class="fa-solid fa-table-cells-large" aria-hidden="true"></i>
+          </span>
+          <span class="home-action-copy">
+            <strong>Apps</strong>
+            <small>Open your favorite tools</small>
+          </span>
+          <i class="fa-solid fa-chevron-right home-action-arrow" aria-hidden="true"></i>
+        </a>
+
+        <a class="home-action" href="/d">
+          <span class="home-action-icon">
+            <i class="fa-regular fa-window-restore" aria-hidden="true"></i>
+          </span>
+          <span class="home-action-copy">
+            <strong>Tabs</strong>
+            <small>Continue browsing</small>
+          </span>
+          <i class="fa-solid fa-chevron-right home-action-arrow" aria-hidden="true"></i>
+        </a>
+      </nav>
+    </section>
+  </main>
+
+  <!-- Core proxy scripts -->
+  <script src="/assets/js/index-3.js?v=6"></script>
+  <script src="/assets/js/h1.js?v=6"></script>
+  <script src="/assets/mathematics/bundle.js"></script>
+  <script src="/assets/mathematics/config.js"></script>
+  <script src="/assets/js/m1.js?v=6"></script>
+
   <script>
-    const canvas = document.getElementById("stars");
-    const ctx = canvas.getContext("2d");
+    (() => {
+      const canvas = document.getElementById("stars");
+      const context = canvas.getContext("2d");
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      let width = 0;
+      let height = 0;
+      let pixelRatio = 1;
+      let stars = [];
 
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+      function resizeCanvas() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
 
-    let stars = Array.from({ length: 120 }, () => ({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      r: Math.random() * 1.3,
-      d: Math.random() * 0.6
-    }));
+        canvas.width = Math.floor(width * pixelRatio);
+        canvas.height = Math.floor(height * pixelRatio);
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
 
-    function animate() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "white";
+        const starCount = Math.max(70, Math.min(180, Math.floor((width * height) / 8500)));
+        stars = Array.from({ length: starCount }, () => ({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          radius: Math.random() * 1.35 + 0.2,
+          speed: Math.random() * 0.12 + 0.025,
+          opacity: Math.random() * 0.65 + 0.2,
+          pulse: Math.random() * Math.PI * 2,
+        }));
+      }
 
-      for (let s of stars) {
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-        ctx.fill();
+      function draw(time = 0) {
+        context.clearRect(0, 0, width, height);
 
-        s.y += s.d;
+        for (const star of stars) {
+          const twinkle = reduceMotion
+            ? star.opacity
+            : star.opacity + Math.sin(time * 0.0012 + star.pulse) * 0.12;
 
-        if (s.y > canvas.height) {
-          s.y = 0;
-          s.x = Math.random() * canvas.width;
+          context.beginPath();
+          context.fillStyle = `rgba(221, 231, 255, ${Math.max(0.08, twinkle)})`;
+          context.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+          context.fill();
+
+          if (!reduceMotion) {
+            star.y += star.speed;
+            if (star.y > height + 3) {
+              star.y = -3;
+              star.x = Math.random() * width;
+            }
+          }
+        }
+
+        if (!reduceMotion) {
+          window.requestAnimationFrame(draw);
         }
       }
 
-      requestAnimationFrame(animate);
-    }
-
-    animate();
-
-    window.addEventListener("resize", () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    });
+      resizeCanvas();
+      draw();
+      window.addEventListener("resize", resizeCanvas, { passive: true });
+    })();
   </script>
 
-    <script src="/assets/js/account-shell.js?v=1" defer></script>
-  <script src="/assets/js/site-control.js" defer></script>
+  <script src="/assets/js/account-shell.js?v=2" defer></script>
+  <script src="/assets/js/site-control.js?v=2" defer></script>
 </body>
 </html>
