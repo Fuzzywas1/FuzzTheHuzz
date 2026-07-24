@@ -88,6 +88,23 @@
     return tabs.get(activeId) || null;
   }
 
+  /*
+   * Keep the active-tab visibility class whenever a tab changes between
+   * start, loading, loaded, and error states.
+   *
+   * The previous overhaul replaced host.className outright, which removed
+   * "is-active" and made the iframe container display:none after navigation.
+   */
+  function setHostState(tab, ...stateClasses) {
+    tab.host.className = [
+      "proxy-tab-host",
+      ...stateClasses.filter(Boolean),
+      tab.id === activeId ? "is-active" : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
+
   function currentEngine() {
     return window.FuzzProxy.getEngine();
   }
@@ -486,8 +503,10 @@
     tab.engine =
       tab.engine || currentEngine();
 
-    tab.host.className =
-      "proxy-tab-host browser-start-host";
+    setHostState(
+      tab,
+      "browser-start-host",
+    );
     tab.host.innerHTML = `
       <section class="browser-start-page">
         <div class="start-content">
@@ -597,8 +616,10 @@
       "Page failed";
     setTabFavicon(tab, "");
 
-    tab.host.className =
-      "proxy-tab-host has-error";
+    setHostState(
+      tab,
+      "has-error",
+    );
     tab.host.innerHTML = `
       <section class="tabs-error-card">
         <div class="tabs-error-content">
@@ -708,8 +729,10 @@
     tab.isStart = false;
     tab.loading = true;
 
-    tab.host.className =
-      "proxy-tab-host is-loading";
+    setHostState(
+      tab,
+      "is-loading",
+    );
     tab.host.innerHTML = "";
     tab.titleNode.textContent = "Loading…";
     setTabFavicon(tab, "");
@@ -745,8 +768,7 @@
       tab.url = view.url;
       tab.engine = view.engine;
       tab.loading = false;
-      tab.host.className =
-        "proxy-tab-host";
+      setHostState(tab);
 
       view.element.addEventListener(
         "load",
