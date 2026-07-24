@@ -110,23 +110,27 @@ app.use(
   }),
 );
 
-/* Scramjet's WASM runtime benefits from a cross-origin-isolated controller page. */
+/*
+ * Do not enable COOP/COEP on the proxy browser pages.
+ *
+ * The tabs and standalone proxy pages embed rewritten websites in frames.
+ * Cross-origin isolation can block those frames before Ultraviolet or
+ * Scramjet gets a chance to render them.
+ */
 app.use((req, res, next) => {
-  const isolatedPage = new Set([
+  const proxyBrowserPage = new Set([
     "/d",
     "/p",
     "/tabs.html",
     "/proxy.html",
   ]);
 
-  if (isolatedPage.has(req.path)) {
-    res.setHeader(
+  if (proxyBrowserPage.has(req.path)) {
+    res.removeHeader(
       "Cross-Origin-Opener-Policy",
-      "same-origin",
     );
-    res.setHeader(
+    res.removeHeader(
       "Cross-Origin-Embedder-Policy",
-      "credentialless",
     );
   }
 
