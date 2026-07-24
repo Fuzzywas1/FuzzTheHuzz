@@ -7,6 +7,14 @@
   const MAX_RECENT = 8;
   const MAX_CUSTOM_APPS = 50;
 
+  /*
+   * These hosts must open as normal top-level websites instead of being sent
+   * through Fuzz's proxy, about:blank wrapper, or alternate proxy engines.
+   */
+  const DIRECT_HOSTS = [
+    "now.gg",
+  ];
+
   const CATEGORY_ORDER = [
     "all",
     "favorites",
@@ -687,6 +695,34 @@
     }).catch(() => {});
   }
 
+  function shouldOpenDirectly(rawUrl) {
+    try {
+      const hostname = new URL(rawUrl, window.location.href)
+        .hostname
+        .toLowerCase();
+
+      return DIRECT_HOSTS.some(
+        (host) =>
+          hostname === host ||
+          hostname.endsWith(`.${host}`),
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  function openDirectly(rawUrl) {
+    const opened = window.open(
+      rawUrl,
+      "_blank",
+      "noopener,noreferrer",
+    );
+
+    if (!opened) {
+      window.location.assign(rawUrl);
+    }
+  }
+
   function openApp(app, mode = "default") {
     if (!app) return;
 
@@ -703,6 +739,15 @@
     if (!selected) return;
 
     recordOpen(app);
+
+    /*
+     * now.gg rejects proxy sessions. Always open it directly, even when the
+     * user clicks the about:blank/direct icon.
+     */
+    if (shouldOpenDirectly(selected)) {
+      openDirectly(selected);
+      return;
+    }
 
     if (mode === "blank") {
       if (typeof window.blank === "function") {
