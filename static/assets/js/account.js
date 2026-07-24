@@ -388,17 +388,294 @@ async function renderPrivacy() {
   });
 }
 
+const SETTINGS_CLOAK_PRESETS = Object.freeze({
+  Classroom: {
+    label: "Google Classroom",
+    title: "Home",
+    icon: "/assets/media/favicon/classroom.png",
+  },
+  Google: {
+    label: "Google",
+    title: "Google",
+    icon: "/assets/media/favicon/google.png",
+  },
+  Drive: {
+    label: "Google Drive",
+    title: "My Drive - Google Drive",
+    icon: "/assets/media/favicon/drive.png",
+  },
+  Gmail: {
+    label: "Gmail",
+    title: "Gmail",
+    icon: "/assets/media/favicon/gmail.png",
+  },
+  Canvas: {
+    label: "Canvas",
+    title: "Dashboard",
+    icon: "/assets/media/favicon/canvas.png",
+  },
+  IXL: {
+    label: "IXL",
+    title: "IXL | Dashboard",
+    icon: "/assets/media/favicon/ixl.png",
+  },
+  Fuzz: {
+    label: "FuzzTheHuzz",
+    title: "FuzzTheHuzz",
+    icon: "/favicon.png",
+  },
+});
+
+function readJsonStorage(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function readBrowserSettings() {
+  const storedKeys = readJsonStorage("eventKey", null);
+  const panicKeys =
+    localStorage.getItem("eventKeyRaw") ||
+    (Array.isArray(storedKeys) ? storedKeys.join(",") : "Ctrl,E");
+
+  return {
+    aboutBlank: localStorage.getItem("ab") !== "false",
+    panicKeys,
+    panicLink:
+      localStorage.getItem("pLink") ||
+      "https://classroom.google.com/",
+    cloakPreset:
+      localStorage.getItem("selectedOption") ||
+      "Classroom",
+    backgroundImage:
+      localStorage.getItem("backgroundImage") || "",
+    proxyMode:
+      localStorage.getItem("dy") === "true"
+        ? "dy"
+        : "uv",
+    particles:
+      localStorage.getItem("Particles") === "true" ||
+      localStorage.getItem("particles") === "true",
+  };
+}
+
+function normalizePanicKeys(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 8);
+}
+
+function setCloakPreset(value) {
+  const preset =
+    SETTINGS_CLOAK_PRESETS[value] ||
+    SETTINGS_CLOAK_PRESETS.Classroom;
+
+  localStorage.setItem("selectedOption", value);
+  localStorage.setItem("name", preset.title);
+  localStorage.setItem("icon", preset.icon);
+  localStorage.removeItem("CustomName");
+  localStorage.removeItem("CustomIcon");
+
+  document.title = preset.title;
+  const favicon =
+    document.querySelector('link[rel~="icon"]') ||
+    document.querySelector('link[rel="shortcut icon"]');
+  favicon?.setAttribute("href", preset.icon);
+}
+
+function saveBrowserSettings(values) {
+  const keys = normalizePanicKeys(values.panicKeys);
+  if (keys.length === 0) {
+    throw new Error("Enter at least one panic key.");
+  }
+
+  let panicUrl;
+  try {
+    panicUrl = new URL(values.panicLink);
+  } catch {
+    throw new Error("Enter a valid panic-link URL, including https://.");
+  }
+
+  if (!["http:", "https:"].includes(panicUrl.protocol)) {
+    throw new Error("The panic link must use http:// or https://.");
+  }
+
+  localStorage.setItem("ab", String(values.aboutBlank === true));
+  localStorage.setItem("eventKey", JSON.stringify(keys));
+  localStorage.setItem("eventKeyRaw", keys.join(","));
+  localStorage.setItem("pLink", panicUrl.toString());
+  localStorage.setItem("backgroundImage", values.backgroundImage || "");
+
+  const dynamic = values.proxyMode === "dy";
+  localStorage.setItem("uv", String(!dynamic));
+  localStorage.setItem("dy", String(dynamic));
+
+  localStorage.setItem("Particles", String(values.particles === true));
+  localStorage.setItem("particles", String(values.particles === true));
+
+  setCloakPreset(values.cloakPreset);
+
+  if (values.backgroundImage) {
+    document.body.style.backgroundImage = `url('${values.backgroundImage.replaceAll("'", "%27")}')`;
+  } else {
+    document.body.style.removeProperty("background-image");
+  }
+}
+
+function openAboutBlankWindow() {
+  const popup = window.open("about:blank", "_blank");
+  if (!popup || popup.closed) {
+    throw new Error("The popup was blocked. Allow popups for this site and try again.");
+  }
+
+  const doc = popup.document;
+  const iframe = doc.createElement("iframe");
+  const favicon = doc.createElement("link");
+
+  doc.title = localStorage.getItem("name") || "My Drive - Google Drive";
+  favicon.rel = "icon";
+  favicon.href =
+    localStorage.getItem("icon") ||
+    "https://ssl.gstatic.com/docs/doclist/images/drive_2022q3_32dp.png";
+
+  iframe.src = window.location.origin;
+  Object.assign(iframe.style, {
+    position: "fixed",
+    inset: "0",
+    width: "100%",
+    height: "100%",
+    border: "0",
+    outline: "0",
+  });
+
+  doc.head.appendChild(favicon);
+  doc.body.style.margin = "0";
+  doc.body.appendChild(iframe);
+}
+
+function exportBrowserSettings() {
+  const allowedKeys = [
+    "ab",
+    "eventKey",
+    "eventKeyRaw",
+    "pLink",
+    "selectedOption",
+    "name",
+    "icon",
+    "CustomName",
+    "CustomIcon",
+    "backgroundImage",
+    "uv",
+    "dy",
+    "Particles",
+    "particles",
+    "engine",
+    "enginename",
+    "theme",
+  ];
+
+  const browserSettings = {};
+  for (const key of allowedKeys) {
+    const value = localStorage.getItem(key);
+    if (value !== null) browserSettings[key] = value;
+  }
+
+  const payload = {
+    product: "FuzzTheHuzz",
+    type: "browser-settings",
+    exportedAt: new Date().toISOString(),
+    browserSettings,
+  };
+
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {
+    type: "application/json;charset=utf-8",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `fuzz-browser-settings-${new Date().toISOString().slice(0, 10)}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function importBrowserSettings(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("That settings file could not be read."));
+    reader.onload = () => {
+      try {
+        const payload = JSON.parse(String(reader.result || "{}"));
+        const values = payload.browserSettings;
+        if (!values || typeof values !== "object" || Array.isArray(values)) {
+          throw new Error("That is not a valid Fuzz browser-settings export.");
+        }
+
+        const allowedKeys = new Set([
+          "ab",
+          "eventKey",
+          "eventKeyRaw",
+          "pLink",
+          "selectedOption",
+          "name",
+          "icon",
+          "CustomName",
+          "CustomIcon",
+          "backgroundImage",
+          "uv",
+          "dy",
+          "Particles",
+          "particles",
+          "engine",
+          "enginename",
+          "theme",
+        ]);
+
+        for (const [key, value] of Object.entries(values)) {
+          if (allowedKeys.has(key) && typeof value === "string") {
+            localStorage.setItem(key, value);
+          }
+        }
+
+        resolve();
+      } catch (error) {
+        reject(error);
+      }
+    };
+    reader.readAsText(file);
+  });
+}
+
 async function renderPreferences() {
-  loading("Loading preferences…");
+  loading("Loading settings…");
   const payload = await request("/api/account/preferences");
   state.preferences = payload.preferences || {};
   const p = state.preferences;
+  const browser = readBrowserSettings();
 
   content.innerHTML = `
     <div class="account-section">
+      <div class="account-callout">
+        <strong>Settings are now part of My Account.</strong><br>
+        Account preferences sync to your signed-in account. Browser settings apply only to this browser and device.
+      </div>
+
       <form id="preferences-form" class="account-section">
+        <div class="account-settings-heading">
+          <div>
+            <span class="account-settings-kicker">Synced settings</span>
+            <h2>Account preferences</h2>
+            <p>These preferences follow your account across signed-in devices.</p>
+          </div>
+          <span class="account-badge success">Account synced</span>
+        </div>
+
         <div class="account-grid-2">
-          ${panel("Site preferences", "How Fuzz looks and behaves on this browser", `
+          ${panel("Site preferences", "How Fuzz looks and behaves", `
             <div class="account-form">
               <label class="account-label">Appearance<select class="account-select" id="pref-appearance"><option value="space" ${p.appearance === "space" ? "selected" : ""}>Space</option><option value="midnight" ${p.appearance === "midnight" ? "selected" : ""}>Midnight</option><option value="dim" ${p.appearance === "dim" ? "selected" : ""}>Dim</option></select></label>
               <label class="account-label">Default search engine<select class="account-select" id="pref-engine">${Object.entries(payload.proxyEngines || {}).map(([key, engine]) => `<option value="${escapeHtml(key)}" ${p.defaultProxyEngine === key ? "selected" : ""}>${escapeHtml(engine.name)}</option>`).join("")}</select></label>
@@ -406,23 +683,152 @@ async function renderPreferences() {
             </div>
           `)}
 
-          ${panel("Notifications and accessibility", "Choose which optional interface features are enabled", `
+          ${panel("Notifications and accessibility", "Optional interface and privacy features", `
             <div class="account-switch-row"><div class="account-switch-copy"><strong>Show site announcements</strong><span>Display active banners published by the owner.</span></div><label class="account-switch"><input id="pref-announcements" type="checkbox" ${p.announcementsEnabled !== false ? "checked" : ""} /><span></span></label></div>
             <div class="account-switch-row"><div class="account-switch-copy"><strong>Reduced motion</strong><span>Minimize interface animation and transitions.</span></div><label class="account-switch"><input id="pref-motion" type="checkbox" ${p.reducedMotion === true ? "checked" : ""} /><span></span></label></div>
             <div class="account-switch-row"><div class="account-switch-copy"><strong>Keep detailed proxy history</strong><span>Save future entered searches, URLs, and destination domains.</span></div><label class="account-switch"><input id="pref-proxy-history" type="checkbox" ${p.retainProxyHistory !== false ? "checked" : ""} /><span></span></label></div>
           `)}
         </div>
-        <div class="account-toolbar"><span class="account-help">Saved preferences are applied across your signed-in Fuzz pages.</span><button class="account-button primary" type="submit"><i class="fa-solid fa-floppy-disk"></i>Save preferences</button></div>
+
+        <div class="account-toolbar account-settings-save-row"><span class="account-help">Saved account preferences are applied across your signed-in Fuzz pages.</span><button class="account-button primary" type="submit"><i class="fa-solid fa-cloud-arrow-up"></i>Save account preferences</button></div>
+      </form>
+
+      <form id="browser-settings-form" class="account-section">
+        <div class="account-settings-heading">
+          <div>
+            <span class="account-settings-kicker">This device</span>
+            <h2>Browser settings</h2>
+            <p>These options stay in this browser's local storage.</p>
+          </div>
+          <span class="account-badge">Browser only</span>
+        </div>
+
+        <div class="account-grid-2">
+          ${panel("Privacy window", "About:blank and panic-key behavior", `
+            <div class="account-switch-row"><div class="account-switch-copy"><strong>Open in about:blank automatically</strong><span>Use the site's existing about:blank startup behavior on supported browsers.</span></div><label class="account-switch"><input id="browser-about-blank" type="checkbox" ${browser.aboutBlank ? "checked" : ""} /><span></span></label></div>
+            <div class="account-form" style="margin-top:13px">
+              <label class="account-label">Panic keys<input class="account-field" id="browser-panic-keys" value="${escapeHtml(browser.panicKeys)}" placeholder="Ctrl,E or A,B,C" /></label>
+              <label class="account-label">Panic link<input class="account-field" id="browser-panic-link" type="url" value="${escapeHtml(browser.panicLink)}" placeholder="https://classroom.google.com/" /></label>
+              <button class="account-button" id="open-about-blank" type="button"><i class="fa-regular fa-window-restore"></i>Open about:blank window</button>
+            </div>
+          `)}
+
+          ${panel("Tab and appearance", "Local tab cloak and background controls", `
+            <div class="account-form">
+              <label class="account-label">Tab cloak<select class="account-select" id="browser-cloak">${Object.entries(SETTINGS_CLOAK_PRESETS).map(([key, preset]) => `<option value="${escapeHtml(key)}" ${browser.cloakPreset === key ? "selected" : ""}>${escapeHtml(preset.label)}</option>`).join("")}</select></label>
+              <label class="account-label">Background image URL<input class="account-field" id="browser-background" type="url" value="${escapeHtml(browser.backgroundImage)}" placeholder="https://example.com/background.jpg" /></label>
+              <button class="account-button" id="reset-browser-background" type="button"><i class="fa-solid fa-rotate-left"></i>Reset background</button>
+            </div>
+          `)}
+
+          ${panel("Proxy and effects", "Choose the local proxy engine and visual effects", `
+            <div class="account-form">
+              <label class="account-label">Proxy mode<select class="account-select" id="browser-proxy-mode"><option value="uv" ${browser.proxyMode === "uv" ? "selected" : ""}>Ultraviolet</option><option value="dy" ${browser.proxyMode === "dy" ? "selected" : ""}>Dynamic (beta)</option></select></label>
+              <div class="account-switch-row"><div class="account-switch-copy"><strong>Particles</strong><span>Show the legacy particle effect on supported pages.</span></div><label class="account-switch"><input id="browser-particles" type="checkbox" ${browser.particles ? "checked" : ""} /><span></span></label></div>
+            </div>
+          `)}
+
+          ${panel("Browser data", "Move local settings between browsers", `
+            <div class="account-callout">This export contains browser preferences only. It does not include your password, login token, AI chats, or account data.</div>
+            <div class="account-toolbar-group" style="margin-top:13px">
+              <button class="account-button" id="export-browser-settings" type="button"><i class="fa-solid fa-download"></i>Export browser settings</button>
+              <button class="account-button" id="import-browser-settings" type="button"><i class="fa-solid fa-upload"></i>Import browser settings</button>
+              <input id="browser-settings-file" type="file" accept="application/json,.json" hidden />
+            </div>
+          `)}
+        </div>
+
+        <div class="account-toolbar account-settings-save-row"><span class="account-help">Some browser changes require a page reload before every part of the site updates.</span><button class="account-button primary" type="submit"><i class="fa-solid fa-floppy-disk"></i>Save browser settings</button></div>
       </form>
     </div>`;
 
   content.querySelector("#preferences-form")?.addEventListener("submit", async (event) => {
-    event.preventDefault(); const button = event.currentTarget.querySelector("button[type=submit]"); button.disabled = true;
-    const values = { announcementsEnabled: content.querySelector("#pref-announcements").checked, retainProxyHistory: content.querySelector("#pref-proxy-history").checked, defaultProxyEngine: content.querySelector("#pref-engine").value, aiBehavior: content.querySelector("#pref-ai").value, reducedMotion: content.querySelector("#pref-motion").checked, appearance: content.querySelector("#pref-appearance").value };
-    try { const result = await request("/api/account/preferences", { method: "PUT", body: JSON.stringify(values) }); state.preferences = result.preferences; state.overview = null; toast("Preferences saved. Reloading to apply them…"); window.setTimeout(() => window.location.reload(), 650); } catch (error) { toast(error.message, "error"); button.disabled = false; }
+    event.preventDefault();
+    const button = event.currentTarget.querySelector("button[type=submit]");
+    button.disabled = true;
+    const values = {
+      announcementsEnabled: content.querySelector("#pref-announcements").checked,
+      retainProxyHistory: content.querySelector("#pref-proxy-history").checked,
+      defaultProxyEngine: content.querySelector("#pref-engine").value,
+      aiBehavior: content.querySelector("#pref-ai").value,
+      reducedMotion: content.querySelector("#pref-motion").checked,
+      appearance: content.querySelector("#pref-appearance").value,
+    };
+
+    try {
+      const result = await request("/api/account/preferences", {
+        method: "PUT",
+        body: JSON.stringify(values),
+      });
+      state.preferences = result.preferences;
+      state.overview = null;
+      toast("Account preferences saved. Reloading to apply them…");
+      window.setTimeout(() => window.location.reload(), 650);
+    } catch (error) {
+      toast(error.message, "error");
+      button.disabled = false;
+    }
+  });
+
+  content.querySelector("#browser-settings-form")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    try {
+      saveBrowserSettings({
+        aboutBlank: content.querySelector("#browser-about-blank").checked,
+        panicKeys: content.querySelector("#browser-panic-keys").value,
+        panicLink: content.querySelector("#browser-panic-link").value,
+        cloakPreset: content.querySelector("#browser-cloak").value,
+        backgroundImage: content.querySelector("#browser-background").value.trim(),
+        proxyMode: content.querySelector("#browser-proxy-mode").value,
+        particles: content.querySelector("#browser-particles").checked,
+      });
+      toast("Browser settings saved. Reloading to apply them…");
+      window.setTimeout(() => window.location.reload(), 650);
+    } catch (error) {
+      toast(error.message, "error");
+    }
+  });
+
+  content.querySelector("#open-about-blank")?.addEventListener("click", () => {
+    try {
+      openAboutBlankWindow();
+      toast("Opened a new about:blank window.");
+    } catch (error) {
+      toast(error.message, "error");
+    }
+  });
+
+  content.querySelector("#reset-browser-background")?.addEventListener("click", () => {
+    const field = content.querySelector("#browser-background");
+    field.value = "";
+    localStorage.removeItem("backgroundImage");
+    document.body.style.removeProperty("background-image");
+    toast("Background reset. Save browser settings to keep the change.");
+  });
+
+  content.querySelector("#export-browser-settings")?.addEventListener("click", () => {
+    exportBrowserSettings();
+    toast("Browser settings exported.");
+  });
+
+  content.querySelector("#import-browser-settings")?.addEventListener("click", () => {
+    content.querySelector("#browser-settings-file")?.click();
+  });
+
+  content.querySelector("#browser-settings-file")?.addEventListener("change", async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      await importBrowserSettings(file);
+      toast("Browser settings imported. Reloading…");
+      window.setTimeout(() => window.location.reload(), 650);
+    } catch (error) {
+      toast(error.message, "error");
+    } finally {
+      event.target.value = "";
+    }
   });
 }
-
 async function renderRoute() {
   try {
     if (state.route === "security") return await renderSecurity();

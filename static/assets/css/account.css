@@ -292,3 +292,74 @@ body {
   .account-detail { grid-template-columns: 1fr; gap: 5px; }
   .account-message { width: 92%; }
 }
+
+/* =======================================================
+   INTEGRATED SETTINGS CENTER
+======================================================= */
+
+.account-settings-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 2px 2px 0;
+}
+
+.account-settings-heading h2 {
+  margin: 5px 0 0;
+  letter-spacing: -.025em;
+  font-size: 20px;
+}
+
+.account-settings-heading p {
+  margin: 6px 0 0;
+  color: var(--account-faint);
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.account-settings-kicker {
+  color: #9ca7ff;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+.account-settings-save-row {
+  padding: 14px 16px;
+  border: 1px solid var(--account-border);
+  border-radius: 15px;
+  background: rgba(127, 140, 255, .045);
+}
+
+#browser-settings-form .account-panel,
+#preferences-form .account-panel {
+  height: 100%;
+}
+
+#browser-settings-form .account-panel-body,
+#preferences-form .account-panel-body {
+  height: calc(100% - 68px);
+}
+
+#browser-settings-form .account-button {
+  width: max-content;
+}
+
+@media (max-width: 760px) {
+  .account-settings-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .account-settings-save-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .account-settings-save-row .account-button {
+    width: 100%;
+  }
+}

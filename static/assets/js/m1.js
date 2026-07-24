@@ -52,7 +52,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <span>Tabs</span>
         </a>`}
 
-        <a class="navbar-link" href="/./c">
+        <a class="navbar-link" href="/account#preferences">
           <i class="fa-solid fa-gear navbar-icon settings-icon"></i>
           <span>Settings</span>
         </a>
