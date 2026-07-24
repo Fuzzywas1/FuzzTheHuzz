@@ -1,99 +1,311 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="referrer" content="no-referrer" />
-  <meta http-equiv="X-Frame-Options" content="SAMEORIGIN" />
-  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="shortcut icon" id="tab-favicon" href="favicon.png" />
-  <title id="t">Home</title>
-  <link rel="stylesheet" href="/assets/css/global.css?v=6" />
-  <link rel="stylesheet" href="/assets/css/t.css?v=4" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <script>
-    window.addEventListener("resize", navigator.keyboard.lock(["Escape"]));
-  </script>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-CQ2VHTSDMR"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
 
-  gtag('config', 'G-CQ2VHTSDMR');
-</script>
+  <title>Home</title>
+  <link
+    id="tab-favicon"
+    rel="shortcut icon"
+    href="/assets/media/favicon/classroom.png"
+  />
+  <link
+    rel="stylesheet"
+    href="/assets/css/t.css?v=6"
+  />
+
   <script src="/baremux/index.js"></script>
   <script src="/scram/scramjet.all.js"></script>
-  <script src="/assets/js/proxy-engine.js?v=2"></script>
+
+  <script src="/assets/mathematics/bundle.js?v=2025-04-15"></script>
+  <script src="/assets/mathematics/config.js?v=2025-04-15"></script>
+
+  <script src="/assets/js/proxy-engine.js?v=3"></script>
 </head>
 
-<body id="no">
-  <nav class="nav" id="right-side-nav">
-    <ul id="tab-list"></ul>
-    <button title="add-tab" id="add-tab">
-      <i class="fa-solid fa-plus"></i>
-    </button>
-  </nav>
-  <div class="nav-bar">
-    <div class="nav-container">
-      <div class="nav-left">
-        <button title="Home Page" id="home-page" class="nav-button" onclick="Home()">
-          <i class="fa-solid fa-house"></i>
-        </button>
-        <button title="Back Arrow" class="nav-button" onclick="goBack()">
-          <i class="fa-solid fa-arrow-left"></i>
-        </button>
-        <button title="Forward Arrow" class="nav-button" onclick="goForward()">
-          <i class="fa-solid fa-arrow-right"></i>
-        </button>
-        <button title="Reload" onclick="reload()" class="nav-button">
-          <i class="fa-solid fa-rotate-right"></i>
-        </button>
-        <form id="fv" class="navpost" method="POST">
-          <input id="input" class="bar" placeholder="Search or enter a new URL" type="text" />
-        </form>
-        <select id="tabs-proxy-engine" class="tabs-engine-select" data-proxy-engine-select aria-label="Proxy engine">
-          <option value="scramjet">Scramjet · Recommended</option>
-          <option value="ultraviolet">Ultraviolet · Legacy</option>
-        </select>
+<body>
+  <header class="browser-shell" id="browser-shell">
+    <div class="tab-strip">
+      <button
+        class="browser-brand"
+        id="browser-brand"
+        type="button"
+        title="Return to Fuzz Home"
+        aria-label="Return to Fuzz Home"
+      >
+        <span>F</span>
+      </button>
+
+      <div class="tabs-scroller" id="tabs-scroller">
+        <div
+          class="tabs-list"
+          id="tab-list"
+          role="tablist"
+          aria-label="Browser tabs"
+        ></div>
       </div>
-      <div class="nav-right">
-        <button title="Fullscreen" id="fullscreen-button" class="nav-button nav-btn-right" onclick="FS()">
-          <i class="fa-solid fa-expand"></i>
+
+      <button
+        class="chrome-button add-tab-button"
+        id="add-tab"
+        type="button"
+        title="New tab (Ctrl+T)"
+        aria-label="New tab"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+      </button>
+
+      <button
+        class="chrome-button tab-strip-action"
+        id="collapse-tabs"
+        type="button"
+        title="Hide tab strip"
+        aria-label="Hide tab strip"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m7 14 5-5 5 5" />
+        </svg>
+      </button>
+    </div>
+
+    <div class="browser-toolbar">
+      <div class="navigation-controls">
+        <button
+          class="chrome-button"
+          id="home-page"
+          type="button"
+          title="Fuzz Home"
+          aria-label="Fuzz Home"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m3 11 9-8 9 8" />
+            <path d="M5.5 10v10h13V10" />
+            <path d="M9.5 20v-6h5v6" />
+          </svg>
         </button>
-        <button title="Window Popout" id="popout-button" class="nav-button nav-btn-right" onclick="popout()">
-          <i class="fa-solid fa-up-right-from-square"></i>
+
+        <button
+          class="chrome-button"
+          id="back-button"
+          type="button"
+          title="Back (Alt+Left)"
+          aria-label="Back"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m15 18-6-6 6-6" />
+          </svg>
         </button>
-        <button title="Inspect" class="nav-button nav-btn-right" onclick="eToggle()">
-          <i class="fa-solid fa-code"></i>
+
+        <button
+          class="chrome-button"
+          id="forward-button"
+          type="button"
+          title="Forward (Alt+Right)"
+          aria-label="Forward"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m9 18 6-6-6-6" />
+          </svg>
         </button>
-        <button title="Tabs" id="tabs-button" class="nav-button nav-btn-right">
-          <i class="fa-solid fa-magnifying-glass-minus"></i>
+
+        <button
+          class="chrome-button"
+          id="reload-button"
+          type="button"
+          title="Reload (Ctrl+R)"
+          aria-label="Reload"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 11a8 8 0 1 0-2.34 5.66" />
+            <path d="M20 4v7h-7" />
+          </svg>
+        </button>
+      </div>
+
+      <form
+        class="address-form"
+        id="fv"
+        autocomplete="off"
+      >
+        <span
+          class="address-status"
+          id="address-status"
+          title="Ready"
+          aria-hidden="true"
+        >
+          <svg viewBox="0 0 24 24">
+            <path d="M12 3 5.5 6v5.4c0 4.1 2.7 7.9 6.5 9.1 3.8-1.2 6.5-5 6.5-9.1V6L12 3Z" />
+            <path d="m9.5 12 1.7 1.7 3.5-3.7" />
+          </svg>
+        </span>
+
+        <input
+          id="input"
+          class="address-input"
+          type="text"
+          inputmode="url"
+          placeholder="Search the web or enter a URL"
+          aria-label="Search or enter a URL"
+          spellcheck="false"
+          autocapitalize="off"
+          autocomplete="off"
+        />
+
+        <button
+          class="address-clear"
+          id="clear-address"
+          type="button"
+          title="Clear"
+          aria-label="Clear address"
+          hidden
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m8 8 8 8M16 8l-8 8" />
+          </svg>
+        </button>
+
+        <span
+          class="address-shortcut"
+          id="address-shortcut"
+          aria-hidden="true"
+        >
+          Ctrl L
+        </span>
+
+        <span class="load-progress" id="load-progress"></span>
+      </form>
+
+      <label
+        class="engine-picker"
+        title="Choose proxy engine"
+      >
+        <span
+          class="engine-dot"
+          id="engine-dot"
+          aria-hidden="true"
+        ></span>
+
+        <span class="engine-copy">
+          <strong id="engine-label">Scramjet</strong>
+          <small id="engine-description">Recommended</small>
+        </span>
+
+        <select
+          id="tabs-proxy-engine"
+          data-proxy-engine-select
+          aria-label="Proxy engine"
+        >
+          <option value="scramjet">
+            Scramjet — Recommended
+          </option>
+          <option value="ultraviolet">
+            Ultraviolet — Legacy
+          </option>
+        </select>
+
+        <svg
+          class="engine-chevron"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path d="m8 10 4 4 4-4" />
+        </svg>
+      </label>
+
+      <div class="toolbar-actions">
+        <button
+          class="chrome-button"
+          id="popout-button"
+          type="button"
+          title="Open current page in a separate Fuzz window"
+          aria-label="Open in separate window"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M14 5h5v5" />
+            <path d="m19 5-8 8" />
+            <path d="M19 13v6H5V5h6" />
+          </svg>
+        </button>
+
+        <button
+          class="chrome-button"
+          id="fullscreen-button"
+          type="button"
+          title="Fullscreen browser"
+          aria-label="Fullscreen browser"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5" />
+          </svg>
+        </button>
+
+        <button
+          class="chrome-button more-button"
+          id="more-button"
+          type="button"
+          title="Browser menu"
+          aria-label="Browser menu"
+          aria-expanded="false"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="5" cy="12" r="1" />
+            <circle cx="12" cy="12" r="1" />
+            <circle cx="19" cy="12" r="1" />
+          </svg>
         </button>
       </div>
     </div>
-  </div>
-  <div class="frame-container" id="frame-container"></div>
-  <script src="./assets/mathematics/bundle.js?v=2025-04-15"></script>
-  <script src="./assets/mathematics/config.js?v=2025-04-15"></script>
-  <script src="/assets/js/t3.js?v=4"></script>
-  <script src="/assets/js/m1.js"></script>
-  <!-- DO NOT REMOVE-->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-WKJQ5QHQTJ"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag() {
-      dataLayer.push(arguments);
-    }
-    gtag("js", new Date());
+  </header>
 
-    gtag("config", "G-WKJQ5QHQTJ");
-  </script>
-  <!-- DO NOT REMOVE-->
-    <script src="/assets/js/account-shell.js?v=1" defer></script>
+  <main
+    class="browser-viewport"
+    id="frame-container"
+    aria-live="polite"
+  ></main>
+
+  <div
+    class="browser-menu"
+    id="browser-menu"
+    hidden
+  >
+    <button type="button" data-menu-action="new-tab">
+      <span>New tab</span>
+      <kbd>Ctrl T</kbd>
+    </button>
+
+    <button type="button" data-menu-action="home">
+      <span>Fuzz Home</span>
+    </button>
+
+    <button type="button" data-menu-action="popout">
+      <span>Open in separate window</span>
+    </button>
+
+    <button type="button" data-menu-action="fullscreen">
+      <span>Fullscreen</span>
+      <kbd>F11</kbd>
+    </button>
+
+    <hr />
+
+    <button type="button" data-menu-action="clear-session">
+      <span>Clear saved tabs</span>
+    </button>
+  </div>
+
+  <div
+    class="browser-toast-region"
+    id="browser-toast-region"
+    aria-live="polite"
+  ></div>
+
+  <script src="/assets/js/t3.js?v=6"></script>
+  <script src="/assets/js/m1.js"></script>
+  <script src="/assets/js/account-shell.js?v=1" defer></script>
   <script src="/assets/js/site-control.js" defer></script>
 </body>
-
 </html>
