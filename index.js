@@ -5198,6 +5198,7 @@ app.get(
         activityResult,
         usageResult,
         sessionsResult,
+        appStateResult,
         deletionResult,
       ] = await Promise.all([
         getAccountCenterPreferences(userId),
@@ -5250,6 +5251,11 @@ app.get(
             ascending: true,
           }),
         supabaseAdmin
+          .from("account_app_state")
+          .select("*")
+          .eq("user_id", userId)
+          .maybeSingle(),
+        supabaseAdmin
           .from("account_deletion_requests")
           .select(
             "id, status, reason, requested_at, cancelled_at, reviewed_at",
@@ -5268,6 +5274,7 @@ app.get(
         activityResult,
         usageResult,
         sessionsResult,
+        appStateResult,
         deletionResult,
       ];
       const error = results.find(
@@ -5307,6 +5314,10 @@ app.get(
           usageResult.data || [],
         securitySessions:
           sessionsResult.data || [],
+        appLibrary:
+          serializeAppsState(
+            appStateResult.data,
+          ),
         deletionRequests:
           deletionResult.data || [],
       };
@@ -6004,6 +6015,376 @@ app.patch(
           "That account status could not be updated.",
       });
     }
+  },
+);
+
+/* =======================================================
+   APPS LIBRARY STATE + ACTIVITY
+======================================================= */
+
+const APPS_STATE_MAX_FAVORITES = 250;
+const APPS_STATE_MAX_RECENT = 20;
+const APPS_STATE_MAX_CUSTOM = 50;
+const APPS_STATE_MAX_OPEN_COUNT_KEYS = 300;
+
+function cleanAppsStateId(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, "")
+    .slice(0, 90);
+}
+
+function cleanAppsStateUrl(value) {
+  const raw = String(value || "")
+    .trim()
+    .slice(0, 2000);
+
+  if (!raw) {
+    return "";
+  }
+
+  try {
+    const parsed = new URL(raw);
+
+    if (!["http:", "https:"].includes(parsed.protocol)) {
+      return "";
+    }
+
+    return parsed.toString();
+  } catch {
+    return "";
+  }
+}
+
+function cleanAppsStateImage(value) {
+  const raw = String(value || "")
+    .trim()
+    .slice(0, 2000);
+
+  if (raw.startsWith("/assets/")) {
+    return raw;
+  }
+
+  return cleanAppsStateUrl(raw);
+}
+
+function cleanAppsStateCategories(value) {
+  if (!Array.isArray(value)) {
+    return ["all"];
+  }
+
+  const categories = [
+    ...new Set(
+      value
+        .map((item) =>
+          String(item || "")
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9_-]/g, "")
+            .slice(0, 30),
+        )
+        .filter(Boolean),
+    ),
+  ].slice(0, 15);
+
+  if (!categories.includes("all")) {
+    categories.unshift("all");
+  }
+
+  return categories;
+}
+
+function cleanAppsStateRecent(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const seen = new Set();
+  const result = [];
+
+  for (const item of value) {
+    const id = cleanAppsStateId(item?.id);
+
+    if (!id || seen.has(id)) {
+      continue;
+    }
+
+    const openedAt = Number.isFinite(
+      Date.parse(item?.openedAt),
+    )
+      ? new Date(item.openedAt).toISOString()
+      : new Date().toISOString();
+
+    seen.add(id);
+    result.push({ id, openedAt });
+
+    if (result.length >= APPS_STATE_MAX_RECENT) {
+      break;
+    }
+  }
+
+  return result;
+}
+
+function cleanAppsStateOpenCounts(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  const output = {};
+
+  for (const [rawId, rawCount] of Object.entries(value)) {
+    const id = cleanAppsStateId(rawId);
+    const count = Math.max(
+      0,
+      Math.min(
+        1000000,
+        Number.parseInt(rawCount, 10) || 0,
+      ),
+    );
+
+    if (id) {
+      output[id] = count;
+    }
+
+    if (Object.keys(output).length >= APPS_STATE_MAX_OPEN_COUNT_KEYS) {
+      break;
+    }
+  }
+
+  return output;
+}
+
+function cleanAppsStateCustomApps(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const result = [];
+  const seen = new Set();
+
+  for (const item of value) {
+    const name = String(item?.name || "")
+      .trim()
+      .slice(0, 60);
+    const link = cleanAppsStateUrl(item?.link);
+    const image = cleanAppsStateImage(item?.image);
+    const id = cleanAppsStateId(item?.id);
+
+    if (!id || !name || !link || seen.has(id)) {
+      continue;
+    }
+
+    seen.add(id);
+    result.push({
+      id,
+      name,
+      link,
+      image,
+      categories:
+        cleanAppsStateCategories(
+          item?.categories,
+        ),
+    });
+
+    if (result.length >= APPS_STATE_MAX_CUSTOM) {
+      break;
+    }
+  }
+
+  return result;
+}
+
+function serializeAppsState(row) {
+  return {
+    favorites: Array.isArray(row?.favorites)
+      ? row.favorites
+          .map(cleanAppsStateId)
+          .filter(Boolean)
+          .slice(0, APPS_STATE_MAX_FAVORITES)
+      : [],
+    recent: cleanAppsStateRecent(row?.recent),
+    openCounts:
+      cleanAppsStateOpenCounts(
+        row?.open_counts,
+      ),
+    customApps:
+      cleanAppsStateCustomApps(
+        row?.custom_apps,
+      ),
+    updatedAt: row?.updated_at || null,
+  };
+}
+
+function parseAppsState(body = {}) {
+  return {
+    favorites: [
+      ...new Set(
+        (Array.isArray(body.favorites)
+          ? body.favorites
+          : []
+        )
+          .map(cleanAppsStateId)
+          .filter(Boolean),
+      ),
+    ].slice(0, APPS_STATE_MAX_FAVORITES),
+    recent: cleanAppsStateRecent(body.recent),
+    open_counts:
+      cleanAppsStateOpenCounts(
+        body.openCounts,
+      ),
+    custom_apps:
+      cleanAppsStateCustomApps(
+        body.customApps,
+      ),
+  };
+}
+
+app.get(
+  "/api/apps/state",
+  requireApiAuth,
+  async (req, res) => {
+    try {
+      const { data, error } =
+        await supabaseAdmin
+          .from("account_app_state")
+          .select("*")
+          .eq(
+            "user_id",
+            req.auth.user.id,
+          )
+          .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      return res.json({
+        state: serializeAppsState(data),
+      });
+    } catch (error) {
+      console.error(
+        "App state load failed:",
+        error,
+      );
+
+      return res.status(500).json({
+        error:
+          "Your app favorites could not be loaded.",
+      });
+    }
+  },
+);
+
+app.put(
+  "/api/apps/state",
+  requireApiAuth,
+  async (req, res) => {
+    try {
+      const values = parseAppsState(
+        req.body,
+      );
+
+      const { data, error } =
+        await supabaseAdmin
+          .from("account_app_state")
+          .upsert(
+            {
+              user_id:
+                req.auth.user.id,
+              ...values,
+              updated_at:
+                new Date().toISOString(),
+            },
+            {
+              onConflict: "user_id",
+            },
+          )
+          .select("*")
+          .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return res.json({
+        success: true,
+        state: serializeAppsState(data),
+      });
+    } catch (error) {
+      console.error(
+        "App state save failed:",
+        error,
+      );
+
+      return res.status(500).json({
+        error:
+          "Your app favorites could not be saved.",
+      });
+    }
+  },
+);
+
+app.post(
+  "/api/apps/open",
+  requireApiAuth,
+  async (req, res) => {
+    const appId = cleanAppsStateId(
+      req.body.id,
+    );
+    const appName = String(
+      req.body.name || "App",
+    )
+      .trim()
+      .slice(0, 80);
+    const appUrl = cleanAppsStateUrl(
+      req.body.link,
+    );
+    const categories =
+      cleanAppsStateCategories(
+        req.body.categories,
+      );
+
+    if (!appId) {
+      return res.status(400).json({
+        error: "A valid app ID is required.",
+      });
+    }
+
+    let domain = null;
+
+    if (appUrl) {
+      try {
+        domain = new URL(appUrl).hostname;
+      } catch {
+        domain = null;
+      }
+    }
+
+    void writeActivityLog({
+      req,
+      userId: req.auth.user.id,
+      category: "apps",
+      action: "apps.opened",
+      status: "success",
+      description:
+        `${req.auth.profile.username} opened ${appName}.`,
+      resourceType: "app",
+      resourceId: appId,
+      responseStatus: 202,
+      metadata: {
+        appId,
+        appName,
+        appDomain: domain,
+        categories,
+        source: "apps-library",
+      },
+    });
+
+    return res.status(202).json({
+      success: true,
+    });
   },
 );
 
@@ -11440,6 +11821,10 @@ const ADMIN_EXPORT_TABLES = {
   usageEvents: {
     table: "usage_events",
     orderColumn: "created_at",
+  },
+  accountAppState: {
+    table: "account_app_state",
+    orderColumn: "updated_at",
   },
 };
 

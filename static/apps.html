@@ -6,64 +6,148 @@
   <meta name="referrer" content="no-referrer" />
   <meta http-equiv="X-Frame-Options" content="SAMEORIGIN" />
   <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#050713" />
+
   <link rel="shortcut icon" id="tab-favicon" href="favicon.png" />
   <title id="t">Home</title>
+
   <script src="./assets/mathematics/bundle.js?v=2025-04-15"></script>
   <script src="./assets/mathematics/config.js?v=2025-04-15"></script>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="/assets/css/global.css?v=6" />
-  <link rel="stylesheet" href="/assets/css/container.css?v=2" />
-  <link rel="stylesheet" href="/assets/css/nav.css?v=01" />
-  <script src="/assets/js/index-3.js"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-CQ2VHTSDMR"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
 
-  gtag('config', 'G-CQ2VHTSDMR');
-</script>
+  <link rel="stylesheet" href="/assets/css/global.css?v=6" />
+  <link rel="stylesheet" href="/assets/css/apps.css?v=1" />
+  <link rel="stylesheet" href="/assets/css/nav.css?v=02" />
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+  />
+
+  <script src="/assets/js/index-3.js"></script>
 </head>
 
-<body>
-  <div class="f-nav"></div>
-  <div class="input-c">
-    <input type="text" id="search" onkeyup="bar()" placeholder="Search" />
-    <select title="Category" id="category" name="category" onchange="category()">
-      <option value="all">&#65;&#108;&#108;</option>
-      <option value="android">
-        &#65;&#110;&#100;&#114;&#111;&#105;&#100;&#32;&#69;&#109;&#117;&#108;&#97;&#116;&#111;&#114;</option>
-      <option value="social">&#83;&#111;&#99;&#105;&#97;&#108;</option>
-      <option value="stream">&#83;&#116;&#114;&#101;&#97;&#109;</option>
-      <option value="message">&#77;&#101;&#115;&#115;&#97;&#103;&#101;</option>
-      <option value="media">&#84;&#86;&#32;&amp;&#32;&#77;&#111;&#118;&#105;&#101;&#115;</option>
-      <option value="game">&#71;&#97;&#109;&#101;&#32;&#83;&#105;&#116;&#101;&#115;</option>
-      <option value="cloud">&#67;&#108;&#111;&#117;&#100;&#32;&#71;&#97;&#109;&#105;&#110;&#103;</option>
-      <option value="tool">&#84;&#111;&#111;&#108;&#115;</option>
-      <option value="ai">&#65;&#73;</option>
-      <option value="emu">&#69;&#109;&#117;&#108;&#97;&#116;&#111;&#114;</option>
-      <option value="mail">&#77;&#97;&#105;&#108;</option>
-    </select>
+<body class="apps-page">
+  <div class="apps-backdrop" aria-hidden="true">
+    <span class="apps-orb apps-orb-one"></span>
+    <span class="apps-orb apps-orb-two"></span>
+    <span class="apps-grid-glow"></span>
   </div>
-  <div class="pinned"></div>
-  <div class="apps"></div>
-  <script src="assets/js/c1.js?v=001"></script>
-  <script src="/assets/js/m1.js"></script>
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-WKJQ5QHQTJ"></script>
-  <!-- DO NOT REMOVE-->
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag() {
-      dataLayer.push(arguments);
-    }
-    gtag("js", new Date());
 
-    gtag("config", "G-WKJQ5QHQTJ");
-  </script>
-  <!-- DO NOT REMOVE-->
-    <script src="/assets/js/account-shell.js?v=1" defer></script>
+  <div class="f-nav"></div>
+
+  <main class="apps-shell" id="apps-shell">
+    <section class="apps-hero" aria-labelledby="apps-title">
+      <div class="apps-hero-copy">
+        <div class="apps-eyebrow">
+          <span class="apps-eyebrow-dot"></span>
+          App library
+        </div>
+
+        <h1 id="apps-title">Everything, one click away.</h1>
+        <p>
+          Search, favorite, and quickly reopen the apps you use most.
+        </p>
+      </div>
+
+      <button class="apps-add-button" id="add-custom-app" type="button">
+        <i class="fa-solid fa-plus" aria-hidden="true"></i>
+        <span>Add custom app</span>
+      </button>
+    </section>
+
+    <section class="apps-command-bar" aria-label="App filters">
+      <label class="apps-search-wrap" for="app-search">
+        <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+        <input
+          id="app-search"
+          type="search"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="Search apps..."
+        />
+        <kbd>/</kbd>
+      </label>
+
+      <label class="apps-sort-wrap" for="app-sort">
+        <i class="fa-solid fa-arrow-down-wide-short" aria-hidden="true"></i>
+        <select id="app-sort" title="Sort apps">
+          <option value="name">Name</option>
+          <option value="recent">Recently opened</option>
+          <option value="used">Most used</option>
+          <option value="favorites">Favorites first</option>
+        </select>
+      </label>
+    </section>
+
+    <section class="apps-category-strip" aria-label="App categories">
+      <div id="category-chips" class="apps-category-chips"></div>
+    </section>
+
+    <div id="apps-status" class="apps-status-row" aria-live="polite">
+      <span>Loading your apps...</span>
+    </div>
+
+    <section id="favorites-section" class="apps-section" hidden>
+      <div class="apps-section-heading">
+        <div>
+          <span class="apps-section-kicker">Quick access</span>
+          <h2>Favorites</h2>
+        </div>
+        <button class="apps-text-button" type="button" data-clear-favorites>
+          Clear favorites
+        </button>
+      </div>
+      <div id="favorite-apps" class="apps-grid apps-grid-compact"></div>
+    </section>
+
+    <section id="recent-section" class="apps-section" hidden>
+      <div class="apps-section-heading">
+        <div>
+          <span class="apps-section-kicker">Jump back in</span>
+          <h2>Recently opened</h2>
+        </div>
+        <button class="apps-text-button" type="button" data-clear-recents>
+          Clear history
+        </button>
+      </div>
+      <div id="recent-apps" class="apps-grid apps-grid-compact"></div>
+    </section>
+
+    <section class="apps-section apps-all-section">
+      <div class="apps-section-heading">
+        <div>
+          <span class="apps-section-kicker">Browse</span>
+          <h2>All apps</h2>
+        </div>
+        <span id="app-count" class="apps-count-pill">0 apps</span>
+      </div>
+
+      <div id="apps-loading" class="apps-loading-grid" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span><span></span>
+      </div>
+
+      <div id="all-apps" class="apps-grid" hidden></div>
+
+      <div id="apps-empty" class="apps-empty" hidden>
+        <div class="apps-empty-icon">
+          <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+        </div>
+        <h3>No apps found</h3>
+        <p>Try another search or category.</p>
+        <button class="apps-secondary-button" id="reset-app-filters" type="button">
+          Reset filters
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <div id="app-modal-root"></div>
+  <div id="apps-toast-region" class="apps-toast-region" aria-live="polite"></div>
+
+  <script src="/assets/js/c1.js?v=3"></script>
+  <script src="/assets/js/m1.js?v=3"></script>
+  <script src="/assets/js/account-shell.js?v=1" defer></script>
   <script src="/assets/js/site-control.js" defer></script>
 </body>
 

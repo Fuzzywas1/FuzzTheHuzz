@@ -1,411 +1,1014 @@
-// cloak.js
-let appInd;
-const g = window.location.pathname === "/a";
-const a = window.location.pathname === "/b";
-const c = window.location.pathname === "/gt";
+(() => {
+  "use strict";
 
-let t;
+  const STORAGE_KEY = "fuzz-app-state-v2";
+  const LEGACY_PIN_KEY = "Apinned";
+  const LEGACY_CUSTOM_KEY = "Acustom";
+  const MAX_RECENT = 8;
+  const MAX_CUSTOM_APPS = 50;
 
-try {
-  t = window.top.location.pathname === "/d";
-} catch {
-  try {
-    t = window.parent.location.pathname === "/d";
-  } catch {
-    t = false;
+  const CATEGORY_ORDER = [
+    "all",
+    "favorites",
+    "recent",
+    "social",
+    "stream",
+    "message",
+    "media",
+    "game",
+    "cloud",
+    "tool",
+    "ai",
+    "emu",
+    "mail",
+    "android",
+    "other",
+  ];
+
+  const CATEGORY_LABELS = {
+    all: "All",
+    favorites: "Favorites",
+    recent: "Recent",
+    social: "Social",
+    stream: "Streaming",
+    message: "Messaging",
+    media: "TV & Movies",
+    game: "Game sites",
+    cloud: "Cloud gaming",
+    tool: "Tools",
+    ai: "AI",
+    emu: "Emulators",
+    mail: "Mail",
+    android: "Android",
+    other: "Other",
+  };
+
+  const CATEGORY_ICONS = {
+    all: "fa-border-all",
+    favorites: "fa-star",
+    recent: "fa-clock-rotate-left",
+    social: "fa-user-group",
+    stream: "fa-tower-broadcast",
+    message: "fa-message",
+    media: "fa-film",
+    game: "fa-gamepad",
+    cloud: "fa-cloud",
+    tool: "fa-screwdriver-wrench",
+    ai: "fa-wand-magic-sparkles",
+    emu: "fa-microchip",
+    mail: "fa-envelope",
+    android: "fa-mobile-screen",
+    other: "fa-shapes",
+  };
+
+  const state = {
+    apps: [],
+    filteredApps: [],
+    favorites: new Set(),
+    recent: [],
+    openCounts: {},
+    customApps: [],
+    search: "",
+    category: "all",
+    sort: "name",
+    synced: false,
+  };
+
+  const elements = {};
+
+  function cacheElements() {
+    elements.search = document.querySelector("#app-search");
+    elements.sort = document.querySelector("#app-sort");
+    elements.categoryChips = document.querySelector("#category-chips");
+    elements.status = document.querySelector("#apps-status");
+    elements.count = document.querySelector("#app-count");
+    elements.loading = document.querySelector("#apps-loading");
+    elements.allApps = document.querySelector("#all-apps");
+    elements.empty = document.querySelector("#apps-empty");
+    elements.favoritesSection = document.querySelector("#favorites-section");
+    elements.favoriteApps = document.querySelector("#favorite-apps");
+    elements.recentSection = document.querySelector("#recent-section");
+    elements.recentApps = document.querySelector("#recent-apps");
+    elements.modalRoot = document.querySelector("#app-modal-root");
+    elements.toastRegion = document.querySelector("#apps-toast-region");
   }
-}
 
-function Span(name) {
-  return name.split("").map(char => {
-    const span = document.createElement("span");
-    span.textContent = char;
-    return span;
-  });
-}
-
-function saveToLocal(path) {
-  sessionStorage.setItem("GoUrl", path);
-}
-
-function handleClick(app) {
-  if (typeof app.say !== "undefined") {
-    alert(app.say);
+  function slugify(value) {
+    return String(value || "app")
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 54) || "app";
   }
 
-  let Selected = app.link;
-  if (app.links && app.links.length > 1) {
-    Selected = getSelected(app.links);
-    if (!Selected) {
-      return false;
+  function smallHash(value) {
+    let hash = 2166136261;
+    const input = String(value || "");
+
+    for (let index = 0; index < input.length; index += 1) {
+      hash ^= input.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+
+    return (hash >>> 0).toString(36).slice(0, 7);
+  }
+
+  function createAppId(app) {
+    return `${slugify(app.name)}-${smallHash(app.link || app.name)}`;
+  }
+
+  function cleanDisplayName(name) {
+    return String(name || "Untitled app")
+      .replace(/^!\s*/, "")
+      .replace(/^\[NEW\]\s*/i, "")
+      .replace(/^\[Custom\]\s*/i, "")
+      .trim();
+  }
+
+  function normalizeCategories(categories) {
+    const list = Array.isArray(categories) ? categories : ["all"];
+    const clean = [...new Set(list.map((value) => String(value).trim().toLowerCase()).filter(Boolean))];
+
+    if (!clean.includes("all")) {
+      clean.unshift("all");
+    }
+
+    if (clean.length === 1) {
+      clean.push("other");
+    }
+
+    return clean;
+  }
+
+  function normalizeApp(rawApp, { custom = false } = {}) {
+    const app = {
+      ...rawApp,
+      name: cleanDisplayName(rawApp.name),
+      link: String(rawApp.link || "").trim(),
+      image: String(rawApp.image || "").trim(),
+      categories: normalizeCategories(rawApp.categories),
+      isCustom: custom === true,
+      isCreateAction:
+        rawApp.custom === true ||
+        rawApp.custom === "true" ||
+        /^create custom app$/i.test(cleanDisplayName(rawApp.name)),
+    };
+
+    if (/interstellar faq|docs/i.test(app.name)) {
+      app.name = "Help & Docs";
+    }
+
+    app.id = String(rawApp.id || createAppId(app));
+    app.searchText = `${app.name} ${app.categories.join(" ")}`.toLowerCase();
+    return app;
+  }
+
+  function defaultLocalState() {
+    return {
+      favorites: [],
+      recent: [],
+      openCounts: {},
+      customApps: [],
+    };
+  }
+
+  function loadLocalState() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+      return {
+        favorites: Array.isArray(parsed?.favorites) ? parsed.favorites : [],
+        recent: Array.isArray(parsed?.recent) ? parsed.recent : [],
+        openCounts:
+          parsed?.openCounts && typeof parsed.openCounts === "object"
+            ? parsed.openCounts
+            : {},
+        customApps: Array.isArray(parsed?.customApps) ? parsed.customApps : [],
+      };
+    } catch {
+      return defaultLocalState();
     }
   }
 
-  if (app.local) {
-    saveToLocal(Selected);
-    window.location.href = "rx";
-    if (t) {
-      window.location.href = Selected;
-    }
-  } else if (app.local2) {
-    saveToLocal(Selected);
-    window.location.href = Selected;
-  } else if (app.blank) {
-    blank(Selected);
-  } else if (app.now) {
-    now(Selected);
-    if (t) {
-      window.location.href = Selected;
-    }
-  } else if (app.custom) {
-    Custom(app);
-  } else if (app.dy) {
-    dy(Selected);
-  } else {
-    go(Selected);
-    if (t) {
-      blank(Selected);
+  function applyStoredState(stored) {
+    state.favorites = new Set(
+      (stored.favorites || []).map(String).filter(Boolean).slice(0, 250),
+    );
+    state.recent = (stored.recent || [])
+      .filter((item) => item && item.id)
+      .slice(0, MAX_RECENT);
+    state.openCounts = stored.openCounts || {};
+    state.customApps = (stored.customApps || [])
+      .slice(0, MAX_CUSTOM_APPS)
+      .map((app) => normalizeApp(app, { custom: true }));
+  }
+
+  function serializeState() {
+    return {
+      favorites: [...state.favorites],
+      recent: state.recent.slice(0, MAX_RECENT),
+      openCounts: state.openCounts,
+      customApps: state.customApps.map((app) => ({
+        id: app.id,
+        name: app.name,
+        link: app.link,
+        image: app.image,
+        categories: app.categories,
+      })),
+    };
+  }
+
+  function saveLocalState() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeState()));
+  }
+
+  let syncTimer = null;
+
+  function scheduleServerSync() {
+    saveLocalState();
+    window.clearTimeout(syncTimer);
+
+    syncTimer = window.setTimeout(async () => {
+      try {
+        const response = await fetch("/api/apps/state", {
+          method: "PUT",
+          credentials: "same-origin",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(serializeState()),
+        });
+
+        state.synced = response.ok;
+      } catch {
+        state.synced = false;
+      }
+    }, 350);
+  }
+
+  async function loadServerState() {
+    try {
+      const response = await fetch("/api/apps/state", {
+        credentials: "same-origin",
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const payload = await response.json();
+      state.synced = true;
+      return payload.state || null;
+    } catch {
+      return null;
     }
   }
-  return false;
-}
 
-function getSelected(links) {
-  const options = links.map((link, index) => `${index + 1}: ${link.name}`).join("\n");
-  const choice = prompt(`Select a link by entering the corresponding number:\n${options}`);
-  const selectedIndex = Number.parseInt(choice, 10) - 1;
+  function mergeStates(localState, serverState) {
+    if (!serverState) {
+      return localState;
+    }
 
-  if (Number.isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= links.length) {
-    alert("Invalid selection. Please try again.");
+    const favorites = [
+      ...new Set([...(localState.favorites || []), ...(serverState.favorites || [])]),
+    ];
+
+    const recentMap = new Map();
+    for (const item of [...(localState.recent || []), ...(serverState.recent || [])]) {
+      if (!item?.id) continue;
+      const current = recentMap.get(item.id);
+      if (!current || Date.parse(item.openedAt || 0) > Date.parse(current.openedAt || 0)) {
+        recentMap.set(item.id, item);
+      }
+    }
+
+    const openCounts = { ...(serverState.openCounts || {}) };
+    for (const [id, count] of Object.entries(localState.openCounts || {})) {
+      openCounts[id] = Math.max(Number(openCounts[id] || 0), Number(count || 0));
+    }
+
+    const customMap = new Map();
+    for (const app of [...(serverState.customApps || []), ...(localState.customApps || [])]) {
+      const normalized = normalizeApp(app, { custom: true });
+      customMap.set(normalized.id, normalized);
+    }
+
+    return {
+      favorites,
+      recent: [...recentMap.values()]
+        .sort((a, b) => Date.parse(b.openedAt || 0) - Date.parse(a.openedAt || 0))
+        .slice(0, MAX_RECENT),
+      openCounts,
+      customApps: [...customMap.values()].slice(0, MAX_CUSTOM_APPS),
+    };
+  }
+
+  function legacyPinnedIds(sortedBuiltInApps) {
+    const raw = localStorage.getItem(LEGACY_PIN_KEY);
+    if (!raw) return [];
+
+    const indexes = raw
+      .split(",")
+      .map((value) => Number.parseInt(value, 10))
+      .filter(Number.isFinite);
+
+    return indexes
+      .map((index) => sortedBuiltInApps[index]?.id)
+      .filter(Boolean);
+  }
+
+  function legacyCustomApps() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(LEGACY_CUSTOM_KEY) || "null");
+      return parsed
+        ? Object.values(parsed).map((app) => normalizeApp(app, { custom: true }))
+        : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function migrateLegacyState(sortedBuiltInApps) {
+    const pinned = legacyPinnedIds(sortedBuiltInApps);
+    const custom = legacyCustomApps();
+
+    if (pinned.length === 0 && custom.length === 0) {
+      return;
+    }
+
+    pinned.forEach((id) => state.favorites.add(id));
+
+    const existing = new Set(state.customApps.map((app) => app.id));
+    for (const app of custom) {
+      if (!existing.has(app.id)) {
+        state.customApps.push(app);
+      }
+    }
+
+    localStorage.removeItem(LEGACY_PIN_KEY);
+    localStorage.removeItem(LEGACY_CUSTOM_KEY);
+    scheduleServerSync();
+  }
+
+  function categoryForLabel(app) {
+    const preferred = app.categories.find((category) => category !== "all");
+    return CATEGORY_LABELS[preferred] || "App";
+  }
+
+  function appStatus(app) {
+    if (app.error) {
+      return { label: "Unavailable", className: "status-error", icon: "fa-circle-xmark" };
+    }
+
+    if (app.partial) {
+      return { label: "May have issues", className: "status-warning", icon: "fa-triangle-exclamation" };
+    }
+
+    if (app.load) {
+      return { label: "Slow loading", className: "status-warning", icon: "fa-clock" };
+    }
+
     return null;
   }
 
-  return links[selectedIndex].url;
-}
+  function cardTemplate(app) {
+    const favorite = state.favorites.has(app.id);
+    const status = appStatus(app);
+    const initials = app.name
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part[0] || "")
+      .join("")
+      .toUpperCase();
 
-function CustomApp(customApp) {
-  let apps;
-  if (g) {
-    apps = localStorage.getItem("Gcustom");
-  } else if (c) {
-    apps = localStorage.getItem("Tcustom");
-  } else if (a) {
-    apps = localStorage.getItem("Acustom");
+    return `
+      <article class="app-card ${favorite ? "is-favorite" : ""} ${app.isCustom ? "app-card-custom" : ""}" data-app-id="${escapeHtml(app.id)}">
+        <div class="app-card-actions">
+          <button
+            class="app-card-action app-card-favorite ${favorite ? "is-active" : ""}"
+            type="button"
+            data-favorite-app="${escapeHtml(app.id)}"
+            title="${favorite ? "Remove from favorites" : "Add to favorites"}"
+            aria-label="${favorite ? "Remove from favorites" : "Add to favorites"}"
+          >
+            <i class="${favorite ? "fa-solid" : "fa-regular"} fa-star" aria-hidden="true"></i>
+          </button>
+
+          ${
+            app.link
+              ? `
+                <button
+                  class="app-card-action app-card-action-open-blank"
+                  type="button"
+                  data-open-blank="${escapeHtml(app.id)}"
+                  title="Open directly"
+                  aria-label="Open directly"
+                >
+                  <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+                </button>
+              `
+              : ""
+          }
+
+          ${
+            app.isCustom
+              ? `
+                <button
+                  class="app-card-action"
+                  type="button"
+                  data-delete-custom="${escapeHtml(app.id)}"
+                  title="Delete custom app"
+                  aria-label="Delete custom app"
+                >
+                  <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                </button>
+              `
+              : ""
+          }
+        </div>
+
+        <button class="app-card-main" type="button" data-open-app="${escapeHtml(app.id)}">
+          <span class="app-card-icon-wrap">
+            ${
+              app.image
+                ? `
+                  <img
+                    class="app-card-icon"
+                    src="${escapeHtml(app.image)}"
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    data-app-image
+                  />
+                  <span class="app-card-icon-fallback" hidden>${escapeHtml(initials || "A")}</span>
+                `
+                : `<span class="app-card-icon-fallback">${escapeHtml(initials || "A")}</span>`
+            }
+            <span class="app-card-shade"></span>
+            ${
+              status
+                ? `
+                  <span class="app-card-status ${status.className}">
+                    <i class="fa-solid ${status.icon}" aria-hidden="true"></i>
+                    ${escapeHtml(status.label)}
+                  </span>
+                `
+                : ""
+            }
+          </span>
+
+          <span class="app-card-copy">
+            <span>
+              <strong class="app-card-name">${escapeHtml(app.name)}</strong>
+              <span class="app-card-meta">${escapeHtml(categoryForLabel(app))}</span>
+            </span>
+            <i class="fa-solid fa-arrow-up-right-from-square app-card-arrow" aria-hidden="true"></i>
+          </span>
+        </button>
+      </article>
+    `;
   }
 
-  if (apps === null) {
-    apps = {};
-  } else {
-    apps = JSON.parse(apps);
+  function renderCards(container, apps) {
+    container.innerHTML = apps.map(cardTemplate).join("");
+
+    container.querySelectorAll("[data-app-image]").forEach((image) => {
+      image.addEventListener("error", () => {
+        image.hidden = true;
+        image.nextElementSibling.hidden = false;
+      }, { once: true });
+    });
   }
 
-  const key = `custom${Object.keys(apps).length + 1}`;
+  function availableCategories() {
+    const counts = new Map([["all", state.apps.length]]);
 
-  apps[key] = customApp;
-
-  if (g) {
-    localStorage.setItem("Gcustom", JSON.stringify(apps));
-  } else if (c) {
-    localStorage.setItem("Tcustom", JSON.stringify(apps));
-  } else if (a) {
-    localStorage.setItem("Acustom", JSON.stringify(apps));
-  }
-}
-
-function setPin(index) {
-  let pins;
-  if (g) {
-    pins = localStorage.getItem("Gpinned");
-  } else if (c) {
-    pins = localStorage.getItem("Tpinned");
-  } else if (a) {
-    pins = localStorage.getItem("Apinned");
-  }
-
-  if (pins === null || pins === "") {
-    pins = [];
-  } else {
-    pins = pins.split(",").map(Number);
-  }
-  if (pinContains(index, pins)) {
-    const remove = pins.indexOf(index);
-    pins.splice(remove, 1);
-  } else {
-    pins.push(index);
-  }
-  if (g) {
-    localStorage.setItem("Gpinned", pins);
-  } else if (c) {
-    localStorage.setItem("Tpinned", pins);
-  } else if (a) {
-    localStorage.setItem("Apinned", pins);
-  }
-  location.reload();
-}
-
-function pinContains(i, p) {
-  if (p === "") {
-    return false;
-  }
-  for (const x of p) {
-    if (x === i) {
-      return true;
-    }
-  }
-  return false;
-}
-
-function Custom(app) {
-  const title = prompt("Enter title for the app:");
-  const link = prompt("Enter link for the app:");
-  if (title && link) {
-    const customApp = {
-      name: `[Custom] ${title}`,
-      link: link,
-      image: "/assets/media/icons/custom.webp",
-      custom: false,
-    };
-
-    CustomApp(customApp);
-    CreateCustomApp(customApp);
-  }
-}
-
-function CreateCustomApp(customApp) {
-  const columnDiv = document.createElement("div");
-  columnDiv.classList.add("column");
-  columnDiv.setAttribute("data-category", "all");
-
-  const pinIcon = document.createElement("i");
-  pinIcon.classList.add("fa", "fa-map-pin");
-  pinIcon.ariaHidden = true;
-
-  const btn = document.createElement("button");
-  btn.appendChild(pinIcon);
-  btn.style.float = "right";
-  btn.style.cursor = "pointer";
-  btn.style.backgroundColor = "rgb(45,45,45)";
-  btn.style.borderRadius = "50%";
-  btn.style.borderColor = "transparent";
-  btn.style.color = "white";
-  btn.style.top = "-200px";
-  btn.style.position = "relative";
-  btn.onclick = () => {
-    setPin(appInd);
-  };
-  btn.title = "Pin";
-
-  const linkElem = document.createElement("a");
-  linkElem.onclick = () => {
-    handleClick(customApp);
-  };
-
-  const image = document.createElement("img");
-  image.width = 145;
-  image.height = 145;
-  image.src = customApp.image;
-  image.loading = "lazy";
-
-  const paragraph = document.createElement("p");
-
-  for (const span of Span(customApp.name)) {
-    paragraph.appendChild(span);
-  }
-
-  linkElem.appendChild(image);
-  linkElem.appendChild(paragraph);
-  columnDiv.appendChild(linkElem);
-  columnDiv.appendChild(btn);
-
-  const nonPinnedApps = document.querySelector(".apps");
-  nonPinnedApps.insertBefore(columnDiv, nonPinnedApps.firstChild);
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-  let storedApps;
-  if (g) {
-    storedApps = JSON.parse(localStorage.getItem("Gcustom"));
-  } else if (c) {
-    storedApps = JSON.parse(localStorage.getItem("Tcustom"));
-  } else if (a) {
-    storedApps = JSON.parse(localStorage.getItem("Acustom"));
-  }
-  if (storedApps) {
-    for (const app of Object.values(storedApps)) {
-      CreateCustomApp(app);
-    }
-  }
-});
-
-let path = "/assets/json/a.min.json";
-if (g) {
-  path = "/assets/json/g.min.json";
-} else if (c) {
-  path = "/assets/json/t.min.json";
-} else if (a) {
-  path = "/assets/json/a.min.json";
-}
-fetch(path)
-  .then(response => {
-    return response.json();
-  })
-  .then(appsList => {
-    appsList.sort((a, b) => {
-      if (a.name.startsWith("[Custom]")) {
-        return -1;
+    for (const app of state.apps) {
+      for (const category of app.categories) {
+        if (category === "all") continue;
+        counts.set(category, (counts.get(category) || 0) + 1);
       }
-      if (b.name.startsWith("[Custom]")) {
-        return 1;
+    }
+
+    counts.set("favorites", state.favorites.size);
+    counts.set("recent", state.recent.length);
+
+    return CATEGORY_ORDER.filter((category) => counts.has(category)).map((category) => ({
+      id: category,
+      label: CATEGORY_LABELS[category] || category,
+      count: counts.get(category) || 0,
+      icon: CATEGORY_ICONS[category] || "fa-shapes",
+    }));
+  }
+
+  function renderCategories() {
+    elements.categoryChips.innerHTML = availableCategories()
+      .map(
+        (category) => `
+          <button
+            class="apps-category-chip ${state.category === category.id ? "is-active" : ""}"
+            type="button"
+            data-category="${escapeHtml(category.id)}"
+          >
+            <i class="fa-solid ${category.icon}" aria-hidden="true"></i>
+            <strong>${escapeHtml(category.label)}</strong>
+            <span>${category.count}</span>
+          </button>
+        `,
+      )
+      .join("");
+  }
+
+  function matchesCategory(app) {
+    if (state.category === "all") return true;
+    if (state.category === "favorites") return state.favorites.has(app.id);
+    if (state.category === "recent") return state.recent.some((item) => item.id === app.id);
+    return app.categories.includes(state.category);
+  }
+
+  function recentTime(id) {
+    return Date.parse(state.recent.find((item) => item.id === id)?.openedAt || 0) || 0;
+  }
+
+  function sortApps(apps) {
+    return [...apps].sort((a, b) => {
+      if (state.sort === "recent") {
+        return recentTime(b.id) - recentTime(a.id) || a.name.localeCompare(b.name);
       }
+
+      if (state.sort === "used") {
+        return Number(state.openCounts[b.id] || 0) - Number(state.openCounts[a.id] || 0) || a.name.localeCompare(b.name);
+      }
+
+      if (state.sort === "favorites") {
+        return Number(state.favorites.has(b.id)) - Number(state.favorites.has(a.id)) || a.name.localeCompare(b.name);
+      }
+
       return a.name.localeCompare(b.name);
     });
-    const nonPinnedApps = document.querySelector(".apps");
-    const pinnedApps = document.querySelector(".pinned");
-    let pinList;
-    if (g) {
-      pinList = localStorage.getItem("Gpinned") || "";
-    } else if (a) {
-      pinList = localStorage.getItem("Apinned") || "";
-    } else if (c) {
-      pinList = localStorage.getItem("Tpinned") || "";
-    }
-    pinList = pinList ? pinList.split(",").map(Number) : [];
-    appInd = 0;
+  }
 
-    for (const app of appsList) {
-      if (app.categories?.includes("local")) {
-        app.local = true;
-      } else if (app.link && (app.link.includes("now.gg") || app.link.includes("nowgg.me"))) {
-        if (app.partial === null || app.partial === undefined) {
+  function filterApps() {
+    const query = state.search.trim().toLowerCase();
+
+    state.filteredApps = sortApps(
+      state.apps.filter((app) => {
+        return matchesCategory(app) && (!query || app.searchText.includes(query));
+      }),
+    );
+  }
+
+  function recentApps() {
+    const appMap = new Map(state.apps.map((app) => [app.id, app]));
+    return state.recent.map((item) => appMap.get(item.id)).filter(Boolean).slice(0, MAX_RECENT);
+  }
+
+  function favoriteApps() {
+    return state.apps.filter((app) => state.favorites.has(app.id)).sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  function render() {
+    filterApps();
+    renderCategories();
+
+    elements.loading.hidden = true;
+    elements.allApps.hidden = state.filteredApps.length === 0;
+    elements.empty.hidden = state.filteredApps.length !== 0;
+    elements.count.textContent = `${state.filteredApps.length} ${state.filteredApps.length === 1 ? "app" : "apps"}`;
+
+    renderCards(elements.allApps, state.filteredApps);
+
+    const favorites = favoriteApps();
+    elements.favoritesSection.hidden = favorites.length === 0 || state.search || state.category !== "all";
+    if (!elements.favoritesSection.hidden) {
+      renderCards(elements.favoriteApps, favorites.slice(0, 8));
+    }
+
+    const recent = recentApps();
+    elements.recentSection.hidden = recent.length === 0 || state.search || state.category !== "all";
+    if (!elements.recentSection.hidden) {
+      renderCards(elements.recentApps, recent.slice(0, 8));
+    }
+
+    const syncText = state.synced ? "Favorites and recents sync to your account." : "Favorites and recents are saved in this browser.";
+    elements.status.innerHTML = `<span>${escapeHtml(syncText)}</span>`;
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function showToast(message, icon = "fa-circle-check") {
+    const toast = document.createElement("div");
+    toast.className = "apps-toast";
+    toast.innerHTML = `<i class="fa-solid ${icon}" aria-hidden="true"></i><span>${escapeHtml(message)}</span>`;
+    elements.toastRegion.appendChild(toast);
+
+    window.setTimeout(() => {
+      toast.remove();
+    }, 3200);
+  }
+
+  function resolveSelectedLink(app) {
+    if (!Array.isArray(app.links) || app.links.length <= 1) {
+      return app.link;
+    }
+
+    const options = app.links.map((link, index) => `${index + 1}: ${link.name}`).join("\n");
+    const choice = window.prompt(`Select a link:\n${options}`);
+    const selectedIndex = Number.parseInt(choice, 10) - 1;
+
+    if (!Number.isFinite(selectedIndex) || selectedIndex < 0 || selectedIndex >= app.links.length) {
+      return null;
+    }
+
+    return app.links[selectedIndex].url;
+  }
+
+  function recordOpen(app) {
+    const openedAt = new Date().toISOString();
+    state.recent = [
+      { id: app.id, openedAt },
+      ...state.recent.filter((item) => item.id !== app.id),
+    ].slice(0, MAX_RECENT);
+    state.openCounts[app.id] = Number(state.openCounts[app.id] || 0) + 1;
+    scheduleServerSync();
+
+    fetch("/api/apps/open", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: app.id,
+        name: app.name,
+        link: app.link,
+        categories: app.categories,
+      }),
+    }).catch(() => {});
+  }
+
+  function openApp(app, mode = "default") {
+    if (!app) return;
+
+    if (app.isCreateAction) {
+      openCustomAppModal();
+      return;
+    }
+
+    if (app.say) {
+      window.alert(app.say);
+    }
+
+    const selected = resolveSelectedLink(app);
+    if (!selected) return;
+
+    recordOpen(app);
+
+    if (mode === "blank") {
+      if (typeof window.blank === "function") {
+        window.blank(selected);
+      } else {
+        window.open(selected, "_blank", "noopener,noreferrer");
+      }
+      return;
+    }
+
+    let inTabsPage = false;
+    try {
+      inTabsPage = window.top.location.pathname === "/d";
+    } catch {
+      inTabsPage = false;
+    }
+
+    if (app.local) {
+      sessionStorage.setItem("GoUrl", selected);
+      window.location.href = inTabsPage ? selected : "rx";
+    } else if (app.local2) {
+      sessionStorage.setItem("GoUrl", selected);
+      window.location.href = selected;
+    } else if (app.blank) {
+      window.blank(selected);
+    } else if (app.now && typeof window.now === "function") {
+      window.now(selected);
+    } else if (app.dy && typeof window.dy === "function") {
+      window.dy(selected);
+    } else if (typeof window.go === "function") {
+      window.go(selected);
+    } else {
+      window.location.href = selected;
+    }
+  }
+
+  function toggleFavorite(id) {
+    if (state.favorites.has(id)) {
+      state.favorites.delete(id);
+      showToast("Removed from favorites", "fa-star");
+    } else {
+      state.favorites.add(id);
+      showToast("Added to favorites", "fa-star");
+    }
+
+    scheduleServerSync();
+    render();
+  }
+
+  function removeCustomApp(id) {
+    const app = state.customApps.find((item) => item.id === id);
+    if (!app) return;
+
+    const confirmed = window.confirm(`Delete ${app.name}?`);
+    if (!confirmed) return;
+
+    state.customApps = state.customApps.filter((item) => item.id !== id);
+    state.apps = state.apps.filter((item) => item.id !== id);
+    state.favorites.delete(id);
+    state.recent = state.recent.filter((item) => item.id !== id);
+    delete state.openCounts[id];
+
+    scheduleServerSync();
+    render();
+    showToast("Custom app deleted", "fa-trash");
+  }
+
+  function closeModal() {
+    elements.modalRoot.innerHTML = "";
+  }
+
+  function openCustomAppModal() {
+    elements.modalRoot.innerHTML = `
+      <div class="apps-modal-backdrop" data-close-app-modal>
+        <section class="apps-modal" role="dialog" aria-modal="true" aria-labelledby="custom-app-title">
+          <header class="apps-modal-header">
+            <div>
+              <span class="apps-section-kicker">Custom shortcut</span>
+              <h2 id="custom-app-title">Add an app</h2>
+              <p>Add any website to your personal app library.</p>
+            </div>
+            <button class="apps-modal-close" type="button" data-close-app-modal-button aria-label="Close">
+              <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+          </header>
+
+          <form class="apps-modal-form" id="custom-app-form">
+            <label class="apps-form-field">
+              <span>Name</span>
+              <input id="custom-app-name" type="text" maxlength="60" placeholder="Example: Google Drive" required />
+            </label>
+
+            <label class="apps-form-field">
+              <span>Website URL</span>
+              <input id="custom-app-url" type="url" maxlength="2000" placeholder="https://example.com" required />
+            </label>
+
+            <label class="apps-form-field">
+              <span>Icon URL <small>(optional)</small></span>
+              <input id="custom-app-icon" type="url" maxlength="2000" placeholder="https://example.com/icon.png" />
+            </label>
+
+            <p class="apps-form-error" id="custom-app-error"></p>
+
+            <div class="apps-modal-actions">
+              <button class="apps-modal-cancel" type="button" data-close-app-modal-button>Cancel</button>
+              <button class="apps-modal-submit" type="submit">
+                <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                Add app
+              </button>
+            </div>
+          </form>
+        </section>
+      </div>
+    `;
+
+    const form = elements.modalRoot.querySelector("#custom-app-form");
+    const nameInput = elements.modalRoot.querySelector("#custom-app-name");
+    const urlInput = elements.modalRoot.querySelector("#custom-app-url");
+    const iconInput = elements.modalRoot.querySelector("#custom-app-icon");
+    const error = elements.modalRoot.querySelector("#custom-app-error");
+
+    window.setTimeout(() => nameInput.focus(), 0);
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      error.textContent = "";
+
+      const name = nameInput.value.trim();
+      let link = urlInput.value.trim();
+      const image = iconInput.value.trim();
+
+      if (!/^https?:\/\//i.test(link)) {
+        link = `https://${link}`;
+      }
+
+      try {
+        const parsed = new URL(link);
+        if (!["http:", "https:"].includes(parsed.protocol)) {
+          throw new Error("Unsupported protocol");
+        }
+      } catch {
+        error.textContent = "Enter a valid website URL.";
+        return;
+      }
+
+      if (image) {
+        try {
+          const parsedImage = new URL(image);
+          if (!["http:", "https:"].includes(parsedImage.protocol)) {
+            throw new Error("Unsupported protocol");
+          }
+        } catch {
+          error.textContent = "Enter a valid icon URL or leave it blank.";
+          return;
+        }
+      }
+
+      const app = normalizeApp(
+        {
+          name,
+          link,
+          image: image || "/assets/media/icons/custom.webp",
+          categories: ["all", "other"],
+        },
+        { custom: true },
+      );
+
+      if (state.apps.some((item) => item.id === app.id)) {
+        error.textContent = "That app is already in your library.";
+        return;
+      }
+
+      state.customApps.unshift(app);
+      state.apps.unshift(app);
+      state.favorites.add(app.id);
+      scheduleServerSync();
+      closeModal();
+      render();
+      showToast(`${app.name} was added`, "fa-plus");
+    });
+  }
+
+  function bindEvents() {
+    elements.search.addEventListener("input", () => {
+      state.search = elements.search.value;
+      render();
+    });
+
+    elements.sort.addEventListener("change", () => {
+      state.sort = elements.sort.value;
+      render();
+    });
+
+    document.querySelector("#add-custom-app")?.addEventListener("click", openCustomAppModal);
+
+    document.querySelector("#reset-app-filters")?.addEventListener("click", () => {
+      state.search = "";
+      state.category = "all";
+      elements.search.value = "";
+      render();
+    });
+
+    document.querySelector("[data-clear-favorites]")?.addEventListener("click", () => {
+      state.favorites.clear();
+      scheduleServerSync();
+      render();
+      showToast("Favorites cleared", "fa-star");
+    });
+
+    document.querySelector("[data-clear-recents]")?.addEventListener("click", () => {
+      state.recent = [];
+      scheduleServerSync();
+      render();
+      showToast("Recent history cleared", "fa-clock-rotate-left");
+    });
+
+    document.addEventListener("click", (event) => {
+      const categoryButton = event.target.closest("[data-category]");
+      if (categoryButton) {
+        state.category = categoryButton.dataset.category;
+        render();
+        return;
+      }
+
+      const favoriteButton = event.target.closest("[data-favorite-app]");
+      if (favoriteButton) {
+        toggleFavorite(favoriteButton.dataset.favoriteApp);
+        return;
+      }
+
+      const blankButton = event.target.closest("[data-open-blank]");
+      if (blankButton) {
+        openApp(state.apps.find((app) => app.id === blankButton.dataset.openBlank), "blank");
+        return;
+      }
+
+      const deleteButton = event.target.closest("[data-delete-custom]");
+      if (deleteButton) {
+        removeCustomApp(deleteButton.dataset.deleteCustom);
+        return;
+      }
+
+      const openButton = event.target.closest("[data-open-app]");
+      if (openButton) {
+        openApp(state.apps.find((app) => app.id === openButton.dataset.openApp));
+        return;
+      }
+
+      if (event.target.matches("[data-close-app-modal]") || event.target.closest("[data-close-app-modal-button]")) {
+        closeModal();
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "/" && !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) {
+        event.preventDefault();
+        elements.search.focus();
+      }
+
+      if (event.key === "Escape") {
+        if (elements.modalRoot.innerHTML) {
+          closeModal();
+        } else if (document.activeElement === elements.search && elements.search.value) {
+          state.search = "";
+          elements.search.value = "";
+          render();
+        }
+      }
+    });
+  }
+
+  async function loadApps() {
+    const response = await fetch("/assets/json/a.min.json", { cache: "no-cache" });
+    if (!response.ok) {
+      throw new Error("The app library could not be loaded.");
+    }
+
+    const rawApps = await response.json();
+    const legacyOrderedApps = rawApps
+      .map((app) => normalizeApp(app))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    const builtInApps = legacyOrderedApps
+      .filter((app) => !app.isCreateAction)
+      .map((app) => {
+        if (app.categories.includes("local")) {
+          app.local = true;
+        }
+
+        if (/now\.gg|nowgg\.me/i.test(app.link) && app.partial == null) {
           app.partial = true;
-          app.say = "Now.gg is currently not working for some users.";
+          app.say = "Now.gg may not work for every user right now.";
         }
-      } else if (app.link?.includes("nowgg.nl")) {
-        if (app.error === null || app.error === undefined) {
+
+        if (/nowgg\.nl/i.test(app.link) && app.error == null) {
           app.error = true;
-          app.say = "NowGG.nl is currently down.";
+          app.say = "This NowGG link is currently unavailable.";
         }
-      }
 
-      const pinNum = appInd;
+        return app;
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
 
-      const columnDiv = document.createElement("div");
-      columnDiv.classList.add("column");
-      columnDiv.setAttribute("data-category", app.categories.join(" "));
+    const localState = loadLocalState();
+    const serverState = await loadServerState();
+    applyStoredState(mergeStates(localState, serverState));
+    migrateLegacyState(legacyOrderedApps);
 
-      const pinIcon = document.createElement("i");
-      pinIcon.classList.add("fa", "fa-map-pin");
-      pinIcon.ariaHidden = true;
-
-      const btn = document.createElement("button");
-      btn.appendChild(pinIcon);
-      btn.style.float = "right";
-      btn.style.backgroundColor = "rgb(45,45,45)";
-      btn.style.borderRadius = "50%";
-      btn.style.borderColor = "transparent";
-      btn.style.color = "white";
-      btn.style.top = "-200px";
-      btn.style.position = "relative";
-      btn.onclick = () => {
-        setPin(pinNum);
-      };
-      btn.title = "Pin";
-
-      const link = document.createElement("a");
-
-      link.onclick = () => {
-        handleClick(app);
-      };
-
-      const image = document.createElement("img");
-      image.width = 145;
-      image.height = 145;
-      image.loading = "lazy";
-
-      if (app.image) {
-        image.src = app.image;
-      } else {
-        image.style.display = "none";
-      }
-
-      const paragraph = document.createElement("p");
-
-      for (const span of Span(app.name)) {
-        paragraph.appendChild(span);
-      }
-
-      if (app.error) {
-        paragraph.style.color = "red";
-        if (!app.say) {
-          app.say = "This app is currently not working.";
-        }
-      } else if (app.load) {
-        paragraph.style.color = "yellow";
-        if (!app.say) {
-          app.say = "This app may experience excessive loading times.";
-        }
-      } else if (app.partial) {
-        paragraph.style.color = "yellow";
-        if (!app.say) {
-          app.say = "This app is currently experiencing some issues, it may not work for you. (Dynamic doesn't work in about:blank)";
-        }
-      }
-
-      link.appendChild(image);
-      link.appendChild(paragraph);
-      columnDiv.appendChild(link);
-
-      if (appInd !== 0) {
-        columnDiv.appendChild(btn);
-      }
-
-      if (pinList != null && appInd !== 0) {
-        if (pinContains(appInd, pinList)) {
-          pinnedApps.appendChild(columnDiv);
-        } else {
-          nonPinnedApps.appendChild(columnDiv);
-        }
-      } else {
-        nonPinnedApps.appendChild(columnDiv);
-      }
-      appInd += 1;
+    const appMap = new Map();
+    for (const app of [...state.customApps, ...builtInApps]) {
+      appMap.set(app.id, app);
     }
 
-    const appsContainer = document.getElementById("apps-container");
-    appsContainer.appendChild(pinnedApps);
-    appsContainer.appendChild(nonPinnedApps);
-  })
-  .catch(error => {
-    console.error("Error fetching JSON data:", error);
-  });
+    state.apps = [...appMap.values()];
 
-function category() {
-  const selectedCategories = Array.from(document.querySelectorAll("#category option:checked")).map(option => option.value);
-  const g = document.getElementsByClassName("column");
+    const validIds = new Set(state.apps.map((app) => app.id));
+    state.favorites = new Set([...state.favorites].filter((id) => validIds.has(id)));
+    state.recent = state.recent.filter((item) => validIds.has(item.id));
 
-  for (const game of g) {
-    const categories = game.getAttribute("data-category").split(" ");
+    scheduleServerSync();
+  }
 
-    if (selectedCategories.length === 0 || selectedCategories.some(category => categories.includes(category))) {
-      game.style.display = "block";
-    } else {
-      game.style.display = "none";
+  async function init() {
+    cacheElements();
+    bindEvents();
+
+    try {
+      await loadApps();
+      render();
+    } catch (error) {
+      console.error(error);
+      elements.loading.hidden = true;
+      elements.allApps.hidden = true;
+      elements.empty.hidden = false;
+      elements.empty.querySelector("h3").textContent = "Apps could not load";
+      elements.empty.querySelector("p").textContent = "Refresh the page and try again.";
+      elements.status.innerHTML = `<span>${escapeHtml(error.message)}</span>`;
     }
   }
-}
 
-function bar() {
-  const input = document.getElementById("search");
-  const filter = input.value.toLowerCase();
-  const g = document.getElementsByClassName("column");
-
-  for (const game of g) {
-    const name = game.getElementsByTagName("p")[0].textContent.toLowerCase();
-
-    if (name.includes(filter)) {
-      game.style.display = "block";
-    } else {
-      game.style.display = "none";
-    }
-  }
-}
+  document.addEventListener("DOMContentLoaded", init);
+})();
