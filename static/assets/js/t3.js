@@ -1,377 +1,232 @@
-// tabs.js
-window.addEventListener("load", () => {
-  navigator.serviceWorker.register("../sw.js?v=2025-04-15", { scope: "/a/" });
+(() => {
+  "use strict";
+
+  const tabList = document.getElementById("tab-list");
+  const frameContainer = document.getElementById("frame-container");
+  const addTabButton = document.getElementById("add-tab");
   const form = document.getElementById("fv");
   const input = document.getElementById("input");
-  if (form && input) {
-    form.addEventListener("submit", async event => {
-      event.preventDefault();
-      const formValue = input.value.trim();
-      const url = isUrl(formValue) ? prependHttps(formValue) : `https://duckduckgo.com/?q=${formValue}`;
-      processUrl(url);
+  const engineSelect = document.getElementById("tabs-proxy-engine");
+
+  const tabs = new Map();
+  let activeId = null;
+  let nextId = 1;
+
+  function activeTab() {
+    return tabs.get(activeId) || null;
+  }
+
+  function selectedEngine() {
+    return window.FuzzProxy.getEngine();
+  }
+
+  function setActive(id) {
+    if (!tabs.has(id)) return;
+    activeId = id;
+
+    for (const tab of tabs.values()) {
+      const active = tab.id === id;
+      tab.button.classList.toggle("active", active);
+      tab.host.classList.toggle("active", active);
+    }
+
+    const tab = activeTab();
+    input.value = tab?.url || "";
+    if (engineSelect) engineSelect.value = tab?.engine || selectedEngine();
+  }
+
+  function updateTitle(tab) {
+    const frame = tab.view?.element;
+    if (!frame) return;
+
+    try {
+      const title = frame.contentDocument?.title?.trim();
+      if (title) tab.title.textContent = title.slice(0, 32);
+    } catch {
+      tab.title.textContent = new URL(tab.url).hostname.replace(/^www\./, "");
+    }
+  }
+
+  async function mountView(tab, url, engine) {
+    tab.view?.destroy?.();
+    tab.host.innerHTML = "";
+    tab.host.classList.add("is-loading");
+    tab.title.textContent = "Loading…";
+
+    try {
+      tab.view = await window.FuzzProxy.createView(tab.host, url, engine);
+      tab.url = tab.view.url;
+      tab.engine = tab.view.engine;
+      tab.view.element.addEventListener("load", () => updateTitle(tab));
+      tab.title.textContent = new URL(tab.url).hostname.replace(/^www\./, "");
+      tab.host.classList.remove("has-error");
+    } catch (error) {
+      console.error(error);
+      tab.host.classList.add("has-error");
+      tab.host.innerHTML = `
+        <div class="tabs-error-card">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <h2>${engine === "scramjet" ? "Scramjet could not open this page" : "Ultraviolet could not open this page"}</h2>
+          <p>${String(error.message || error)}</p>
+          ${engine === "scramjet" ? '<button type="button" data-retry-ultraviolet>Retry with Ultraviolet</button>' : ""}
+        </div>`;
+      tab.host.querySelector("[data-retry-ultraviolet]")?.addEventListener("click", () => {
+        window.FuzzProxy.setEngine("ultraviolet");
+        mountView(tab, url, "ultraviolet");
+      });
+      tab.title.textContent = "Failed";
+    } finally {
+      tab.host.classList.remove("is-loading");
+      if (tab.id === activeId) {
+        input.value = tab.url || url;
+        if (engineSelect) engineSelect.value = tab.engine || engine;
+      }
+    }
+  }
+
+  function createTab(rawUrl = "", engine = selectedEngine()) {
+    const id = String(nextId++);
+    const item = document.createElement("li");
+    item.dataset.tabId = id;
+    item.draggable = true;
+
+    const title = document.createElement("span");
+    title.className = "t";
+    title.textContent = rawUrl ? "Loading…" : "New tab";
+
+    const close = document.createElement("button");
+    close.className = "close-tab";
+    close.type = "button";
+    close.innerHTML = "&#10005;";
+    close.setAttribute("aria-label", "Close tab");
+
+    item.append(title, close);
+    tabList.appendChild(item);
+
+    const host = document.createElement("section");
+    host.className = "proxy-tab-host";
+    host.dataset.tabId = id;
+    frameContainer.appendChild(host);
+
+    const tab = { id, button: item, title, close, host, view: null, url: "", engine };
+    tabs.set(id, tab);
+
+    item.addEventListener("click", () => setActive(id));
+    close.addEventListener("click", (event) => {
+      event.stopPropagation();
+      closeTab(id);
     });
-  }
-  function processUrl(url) {
-    sessionStorage.setItem("GoUrl", __uv$config.encodeUrl(url));
-    const iframeContainer = document.getElementById("frame-container");
-    const activeIframe = Array.from(iframeContainer.querySelectorAll("iframe")).find(iframe => iframe.classList.contains("active"));
-    activeIframe.src = `/a/${__uv$config.encodeUrl(url)}`;
-    activeIframe.dataset.tabUrl = url;
-    input.value = url;
-    console.log(activeIframe.dataset.tabUrl);
-  }
-  function isUrl(val = "") {
-    if (/^http(s?):\/\//.test(val) || (val.includes(".") && val.substr(0, 1) !== " ")) {
-      return true;
-    }
-    return false;
-  }
-  function prependHttps(url) {
-    if (!url.startsWith("http://") && !url.startsWith("https://")) {
-      return `https://${url}`;
-    }
-    return url;
-  }
-});
-document.addEventListener("DOMContentLoaded", event => {
-  const addTabButton = document.getElementById("add-tab");
-  const tabList = document.getElementById("tab-list");
-  const iframeContainer = document.getElementById("frame-container");
-  let tabCounter = 1;
-  addTabButton.addEventListener("click", () => {
-    createNewTab();
-    Load();
-  });
-  function createNewTab() {
-    const newTab = document.createElement("li");
-    const tabTitle = document.createElement("span");
-    const newIframe = document.createElement("iframe");
-    newIframe.sandbox = "allow-same-origin allow-scripts allow-forms allow-pointer-lock allow-modals allow-orientation-lock allow-presentation allow-storage-access-by-user-activation";
-    // When Top Navigation is not allowed links with the "top" value will be entirely blocked, if we allow Top Navigation it will overwrite the tab, which is obviously not wanted.
-    tabTitle.textContent = `New Tab ${tabCounter}`;
-    tabTitle.className = "t";
-    newTab.dataset.tabId = tabCounter;
-    newTab.addEventListener("click", switchTab);
-    newTab.setAttribute("draggable", true);
-    const closeButton = document.createElement("button");
-    closeButton.classList.add("close-tab");
-    closeButton.innerHTML = "&#10005;";
-    closeButton.addEventListener("click", closeTab);
-    newTab.appendChild(tabTitle);
-    newTab.appendChild(closeButton);
-    tabList.appendChild(newTab);
-    const allTabs = Array.from(tabList.querySelectorAll("li"));
-    for (const tab of allTabs) {
-      tab.classList.remove("active");
-    }
-    const allIframes = Array.from(iframeContainer.querySelectorAll("iframe"));
-    for (const iframe of allIframes) {
-      iframe.classList.remove("active");
-    }
-    newTab.classList.add("active");
-    newIframe.dataset.tabId = tabCounter;
-    newIframe.classList.add("active");
-    newIframe.addEventListener("load", () => {
-      const title = newIframe.contentDocument.title;
-      if (title.length <= 1) {
-        tabTitle.textContent = "Tab";
-      } else {
-        tabTitle.textContent = title;
-      }
-      newIframe.contentWindow.open = url => {
-        sessionStorage.setItem("URL", `/a/${__uv$config.encodeUrl(url)}`);
-        createNewTab();
-        return null;
-      };
-      if (newIframe.contentDocument.documentElement.outerHTML.trim().length > 0) {
-        Load();
-      }
-      Load();
-    });
-    const goUrl = sessionStorage.getItem("GoUrl");
-    const url = sessionStorage.getItem("URL");
 
-    if (tabCounter === 0 || tabCounter === 1) {
-      if (goUrl !== null) {
-        if (goUrl.includes("/e/")) {
-          newIframe.src = window.location.origin + goUrl;
-        } else {
-          newIframe.src = `${window.location.origin}/a/${goUrl}`;
-        }
-      } else {
-        newIframe.src = "/";
-      }
-    } else if (tabCounter > 1) {
-      if (url !== null) {
-        newIframe.src = window.location.origin + url;
-        sessionStorage.removeItem("URL");
-      } else if (goUrl !== null) {
-        if (goUrl.includes("/e/")) {
-          newIframe.src = window.location.origin + goUrl;
-        } else {
-          newIframe.src = `${window.location.origin}/a/${goUrl}`;
-        }
-      } else {
-        newIframe.src = "/";
-      }
-    }
+    setActive(id);
 
-    iframeContainer.appendChild(newIframe);
-    tabCounter += 1;
-  }
-  function closeTab(event) {
-    event.stopPropagation();
-    const tabId = event.target.closest("li").dataset.tabId;
-    const tabToRemove = tabList.querySelector(`[data-tab-id='${tabId}']`);
-    const iframeToRemove = iframeContainer.querySelector(`[data-tab-id='${tabId}']`);
-    if (tabToRemove && iframeToRemove) {
-      tabToRemove.remove();
-      iframeToRemove.remove();
-      const remainingTabs = Array.from(tabList.querySelectorAll("li"));
-      if (remainingTabs.length === 0) {
-        tabCounter = 0;
-        document.getElementById("input").value = "";
-      } else {
-        const nextTabIndex = remainingTabs.findIndex(tab => tab.dataset.tabId !== tabId);
-        if (nextTabIndex > -1) {
-          const nextTabToActivate = remainingTabs[nextTabIndex];
-          const nextIframeToActivate = iframeContainer.querySelector(`[data-tab-id='${nextTabToActivate.dataset.tabId}']`);
-          for (const tab of remainingTabs) {
-            tab.classList.remove("active");
-          }
-          remainingTabs[nextTabIndex].classList.add("active");
-          const allIframes = Array.from(iframeContainer.querySelectorAll("iframe"));
-          for (const iframe of allIframes) {
-            iframe.classList.remove("active");
-          }
-          nextIframeToActivate.classList.add("active");
-        }
-      }
-    }
-  }
-  function switchTab(event) {
-    const tabId = event.target.closest("li").dataset.tabId;
-    const allTabs = Array.from(tabList.querySelectorAll("li"));
-    for (const tab of allTabs) {
-      tab.classList.remove("active");
-    }
-    const allIframes = Array.from(iframeContainer.querySelectorAll("iframe"));
-    for (const iframe of allIframes) {
-      iframe.classList.remove("active");
-    }
-    const selectedTab = tabList.querySelector(`[data-tab-id='${tabId}']`);
-    if (selectedTab) {
-      selectedTab.classList.add("active");
-      Load();
+    if (rawUrl) {
+      void mountView(tab, rawUrl, engine);
     } else {
-      console.log("No selected tab found with ID:", tabId);
+      const iframe = document.createElement("iframe");
+      iframe.src = "/";
+      iframe.className = "fuzz-proxy-frame";
+      host.appendChild(iframe);
+      tab.view = { element: iframe, destroy: () => iframe.remove(), engine: "local", url: "/" };
+      tab.url = "";
+      tab.engine = engine;
     }
-    const selectedIframe = iframeContainer.querySelector(`[data-tab-id='${tabId}']`);
-    if (selectedIframe) {
-      selectedIframe.classList.add("active");
-    } else {
-      console.log("No selected iframe found with ID:", tabId);
-    }
-  }
-  let dragTab = null;
-  tabList.addEventListener("dragstart", event => {
-    dragTab = event.target;
-  });
-  tabList.addEventListener("dragover", event => {
-    event.preventDefault();
-    const targetTab = event.target;
-    if (targetTab.tagName === "LI" && targetTab !== dragTab) {
-      const targetIndex = Array.from(tabList.children).indexOf(targetTab);
-      const dragIndex = Array.from(tabList.children).indexOf(dragTab);
-      if (targetIndex < dragIndex) {
-        tabList.insertBefore(dragTab, targetTab);
-      } else {
-        tabList.insertBefore(dragTab, targetTab.nextSibling);
-      }
-    }
-  });
-  tabList.addEventListener("dragend", () => {
-    dragTab = null;
-  });
-  createNewTab();
-});
-// Reload
-function reload() {
-  const activeIframe = document.querySelector("#frame-container iframe.active");
-  if (activeIframe) {
-    // biome-ignore lint: idk
-    activeIframe.src = activeIframe.src;
-    Load();
-  } else {
-    console.error("No active iframe found");
-  }
-}
 
-// Popout
-function popout() {
-  const activeIframe = document.querySelector("#frame-container iframe.active");
-  if (activeIframe) {
-    const newWindow = window.open("about:blank", "_blank");
-    if (newWindow) {
-      const name = localStorage.getItem("name") || "My Drive - Google Drive";
-      const icon = localStorage.getItem("icon") || "https://ssl.gstatic.com/docs/doclist/images/drive_2022q3_32dp.png";
-      newWindow.document.title = name;
-      const link = newWindow.document.createElement("link");
-      link.rel = "icon";
-      link.href = encodeURI(icon);
-      newWindow.document.head.appendChild(link);
-
-      const newIframe = newWindow.document.createElement("iframe");
-      const style = newIframe.style;
-      style.position = "fixed";
-      style.top = style.bottom = style.left = style.right = 0;
-      style.border = style.outline = "none";
-      style.width = style.height = "100%";
-
-      newIframe.src = activeIframe.src;
-
-      newWindow.document.body.appendChild(newIframe);
-    }
-  } else {
-    console.error("No active iframe found");
+    return tab;
   }
-}
 
-function eToggle() {
-  const activeIframe = document.querySelector("#frame-container iframe.active");
-  if (!activeIframe) {
-    console.error("No active iframe found");
-    return;
-  }
-  const erudaWindow = activeIframe.contentWindow;
-  if (!erudaWindow) {
-    console.error("No content window found for the active iframe");
-    return;
-  }
-  if (erudaWindow.eruda) {
-    if (erudaWindow.eruda._isInit) {
-      erudaWindow.eruda.destroy();
-    } else {
-      console.error("Eruda is not initialized in the active iframe");
-    }
-  } else {
-    const erudaDocument = activeIframe.contentDocument;
-    if (!erudaDocument) {
-      console.error("No content document found for the active iframe");
+  function closeTab(id) {
+    const tab = tabs.get(id);
+    if (!tab) return;
+    const ids = [...tabs.keys()];
+    const index = ids.indexOf(id);
+    tab.view?.destroy?.();
+    tab.button.remove();
+    tab.host.remove();
+    tabs.delete(id);
+
+    if (tabs.size === 0) {
+      createTab();
       return;
     }
-    const script = erudaDocument.createElement("script");
-    script.src = "https://cdn.jsdelivr.net/npm/eruda";
-    script.onload = () => {
-      if (!erudaWindow.eruda) {
-        console.error("Failed to load Eruda in the active iframe");
-        return;
-      }
-      erudaWindow.eruda.init();
-      erudaWindow.eruda.show();
-    };
-    erudaDocument.head.appendChild(script);
-  }
-}
-// Fullscreen
-function FS() {
-  const activeIframe = document.querySelector("#frame-container iframe.active");
-  if (activeIframe) {
-    if (activeIframe.contentDocument.fullscreenElement) {
-      activeIframe.contentDocument.exitFullscreen();
-    } else {
-      activeIframe.contentDocument.documentElement.requestFullscreen();
+
+    if (activeId === id) {
+      setActive(ids[index + 1] || ids[index - 1] || [...tabs.keys()][0]);
     }
-  } else {
-    console.error("No active iframe found");
   }
-}
-const fullscreenButton = document.getElementById("fullscreen-button");
-fullscreenButton.addEventListener("click", FS);
-// Home
-function Home() {
-  window.location.href = "./";
-}
-const homeButton = document.getElementById("home-page");
-homeButton.addEventListener("click", Home);
-// Back
-function goBack() {
-  const activeIframe = document.querySelector("#frame-container iframe.active");
-  if (activeIframe) {
-    activeIframe.contentWindow.history.back();
-    iframe.src = activeIframe.src;
-    Load();
-  } else {
-    console.error("No active iframe found");
+
+  async function navigateActive(value, engine = selectedEngine()) {
+    const tab = activeTab() || createTab();
+    const url = window.FuzzProxy.normalizeInput(value);
+    if (!url) return;
+    window.FuzzProxy.logNavigation(url, engine, window.FuzzProxy.isUrl(value) ? "" : value, "tabs-address-bar");
+    await mountView(tab, url, engine);
   }
-}
-// Forward
-function goForward() {
-  const activeIframe = document.querySelector("#frame-container iframe.active");
-  if (activeIframe) {
-    activeIframe.contentWindow.history.forward();
-    iframe.src = activeIframe.src;
-    Load();
-  } else {
-    console.error("No active iframe found");
-  }
-}
-// Remove Nav
-document.addEventListener("DOMContentLoaded", () => {
-  const tb = document.getElementById("tabs-button");
-  const nb = document.getElementById("right-side-nav");
-  tb.addEventListener("click", () => {
-    const activeIframe = document.querySelector("#frame-container iframe.active");
-    if (nb.style.display === "none") {
-      nb.style.display = "";
-      activeIframe.style.top = "10%";
-      activeIframe.style.height = "90%";
-      tb.querySelector("i").classList.remove("fa-magnifying-glass-plus");
-      tb.querySelector("i").classList.add("fa-magnifying-glass-minus");
-    } else {
-      nb.style.display = "none";
-      activeIframe.style.top = "5%";
-      activeIframe.style.height = "95%";
-      tb.querySelector("i").classList.remove("fa-magnifying-glass-minus");
-      tb.querySelector("i").classList.add("fa-magnifying-glass-plus");
-    }
+
+  window.fuzzNavigateActiveTab = navigateActive;
+
+  form?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    void navigateActive(input.value, selectedEngine());
   });
-});
-if (navigator.userAgent.includes("Chrome")) {
-  window.addEventListener("resize", () => {
-    navigator.keyboard.lock(["Escape"]);
+
+  addTabButton?.addEventListener("click", () => createTab());
+
+  engineSelect?.addEventListener("change", () => {
+    const engine = window.FuzzProxy.setEngine(engineSelect.value);
+    const tab = activeTab();
+    if (tab?.url) void mountView(tab, tab.url, engine);
   });
-}
-function Load() {
-  const activeIframe = document.querySelector("#frame-container iframe.active");
-  if (activeIframe && activeIframe.contentWindow.document.readyState === "complete") {
-    const website = activeIframe.contentWindow.document.location.href;
-    if (website.includes("/a/")) {
-      const websitePath = website.replace(window.location.origin, "").replace("/a/", "");
-      localStorage.setItem("decoded", websitePath);
-      const decodedValue = decodeXor(websitePath);
-      document.getElementById("input").value = decodedValue;
-    } else if (website.includes("/a/q/")) {
-      const websitePath = website.replace(window.location.origin, "").replace("/a/q/", "");
-      const decodedValue = decodeXor(websitePath);
-      localStorage.setItem("decoded", websitePath);
-      document.getElementById("input").value = decodedValue;
-    } else {
-      const websitePath = website.replace(window.location.origin, "");
-      document.getElementById("input").value = websitePath;
-      localStorage.setItem("decoded", websitePath);
-    }
-  }
-}
-function decodeXor(input) {
-  if (!input) {
-    return input;
-  }
-  const [str, ...search] = input.split("?");
-  return (
-    decodeURIComponent(str)
-      .split("")
-      .map((char, ind) => (ind % 2 ? String.fromCharCode(char.charCodeAt(Number.NaN) ^ 2) : char))
-      .join("") + (search.length ? `?${search.join("?")}` : "")
-  );
-}
+
+  window.Home = () => {
+    const tab = activeTab();
+    if (!tab) return;
+    tab.view?.destroy?.();
+    tab.host.innerHTML = '<iframe class="fuzz-proxy-frame" src="/"></iframe>';
+    const iframe = tab.host.querySelector("iframe");
+    tab.view = { element: iframe, destroy: () => iframe.remove(), engine: "local", url: "/" };
+    tab.url = "";
+    tab.title.textContent = "Home";
+    input.value = "";
+  };
+
+  window.reload = () => {
+    const frame = activeTab()?.view?.element;
+    try { frame?.contentWindow?.location.reload(); } catch { if (activeTab()?.url) void mountView(activeTab(), activeTab().url, activeTab().engine); }
+  };
+  window.goBack = () => { try { activeTab()?.view?.element?.contentWindow?.history.back(); } catch {} };
+  window.goForward = () => { try { activeTab()?.view?.element?.contentWindow?.history.forward(); } catch {} };
+  window.FS = () => document.body.classList.toggle("fullscreen");
+  window.popout = () => {
+    const tab = activeTab();
+    if (!tab?.url) return;
+    window.FuzzProxy.savePending(tab.url, tab.engine);
+    window.open("/p", "_blank", "noopener");
+  };
+  window.eToggle = () => window.alert("Inspect tools are not available for proxied pages.");
+
+  document.getElementById("fullscreen-button")?.addEventListener("click", window.FS);
+  document.getElementById("popout-button")?.addEventListener("click", window.popout);
+  document.getElementById("tabs-button")?.addEventListener("click", () => {
+    document.body.classList.toggle("tabs-collapsed");
+  });
+
+  let dragged = null;
+  tabList.addEventListener("dragstart", (event) => { dragged = event.target.closest("li"); });
+  tabList.addEventListener("dragover", (event) => {
+    event.preventDefault();
+    const target = event.target.closest("li");
+    if (!dragged || !target || dragged === target) return;
+    const rect = target.getBoundingClientRect();
+    tabList.insertBefore(dragged, event.clientX < rect.left + rect.width / 2 ? target : target.nextSibling);
+  });
+  tabList.addEventListener("dragend", () => { dragged = null; });
+
+  const pendingUrl = sessionStorage.getItem("GoUrlRaw");
+  const pendingEngine = sessionStorage.getItem("GoProxyEngine") || selectedEngine();
+  sessionStorage.removeItem("GoUrlRaw");
+  sessionStorage.removeItem("GoProxyEngine");
+  // Remove legacy encoded state so it cannot create a malformed first tab.
+  sessionStorage.removeItem("GoUrl");
+
+  createTab(pendingUrl || "", pendingEngine);
+})();

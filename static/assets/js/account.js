@@ -453,9 +453,10 @@ function readBrowserSettings() {
     backgroundImage:
       localStorage.getItem("backgroundImage") || "",
     proxyMode:
-      localStorage.getItem("dy") === "true"
-        ? "dy"
-        : "uv",
+      localStorage.getItem("fuzz_proxy_engine") ||
+      (localStorage.getItem("dy") === "true"
+        ? "scramjet"
+        : "ultraviolet"),
     particles:
       localStorage.getItem("Particles") === "true" ||
       localStorage.getItem("particles") === "true",
@@ -511,9 +512,13 @@ function saveBrowserSettings(values) {
   localStorage.setItem("pLink", panicUrl.toString());
   localStorage.setItem("backgroundImage", values.backgroundImage || "");
 
-  const dynamic = values.proxyMode === "dy";
-  localStorage.setItem("uv", String(!dynamic));
-  localStorage.setItem("dy", String(dynamic));
+  const proxyMode =
+    values.proxyMode === "ultraviolet"
+      ? "ultraviolet"
+      : "scramjet";
+  localStorage.setItem("fuzz_proxy_engine", proxyMode);
+  localStorage.setItem("uv", String(proxyMode === "ultraviolet"));
+  localStorage.setItem("dy", "false");
 
   localStorage.setItem("Particles", String(values.particles === true));
   localStorage.setItem("particles", String(values.particles === true));
@@ -572,6 +577,7 @@ function exportBrowserSettings() {
     "backgroundImage",
     "uv",
     "dy",
+    "fuzz_proxy_engine",
     "Particles",
     "particles",
     "engine",
@@ -628,6 +634,7 @@ function importBrowserSettings(file) {
           "backgroundImage",
           "uv",
           "dy",
+          "fuzz_proxy_engine",
           "Particles",
           "particles",
           "engine",
@@ -679,6 +686,7 @@ async function renderPreferences() {
             <div class="account-form">
               <label class="account-label">Appearance<select class="account-select" id="pref-appearance"><option value="space" ${p.appearance === "space" ? "selected" : ""}>Space</option><option value="midnight" ${p.appearance === "midnight" ? "selected" : ""}>Midnight</option><option value="dim" ${p.appearance === "dim" ? "selected" : ""}>Dim</option></select></label>
               <label class="account-label">Default search engine<select class="account-select" id="pref-engine">${Object.entries(payload.proxyEngines || {}).map(([key, engine]) => `<option value="${escapeHtml(key)}" ${p.defaultProxyEngine === key ? "selected" : ""}>${escapeHtml(engine.name)}</option>`).join("")}</select></label>
+              <label class="account-label">Default proxy<select class="account-select" id="pref-proxy-technology"><option value="scramjet" ${p.proxyTechnology !== "ultraviolet" ? "selected" : ""}>Scramjet · Recommended</option><option value="ultraviolet" ${p.proxyTechnology === "ultraviolet" ? "selected" : ""}>Ultraviolet · Legacy fallback</option></select></label>
               <label class="account-label">Fuzz AI response style<select class="account-select" id="pref-ai"><option value="balanced" ${p.aiBehavior === "balanced" ? "selected" : ""}>Balanced</option><option value="concise" ${p.aiBehavior === "concise" ? "selected" : ""}>Concise</option><option value="detailed" ${p.aiBehavior === "detailed" ? "selected" : ""}>Detailed</option><option value="creative" ${p.aiBehavior === "creative" ? "selected" : ""}>Creative</option></select></label>
             </div>
           `)}
@@ -721,9 +729,8 @@ async function renderPreferences() {
             </div>
           `)}
 
-          ${panel("Proxy and effects", "Choose the local proxy engine and visual effects", `
+          ${panel("Effects", "Local visual effects for this browser", `
             <div class="account-form">
-              <label class="account-label">Proxy mode<select class="account-select" id="browser-proxy-mode"><option value="uv" ${browser.proxyMode === "uv" ? "selected" : ""}>Ultraviolet</option><option value="dy" ${browser.proxyMode === "dy" ? "selected" : ""}>Dynamic (beta)</option></select></label>
               <div class="account-switch-row"><div class="account-switch-copy"><strong>Particles</strong><span>Show the legacy particle effect on supported pages.</span></div><label class="account-switch"><input id="browser-particles" type="checkbox" ${browser.particles ? "checked" : ""} /><span></span></label></div>
             </div>
           `)}
@@ -750,6 +757,7 @@ async function renderPreferences() {
       announcementsEnabled: content.querySelector("#pref-announcements").checked,
       retainProxyHistory: content.querySelector("#pref-proxy-history").checked,
       defaultProxyEngine: content.querySelector("#pref-engine").value,
+      proxyTechnology: content.querySelector("#pref-proxy-technology").value,
       aiBehavior: content.querySelector("#pref-ai").value,
       reducedMotion: content.querySelector("#pref-motion").checked,
       appearance: content.querySelector("#pref-appearance").value,
@@ -779,7 +787,7 @@ async function renderPreferences() {
         panicLink: content.querySelector("#browser-panic-link").value,
         cloakPreset: content.querySelector("#browser-cloak").value,
         backgroundImage: content.querySelector("#browser-background").value.trim(),
-        proxyMode: content.querySelector("#browser-proxy-mode").value,
+        proxyMode: state.preferences?.proxyTechnology || browser.proxyMode,
         particles: content.querySelector("#browser-particles").checked,
       });
       toast("Browser settings saved. Reloading to apply them…");

@@ -412,3 +412,7 @@ body.home-page::before {
     transition-duration: 1ms !important;
   }
 }
+
+
+/* Dual proxy selector */
+.home-engine-control{display:inline-flex;align-items:center;gap:7px}.home-engine-control>span{color:#69738f;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em}.home-engine-control select{min-height:27px;padding:0 26px 0 9px;border:1px solid rgba(145,155,255,.12);border-radius:8px;color:#cbd0e5;background:#0c1123;color-scheme:dark;font:inherit;font-size:9px;font-weight:700;cursor:pointer}.home-engine-control select:hover{border-color:rgba(127,140,255,.38)}.home-engine-control option{color:#f4f7ff;background:#0d1226}@media(max-width:520px){.home-search-footer{flex-wrap:wrap;padding:6px 4px}.home-search-divider{display:none}}

@@ -70,7 +70,13 @@
         <div class="home-search-footer">
           <span><kbd>Enter</kbd> to search</span>
           <span class="home-search-divider"></span>
-          <span>URLs open directly</span>
+          <label class="home-engine-control">
+            <span>Proxy</span>
+            <select data-proxy-engine-select aria-label="Choose proxy engine">
+              <option value="scramjet">Scramjet · Recommended</option>
+              <option value="ultraviolet">Ultraviolet · Legacy</option>
+            </select>
+          </label>
         </div>
       </div>
 
@@ -111,8 +117,12 @@
     </section>
   </main>
 
+  <script src="/baremux/index.js"></script>
+  <script src="/scram/scramjet.bundle.js"></script>
+  <script src="/assets/js/proxy-engine.js?v=1"></script>
+
   <!-- Core proxy scripts -->
-  <script src="/assets/js/index-3.js?v=6"></script>
+  <script src="/assets/js/index-3.js?v=7"></script>
   <script src="/assets/js/h1.js?v=6"></script>
   <script src="/assets/mathematics/bundle.js"></script>
   <script src="/assets/mathematics/config.js"></script>

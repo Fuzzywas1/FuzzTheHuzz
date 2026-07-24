@@ -1,114 +1,49 @@
-window.addEventListener("load", () => {
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("../sw.js?v=2025-04-15", {
-      scope: "/a/",
-    }).catch(err => {
-      console.warn("Service worker failed:", err);
-    });
-  }
-});
+(() => {
+  "use strict";
 
-/* 🌌 FRAME CHECK (safe fallback) */
-let xl = false;
+  const form = document.getElementById("fv");
+  const input = document.getElementById("input");
 
-try {
-  xl = window.top.location.pathname === "/d";
-} catch {
+  let insideTabs = false;
   try {
-    xl = window.parent.location.pathname === "/d";
-  } catch {
-    xl = false;
+    insideTabs = window.top.location.pathname === "/d";
+  } catch {}
+
+  async function submit(value) {
+    const rawValue = String(value || "").trim();
+    if (!rawValue) return;
+
+    const url = window.FuzzProxy.normalizeInput(rawValue);
+    const engine = window.FuzzProxy.getEngine();
+    window.FuzzProxy.logNavigation(
+      url,
+      engine,
+      window.FuzzProxy.isUrl(rawValue) ? "" : rawValue,
+      insideTabs ? "tabs-address-bar" : "home-search",
+    );
+
+    if (insideTabs && typeof window.fuzzNavigateActiveTab === "function") {
+      await window.fuzzNavigateActiveTab(url, engine);
+      return;
+    }
+
+    window.FuzzProxy.openTabs(url, engine);
   }
-}
 
-/* 🔍 ELEMENTS */
-const form = document.getElementById("fv");
-const input = document.getElementById("input");
-
-/* 🚀 FORM HANDLER */
-if (form && input) {
-  form.addEventListener("submit", async (event) => {
+  form?.addEventListener("submit", (event) => {
     event.preventDefault();
-
-    const value = input.value.trim();
-
-    if (!value) return;
-
-    try {
-      if (xl) {
-        processUrl(value, "");
-      } else {
-        processUrl(value, "/d");
-      }
-    } catch (err) {
-      console.warn("Fallback navigation triggered:", err);
-      processUrl(value, "/d");
-    }
+    submit(input?.value).catch((error) => {
+      console.error("Proxy navigation failed:", error);
+      window.alert(`The page could not be opened: ${error.message}`);
+    });
   });
-}
 
-/* 🌠 MAIN URL PROCESSOR */
-function processUrl(value, path = "") {
-  let url = value.trim();
-
-  const engine =
-    localStorage.getItem("engine") ||
-    "https://duckduckgo.com/?q=";
-
-  /* 🌌 detect URL vs search */
-  if (!isUrl(url)) {
-    url = engine + encodeURIComponent(url);
-  } else if (!/^https?:\/\//i.test(url)) {
-    url = `https://${url}`;
-  }
-
-  try {
-    const encoded = __uv$config.encodeUrl(url);
-    sessionStorage.setItem("GoUrl", encoded);
-
-    const dy = localStorage.getItem("dy");
-
-    /* 🌠 dynamic routing modes */
-    if (dy === "true") {
-      window.location.href = `/a/q/${encoded}`;
-      return;
-    }
-
-    if (path) {
-      location.href = path;
-      return;
-    }
-
-    window.location.href = `/a/${encoded}`;
-
-  } catch (err) {
-    console.error("Encoding failed, redirecting normally:", err);
-    window.location.href = url;
-  }
-}
-
-/* 🚀 HELPERS */
-function go(value) {
-  processUrl(value, "/d");
-}
-
-function blank(value) {
-  processUrl(value);
-}
-
-function dy(value) {
-  const encoded = __uv$config.encodeUrl(value);
-  processUrl(value, `/a/q/${encoded}`);
-}
-
-/* 🔍 URL DETECTION (IMPROVED) */
-function isUrl(val = "") {
-  const trimmed = val.trim();
-
-  if (!trimmed) return false;
-
-  return (
-    /^https?:\/\//i.test(trimmed) ||
-    /^[a-z0-9.-]+\.[a-z]{2,}/i.test(trimmed)
-  );
-}
+  window.processUrl = (value, path = "/d") => {
+    if (path === "/d") return window.FuzzProxy.openTabs(value);
+    return window.FuzzProxy.openStandalone(value);
+  };
+  window.go = (value) => window.FuzzProxy.openTabs(value);
+  window.blank = (value) => window.FuzzProxy.openStandalone(value);
+  window.dy = (value) => window.FuzzProxy.openTabs(value, "scramjet");
+  window.now = (value) => window.FuzzProxy.openTabs(value, "scramjet");
+})();

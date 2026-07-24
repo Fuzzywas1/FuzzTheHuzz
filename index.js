@@ -5,6 +5,10 @@ import http from "node:http";
 import path from "node:path";
 
 import { createBareServer } from "@nebula-services/bare-server-node";
+import { baremuxPath } from "@mercuryworkshop/bare-mux/node";
+import { libcurlPath } from "@mercuryworkshop/libcurl-transport";
+import { scramjetPath } from "@mercuryworkshop/scramjet/path";
+import { logging as wispLogging, server as wispServer } from "@mercuryworkshop/wisp-js/server";
 import { createClient } from "@supabase/supabase-js";
 import chalk from "chalk";
 import cookieParser from "cookie-parser";
@@ -26,6 +30,12 @@ app.set("trust proxy", 1);
 
 const PORT = Number(process.env.PORT) || 8080;
 const bareServer = createBareServer("/ca/");
+
+/* Scramjet uses Wisp + CurlTransport while Ultraviolet keeps the existing Bare route. */
+wispLogging.set_level(wispLogging.NONE);
+Object.assign(wispServer.options, {
+  allow_udp_streams: false,
+});
 
 const CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
 const cache = new Map();
@@ -99,6 +109,29 @@ app.use(
     limit: "15mb",
   }),
 );
+
+/* Scramjet's WASM runtime benefits from a cross-origin-isolated controller page. */
+app.use((req, res, next) => {
+  const isolatedPage = new Set([
+    "/d",
+    "/p",
+    "/tabs.html",
+    "/proxy.html",
+  ]);
+
+  if (isolatedPage.has(req.path)) {
+    res.setHeader(
+      "Cross-Origin-Opener-Policy",
+      "same-origin",
+    );
+    res.setHeader(
+      "Cross-Origin-Embedder-Policy",
+      "credentialless",
+    );
+  }
+
+  next();
+});
 
 /*
  * The Bare server is handled before Express at the bottom of
@@ -3393,6 +3426,7 @@ const ACCOUNT_CENTER_DEFAULTS = Object.freeze({
   announcementsEnabled: true,
   retainProxyHistory: true,
   defaultProxyEngine: "duckduckgo",
+  proxyTechnology: "scramjet",
   aiBehavior: "balanced",
   reducedMotion: false,
   appearance: "space",
@@ -3421,6 +3455,11 @@ const ACCOUNT_CENTER_PROXY_ENGINES = Object.freeze({
   },
 });
 
+const ACCOUNT_CENTER_PROXY_TECHNOLOGIES = new Set([
+  "scramjet",
+  "ultraviolet",
+]);
+
 const ACCOUNT_CENTER_AI_BEHAVIORS = new Set([
   "balanced",
   "concise",
@@ -3448,6 +3487,12 @@ function serializeAccountCenterPreferences(row) {
       ]
         ? row.default_proxy_engine
         : ACCOUNT_CENTER_DEFAULTS.defaultProxyEngine,
+    proxyTechnology:
+      ACCOUNT_CENTER_PROXY_TECHNOLOGIES.has(
+        row?.proxy_technology,
+      )
+        ? row.proxy_technology
+        : ACCOUNT_CENTER_DEFAULTS.proxyTechnology,
     aiBehavior:
       ACCOUNT_CENTER_AI_BEHAVIORS.has(
         row?.ai_behavior,
@@ -3489,6 +3534,13 @@ function parseAccountCenterPreferences(body = {}) {
     .trim()
     .toLowerCase();
 
+  const proxyTechnology = String(
+    body.proxyTechnology ||
+      ACCOUNT_CENTER_DEFAULTS.proxyTechnology,
+  )
+    .trim()
+    .toLowerCase();
+
   const aiBehavior = String(
     body.aiBehavior ||
       ACCOUNT_CENTER_DEFAULTS.aiBehavior,
@@ -3510,6 +3562,16 @@ function parseAccountCenterPreferences(body = {}) {
   ) {
     throw new Error(
       "That default search engine is not supported.",
+    );
+  }
+
+  if (
+    !ACCOUNT_CENTER_PROXY_TECHNOLOGIES.has(
+      proxyTechnology,
+    )
+  ) {
+    throw new Error(
+      "That proxy technology is not supported.",
     );
   }
 
@@ -3540,6 +3602,8 @@ function parseAccountCenterPreferences(body = {}) {
       body.retainProxyHistory !== false,
     default_proxy_engine:
       defaultProxyEngine,
+    proxy_technology:
+      proxyTechnology,
     ai_behavior: aiBehavior,
     reduced_motion:
       body.reducedMotion === true,
@@ -4262,6 +4326,16 @@ app.get(
         preferences,
         proxyEngines:
           ACCOUNT_CENTER_PROXY_ENGINES,
+        proxyTechnologies: {
+          scramjet: {
+            name: "Scramjet",
+            description: "Recommended for modern websites.",
+          },
+          ultraviolet: {
+            name: "Ultraviolet",
+            description: "Legacy fallback for compatibility.",
+          },
+        },
         aiBehaviors: [
           "balanced",
           "concise",
@@ -4355,6 +4429,103 @@ app.put(
 
       return res.status(400).json({
         error: message,
+      });
+    }
+  },
+);
+
+
+app.patch(
+  "/api/account/preferences/proxy-technology",
+  requireApiAuth,
+  async (req, res) => {
+    const proxyTechnology = String(
+      req.body.proxyTechnology || "",
+    )
+      .trim()
+      .toLowerCase();
+
+    if (
+      !ACCOUNT_CENTER_PROXY_TECHNOLOGIES.has(
+        proxyTechnology,
+      )
+    ) {
+      return res.status(400).json({
+        error:
+          "Choose Scramjet or Ultraviolet.",
+      });
+    }
+
+    try {
+      const current =
+        await getAccountCenterPreferences(
+          req.auth.user.id,
+        );
+
+      const values =
+        parseAccountCenterPreferences({
+          ...current,
+          proxyTechnology,
+        });
+
+      const { data, error } =
+        await supabaseAdmin
+          .from("account_preferences")
+          .upsert(
+            {
+              user_id:
+                req.auth.user.id,
+              ...values,
+              updated_at:
+                new Date().toISOString(),
+            },
+            {
+              onConflict: "user_id",
+            },
+          )
+          .select("*")
+          .single();
+
+      if (error) {
+        throw error;
+      }
+
+      void writeActivityLog({
+        req,
+        userId: req.auth.user.id,
+        targetUserId:
+          req.auth.user.id,
+        category: "account",
+        action:
+          "account.proxy_technology_changed",
+        status: "success",
+        description:
+          `${req.auth.profile.username} selected ${proxyTechnology} as their proxy technology.`,
+        resourceType: "user",
+        resourceId:
+          req.auth.user.id,
+        responseStatus: 200,
+        newValues: {
+          proxyTechnology,
+        },
+      });
+
+      return res.json({
+        success: true,
+        preferences:
+          serializeAccountCenterPreferences(
+            data,
+          ),
+      });
+    } catch (error) {
+      console.error(
+        "Proxy technology preference update failed:",
+        error,
+      );
+
+      return res.status(500).json({
+        error:
+          "Your proxy preference could not be saved.",
       });
     }
   },
@@ -12650,6 +12821,7 @@ const protectedHtmlFiles = new Set([
   "/games.html",
   "/settings.html",
   "/tabs.html",
+  "/proxy.html",
   "/ai.html",
   "/admin.html",
 ]);
@@ -12673,6 +12845,49 @@ app.use((req, res, next) => {
     next,
   );
 });
+
+/* =======================================================
+   SCRAMJET CLIENT ASSETS
+======================================================= */
+
+const proxyVendorStaticOptions = {
+  index: false,
+  fallthrough: false,
+  setHeaders(res) {
+    res.setHeader(
+      "Cache-Control",
+      "public, max-age=3600",
+    );
+    res.setHeader(
+      "Cross-Origin-Resource-Policy",
+      "same-origin",
+    );
+  },
+};
+
+app.use(
+  "/scram",
+  express.static(
+    scramjetPath,
+    proxyVendorStaticOptions,
+  ),
+);
+
+app.use(
+  "/baremux",
+  express.static(
+    baremuxPath,
+    proxyVendorStaticOptions,
+  ),
+);
+
+app.use(
+  "/libcurl",
+  express.static(
+    libcurlPath,
+    proxyVendorStaticOptions,
+  ),
+);
 
 app.use(
   express.static(
@@ -12752,6 +12967,10 @@ const protectedRoutes = [
   {
     route: "/d",
     file: "tabs.html",
+  },
+  {
+    route: "/p",
+    file: "proxy.html",
   },
   {
     route: "/ai",
@@ -12881,6 +13100,42 @@ server.on("request", (req, res) => {
 server.on(
   "upgrade",
   (req, socket, head) => {
+    let upgradePath = "";
+
+    try {
+      upgradePath = new URL(
+        req.url || "/",
+        "http://localhost",
+      ).pathname;
+    } catch {
+      upgradePath = req.url || "";
+    }
+
+    if (
+      upgradePath === "/wisp/" ||
+      upgradePath.startsWith("/wisp/")
+    ) {
+      const settings =
+        platformSettingsCache.value ||
+        DEFAULT_PLATFORM_SETTINGS;
+
+      if (
+        !settings.proxy_enabled ||
+        isMaintenanceActive(settings)
+      ) {
+        socket.end(
+          "HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n",
+        );
+        return;
+      }
+
+      return wispServer.routeRequest(
+        req,
+        socket,
+        head,
+      );
+    }
+
     if (bareServer.shouldRoute(req)) {
       const settings =
         platformSettingsCache.value ||

@@ -10,7 +10,7 @@
   <link rel="shortcut icon" id="tab-favicon" href="favicon.png" />
   <title id="t">Home</title>
   <link rel="stylesheet" href="/assets/css/global.css?v=6" />
-  <link rel="stylesheet" href="/assets/css/t.css?v=02" />
+  <link rel="stylesheet" href="/assets/css/t.css?v=3" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <script>
     window.addEventListener("resize", navigator.keyboard.lock(["Escape"]));
@@ -24,6 +24,9 @@
 
   gtag('config', 'G-CQ2VHTSDMR');
 </script>
+  <script src="/baremux/index.js"></script>
+  <script src="/scram/scramjet.bundle.js"></script>
+  <script src="/assets/js/proxy-engine.js?v=1"></script>
 </head>
 
 <body id="no">
@@ -51,6 +54,10 @@
         <form id="fv" class="navpost" method="POST">
           <input id="input" class="bar" placeholder="Search or enter a new URL" type="text" />
         </form>
+        <select id="tabs-proxy-engine" class="tabs-engine-select" data-proxy-engine-select aria-label="Proxy engine">
+          <option value="scramjet">Scramjet · Recommended</option>
+          <option value="ultraviolet">Ultraviolet · Legacy</option>
+        </select>
       </div>
       <div class="nav-right">
         <button title="Fullscreen" id="fullscreen-button" class="nav-button nav-btn-right" onclick="FS()">
@@ -69,9 +76,9 @@
     </div>
   </div>
   <div class="frame-container" id="frame-container"></div>
-  <script src="assets/js/t3.js"></script>
   <script src="./assets/mathematics/bundle.js?v=2025-04-15"></script>
   <script src="./assets/mathematics/config.js?v=2025-04-15"></script>
+  <script src="assets/js/t3.js?v=3"></script>
   <script src="/assets/js/m1.js"></script>
   <!-- DO NOT REMOVE-->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-WKJQ5QHQTJ"></script>

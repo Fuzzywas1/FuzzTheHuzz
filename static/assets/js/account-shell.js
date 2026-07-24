@@ -88,6 +88,14 @@
         localStorage.setItem("engine", engine.url);
         localStorage.setItem("enginename", engine.name);
       }
+      const proxyTechnology =
+        preferences?.proxyTechnology === "ultraviolet"
+          ? "ultraviolet"
+          : "scramjet";
+      localStorage.setItem("fuzz_proxy_engine", proxyTechnology);
+      localStorage.setItem("uv", String(proxyTechnology === "ultraviolet"));
+      localStorage.setItem("dy", "false");
+      window.FuzzProxy?.setEngine?.(proxyTechnology, { sync: false });
     } catch {
       // The site remains usable when browser storage is blocked.
     }
