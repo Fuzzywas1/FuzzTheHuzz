@@ -119,13 +119,126 @@
     return `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/wisp/`;
   }
 
+  function loadClientScript(src, readyCheck) {
+    if (readyCheck()) {
+      return Promise.resolve();
+    }
+
+    const existing = document.querySelector(
+      `script[data-fuzz-client-src="${src}"]`,
+    );
+
+    if (existing) {
+      return new Promise((resolve, reject) => {
+        const timeout = window.setTimeout(() => {
+          if (readyCheck()) {
+            resolve();
+          } else {
+            reject(new Error(`Client script did not become ready: ${src}`));
+          }
+        }, 12000);
+
+        existing.addEventListener(
+          "load",
+          () => {
+            window.clearTimeout(timeout);
+
+            if (readyCheck()) {
+              resolve();
+            } else {
+              reject(new Error(`Client script loaded without its API: ${src}`));
+            }
+          },
+          { once: true },
+        );
+
+        existing.addEventListener(
+          "error",
+          () => {
+            window.clearTimeout(timeout);
+            reject(new Error(`Client script failed to load: ${src}`));
+          },
+          { once: true },
+        );
+      });
+    }
+
+    return new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = src;
+      script.async = false;
+      script.dataset.fuzzClientSrc = src;
+
+      const timeout = window.setTimeout(() => {
+        script.remove();
+
+        reject(
+          new Error(
+            `Client script timed out: ${src}`,
+          ),
+        );
+      }, 12000);
+
+      script.addEventListener(
+        "load",
+        () => {
+          window.clearTimeout(timeout);
+
+          if (readyCheck()) {
+            resolve();
+          } else {
+            reject(
+              new Error(
+                `Client script loaded without its API: ${src}`,
+              ),
+            );
+          }
+        },
+        { once: true },
+      );
+
+      script.addEventListener(
+        "error",
+        () => {
+          window.clearTimeout(timeout);
+          script.remove();
+
+          reject(
+            new Error(
+              `Client script failed to load: ${src}`,
+            ),
+          );
+        },
+        { once: true },
+      );
+
+      document.head.appendChild(script);
+    });
+  }
+
+  async function ensureScramjetClientFiles() {
+    await loadClientScript(
+      "/baremux/index.js",
+      () => Boolean(
+        window.BareMux?.BareMuxConnection,
+      ),
+    );
+
+    await loadClientScript(
+      "/scram/scramjet.all.js",
+      () =>
+        typeof window.$scramjetLoadController ===
+        "function",
+    );
+  }
+
   async function registerScramjetWorker() {
     if (!("serviceWorker" in navigator)) {
       throw new Error("This browser does not support service workers.");
     }
 
     const registration = await navigator.serviceWorker.register(
-      "/scramjet-sw.js?v=1",
+      "/scramjet-sw.js?v=2",
       { scope: "/" },
     );
 
@@ -153,14 +266,25 @@
     if (initPromise) return initPromise;
 
     initPromise = (async () => {
-      if (typeof window.$scramjetLoadController !== "function") {
-        throw new Error("Scramjet client files did not load.");
-      }
-      if (!window.BareMux?.BareMuxConnection) {
-        throw new Error("BareMux client files did not load.");
+      await ensureScramjetClientFiles();
+
+      if (
+        typeof window.$scramjetLoadController !==
+        "function"
+      ) {
+        throw new Error(
+          "Scramjet client API did not initialize.",
+        );
       }
 
-      const { ScramjetController } = window.$scramjetLoadController();
+      if (!window.BareMux?.BareMuxConnection) {
+        throw new Error(
+          "BareMux client API did not initialize.",
+        );
+      }
+
+      const { ScramjetController } =
+        window.$scramjetLoadController();
       controller = new ScramjetController({
         files: {
           wasm: "/scram/scramjet.wasm.wasm",
