@@ -3,6 +3,7 @@ import { renderAnnouncements } from "./announcements.js";
 import { renderAi } from "./ai.js";
 import { renderAnalytics } from "./analytics.js";
 import { renderDashboard } from "./dashboard.js";
+import { renderExports } from "./exports.js";
 import { renderInvites } from "./invites.js";
 import { renderLimits } from "./limits.js";
 import { renderHistory } from "./history.js";
@@ -72,6 +73,11 @@ const routes = {
     title: "Analytics",
     subtitle: "Growth and usage trends across the platform.",
     render: renderAnalytics,
+  },
+  exports: {
+    title: "Backups & Export",
+    subtitle: "Download secure snapshots of platform data.",
+    render: renderExports,
   },
   settings: {
     title: "Settings",

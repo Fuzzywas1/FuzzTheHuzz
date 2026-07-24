@@ -3386,6 +3386,193 @@ async function revokeCurrentSecuritySession(
 }
 
 /* =======================================================
+   USER ACCOUNT CENTER HELPERS
+======================================================= */
+
+const ACCOUNT_CENTER_DEFAULTS = Object.freeze({
+  announcementsEnabled: true,
+  retainProxyHistory: true,
+  defaultProxyEngine: "duckduckgo",
+  aiBehavior: "balanced",
+  reducedMotion: false,
+  appearance: "space",
+});
+
+const ACCOUNT_CENTER_PROXY_ENGINES = Object.freeze({
+  duckduckgo: {
+    name: "DuckDuckGo",
+    url: "https://duckduckgo.com/?q=",
+  },
+  google: {
+    name: "Google",
+    url: "https://www.google.com/search?q=",
+  },
+  bing: {
+    name: "Bing",
+    url: "https://www.bing.com/search?q=",
+  },
+  startpage: {
+    name: "Startpage",
+    url: "https://www.startpage.com/search?q=",
+  },
+  qwant: {
+    name: "Qwant",
+    url: "https://www.qwant.com/?q=",
+  },
+});
+
+const ACCOUNT_CENTER_AI_BEHAVIORS = new Set([
+  "balanced",
+  "concise",
+  "detailed",
+  "creative",
+]);
+
+const ACCOUNT_CENTER_APPEARANCES = new Set([
+  "space",
+  "midnight",
+  "dim",
+]);
+
+function serializeAccountCenterPreferences(row) {
+  return {
+    announcementsEnabled:
+      row?.announcements_enabled ??
+      ACCOUNT_CENTER_DEFAULTS.announcementsEnabled,
+    retainProxyHistory:
+      row?.retain_proxy_history ??
+      ACCOUNT_CENTER_DEFAULTS.retainProxyHistory,
+    defaultProxyEngine:
+      ACCOUNT_CENTER_PROXY_ENGINES[
+        row?.default_proxy_engine
+      ]
+        ? row.default_proxy_engine
+        : ACCOUNT_CENTER_DEFAULTS.defaultProxyEngine,
+    aiBehavior:
+      ACCOUNT_CENTER_AI_BEHAVIORS.has(
+        row?.ai_behavior,
+      )
+        ? row.ai_behavior
+        : ACCOUNT_CENTER_DEFAULTS.aiBehavior,
+    reducedMotion:
+      row?.reduced_motion ??
+      ACCOUNT_CENTER_DEFAULTS.reducedMotion,
+    appearance:
+      ACCOUNT_CENTER_APPEARANCES.has(
+        row?.appearance,
+      )
+        ? row.appearance
+        : ACCOUNT_CENTER_DEFAULTS.appearance,
+    updatedAt: row?.updated_at || null,
+  };
+}
+
+async function getAccountCenterPreferences(userId) {
+  const { data, error } = await supabaseAdmin
+    .from("account_preferences")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return serializeAccountCenterPreferences(data);
+}
+
+function parseAccountCenterPreferences(body = {}) {
+  const defaultProxyEngine = String(
+    body.defaultProxyEngine ||
+      ACCOUNT_CENTER_DEFAULTS.defaultProxyEngine,
+  )
+    .trim()
+    .toLowerCase();
+
+  const aiBehavior = String(
+    body.aiBehavior ||
+      ACCOUNT_CENTER_DEFAULTS.aiBehavior,
+  )
+    .trim()
+    .toLowerCase();
+
+  const appearance = String(
+    body.appearance ||
+      ACCOUNT_CENTER_DEFAULTS.appearance,
+  )
+    .trim()
+    .toLowerCase();
+
+  if (
+    !ACCOUNT_CENTER_PROXY_ENGINES[
+      defaultProxyEngine
+    ]
+  ) {
+    throw new Error(
+      "That default search engine is not supported.",
+    );
+  }
+
+  if (
+    !ACCOUNT_CENTER_AI_BEHAVIORS.has(
+      aiBehavior,
+    )
+  ) {
+    throw new Error(
+      "That Fuzz AI response style is not supported.",
+    );
+  }
+
+  if (
+    !ACCOUNT_CENTER_APPEARANCES.has(
+      appearance,
+    )
+  ) {
+    throw new Error(
+      "That appearance option is not supported.",
+    );
+  }
+
+  return {
+    announcements_enabled:
+      body.announcementsEnabled !== false,
+    retain_proxy_history:
+      body.retainProxyHistory !== false,
+    default_proxy_engine:
+      defaultProxyEngine,
+    ai_behavior: aiBehavior,
+    reduced_motion:
+      body.reducedMotion === true,
+    appearance,
+  };
+}
+
+function accountCenterAiInstruction(behavior) {
+  const instructions = {
+    concise:
+      "Prefer direct, compact answers. Include only the detail needed to solve the request.",
+    detailed:
+      "Give thorough explanations, useful context, and clear step-by-step guidance when appropriate.",
+    creative:
+      "Be imaginative and expressive while remaining accurate, safe, and useful.",
+    balanced:
+      "Balance clarity and detail. Be concise for simple questions and more thorough for complex ones.",
+  };
+
+  return (
+    instructions[behavior] ||
+    instructions.balanced
+  );
+}
+
+function accountCenterCsvSafeFilename(value) {
+  return String(value || "fuzz-account")
+    .replace(/[^A-Za-z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 70) || "fuzz-account";
+}
+
+/* =======================================================
    AUTH ROUTES
 ======================================================= */
 
@@ -3920,6 +4107,1479 @@ app.get(
   },
 );
 
+/* =======================================================
+   USER ACCOUNT CENTER ROUTES
+======================================================= */
+
+app.get(
+  "/api/account/overview",
+  requireApiAuth,
+  async (req, res) => {
+    const userId = req.auth.user.id;
+
+    try {
+      const [
+        preferences,
+        usagePolicy,
+        usageSnapshot,
+        aiChatsResult,
+        aiMessagesResult,
+        proxyResult,
+        inviteResult,
+        sessions,
+        deletionResult,
+      ] = await Promise.all([
+        getAccountCenterPreferences(userId),
+        getEffectiveUsagePolicy(
+          userId,
+          req.auth.profile.role,
+        ),
+        getUserUsageSnapshot(userId),
+        supabaseAdmin
+          .from("ai_chats")
+          .select("id", {
+            count: "exact",
+            head: true,
+          })
+          .eq("user_id", userId),
+        supabaseAdmin
+          .from("ai_messages")
+          .select("id", {
+            count: "exact",
+            head: true,
+          })
+          .eq("user_id", userId),
+        supabaseAdmin
+          .from("activity_logs")
+          .select("id", {
+            count: "exact",
+            head: true,
+          })
+          .eq("user_id", userId)
+          .eq("category", "proxy"),
+        supabaseAdmin
+          .from("invite_codes")
+          .select("code")
+          .eq("used_by", userId)
+          .order("created_at", {
+            ascending: false,
+          })
+          .limit(1)
+          .maybeSingle(),
+        getRecentSecuritySessions(userId),
+        supabaseAdmin
+          .from("account_deletion_requests")
+          .select("*")
+          .eq("user_id", userId)
+          .eq("status", "pending")
+          .order("requested_at", {
+            ascending: false,
+          })
+          .limit(1)
+          .maybeSingle(),
+      ]);
+
+      const firstError =
+        aiChatsResult.error ||
+        aiMessagesResult.error ||
+        proxyResult.error ||
+        inviteResult.error ||
+        deletionResult.error;
+
+      if (firstError) {
+        throw firstError;
+      }
+
+      return res.json({
+        account: {
+          id: userId,
+          email: req.auth.user.email,
+          emailVerified: Boolean(
+            req.auth.user.email_confirmed_at,
+          ),
+          username:
+            req.auth.profile.username,
+          role: req.auth.profile.role,
+          banned:
+            req.auth.profile.banned === true,
+          createdAt:
+            req.auth.user.created_at,
+          lastSignInAt:
+            req.auth.user.last_sign_in_at,
+          suspension:
+            req.auth.suspension || null,
+        },
+        stats: {
+          aiChats:
+            aiChatsResult.count || 0,
+          aiMessages:
+            aiMessagesResult.count || 0,
+          proxyRequests:
+            proxyResult.count || 0,
+          activeSessions:
+            sessions.length,
+        },
+        usage: {
+          policy:
+            usagePolicy.effective,
+          totals:
+            usageSnapshot.totals,
+          dayStartedAt:
+            usageSnapshot.dayStartedAt,
+          recentViolations:
+            usageSnapshot.recentViolations,
+        },
+        invite: inviteResult.data || null,
+        preferences,
+        deletionRequest:
+          deletionResult.data || null,
+      });
+    } catch (error) {
+      console.error(
+        "Account overview load failed:",
+        error,
+      );
+
+      return res.status(500).json({
+        error:
+          "Your account overview could not be loaded.",
+      });
+    }
+  },
+);
+
+app.get(
+  "/api/account/preferences",
+  requireApiAuth,
+  async (req, res) => {
+    try {
+      const preferences =
+        await getAccountCenterPreferences(
+          req.auth.user.id,
+        );
+
+      return res.json({
+        preferences,
+        proxyEngines:
+          ACCOUNT_CENTER_PROXY_ENGINES,
+        aiBehaviors: [
+          "balanced",
+          "concise",
+          "detailed",
+          "creative",
+        ],
+        appearances: [
+          "space",
+          "midnight",
+          "dim",
+        ],
+      });
+    } catch (error) {
+      console.error(
+        "Account preferences load failed:",
+        error,
+      );
+
+      return res.status(500).json({
+        error:
+          "Your preferences could not be loaded.",
+      });
+    }
+  },
+);
+
+app.put(
+  "/api/account/preferences",
+  requireApiAuth,
+  async (req, res) => {
+    try {
+      const values =
+        parseAccountCenterPreferences(
+          req.body,
+        );
+
+      const { data, error } =
+        await supabaseAdmin
+          .from("account_preferences")
+          .upsert(
+            {
+              user_id:
+                req.auth.user.id,
+              ...values,
+              updated_at:
+                new Date().toISOString(),
+            },
+            {
+              onConflict: "user_id",
+            },
+          )
+          .select("*")
+          .single();
+
+      if (error) {
+        throw error;
+      }
+
+      void writeActivityLog({
+        req,
+        userId: req.auth.user.id,
+        targetUserId:
+          req.auth.user.id,
+        category: "account",
+        action:
+          "account.preferences_updated",
+        status: "success",
+        description:
+          `${req.auth.profile.username} updated their account preferences.`,
+        resourceType: "user",
+        resourceId:
+          req.auth.user.id,
+        responseStatus: 200,
+        newValues:
+          serializeAccountCenterPreferences(
+            data,
+          ),
+      });
+
+      return res.json({
+        success: true,
+        preferences:
+          serializeAccountCenterPreferences(
+            data,
+          ),
+      });
+    } catch (error) {
+      const message =
+        error?.message ||
+        "Your preferences could not be saved.";
+
+      return res.status(400).json({
+        error: message,
+      });
+    }
+  },
+);
+
+app.get(
+  "/api/account/security",
+  requireApiAuth,
+  async (req, res) => {
+    const userId = req.auth.user.id;
+
+    try {
+      const [sessionsResult, activityResult] =
+        await Promise.all([
+          supabaseAdmin
+            .from("user_security_sessions")
+            .select("*")
+            .eq("user_id", userId)
+            .order("last_seen_at", {
+              ascending: false,
+            })
+            .limit(100),
+          supabaseAdmin
+            .from("activity_logs")
+            .select(
+              "id, category, action, status, description, ip_address, browser, operating_system, device_type, created_at, metadata",
+            )
+            .eq("user_id", userId)
+            .in("category", [
+              "auth",
+              "security",
+            ])
+            .order("created_at", {
+              ascending: false,
+            })
+            .limit(40),
+        ]);
+
+      const error =
+        sessionsResult.error ||
+        activityResult.error;
+
+      if (error) {
+        throw error;
+      }
+
+      const rows =
+        sessionsResult.data || [];
+      const currentSessionHash =
+        getSecuritySessionHash(req);
+      const serialized = rows.map(
+        (row) =>
+          serializeSecuritySession(row, {
+            username:
+              req.auth.profile.username,
+            currentSessionHash,
+          }),
+      );
+
+      return res.json({
+        sessions: serialized,
+        summary: {
+          activeSessions:
+            serialized.filter(
+              (session) => session.active,
+            ).length,
+          knownDevices:
+            new Set(
+              rows.map(
+                (row) => row.device_hash,
+              ),
+            ).size,
+          knownIps:
+            new Set(
+              rows
+                .map(
+                  (row) => row.ip_address,
+                )
+                .filter(Boolean),
+            ).size,
+        },
+        activity:
+          activityResult.data || [],
+      });
+    } catch (error) {
+      console.error(
+        "Account security load failed:",
+        error,
+      );
+
+      return res.status(500).json({
+        error:
+          "Your security information could not be loaded.",
+      });
+    }
+  },
+);
+
+app.post(
+  "/api/account/security/sessions/:sessionId/revoke",
+  requireApiAuth,
+  async (req, res) => {
+    const sessionId = String(
+      req.params.sessionId || "",
+    );
+
+    try {
+      const { data: existing, error } =
+        await supabaseAdmin
+          .from("user_security_sessions")
+          .select("*")
+          .eq("id", sessionId)
+          .eq(
+            "user_id",
+            req.auth.user.id,
+          )
+          .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      if (!existing) {
+        return res.status(404).json({
+          error:
+            "That login session was not found.",
+        });
+      }
+
+      if (
+        existing.session_token_hash ===
+        getSecuritySessionHash(req)
+      ) {
+        return res.status(400).json({
+          error:
+            "Use Sign Out to end your current session.",
+        });
+      }
+
+      const { error: updateError } =
+        await supabaseAdmin
+          .from("user_security_sessions")
+          .update({
+            revoked_at:
+              new Date().toISOString(),
+            revoke_reason:
+              "Revoked by account owner",
+          })
+          .eq("id", sessionId)
+          .eq(
+            "user_id",
+            req.auth.user.id,
+          );
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      void writeActivityLog({
+        req,
+        userId: req.auth.user.id,
+        targetUserId:
+          req.auth.user.id,
+        category: "security",
+        action:
+          "account.session_revoked_by_user",
+        status: "success",
+        description:
+          `${req.auth.profile.username} revoked one of their login sessions.`,
+        resourceType:
+          "security_session",
+        resourceId: sessionId,
+        responseStatus: 200,
+        metadata: {
+          browser: existing.browser,
+          operatingSystem:
+            existing.operating_system,
+          deviceType:
+            existing.device_type,
+        },
+      });
+
+      return res.json({
+        success: true,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        error:
+          "That login session could not be revoked.",
+      });
+    }
+  },
+);
+
+app.post(
+  "/api/account/security/revoke-others",
+  requireApiAuth,
+  async (req, res) => {
+    const currentHash =
+      getSecuritySessionHash(req);
+
+    try {
+      let query = supabaseAdmin
+        .from("user_security_sessions")
+        .update({
+          revoked_at:
+            new Date().toISOString(),
+          revoke_reason:
+            "Signed out by account owner",
+        })
+        .eq("user_id", req.auth.user.id)
+        .is("revoked_at", null);
+
+      if (currentHash) {
+        query = query.neq(
+          "session_token_hash",
+          currentHash,
+        );
+      }
+
+      const { data, error } = await query
+        .select("id");
+
+      if (error) {
+        throw error;
+      }
+
+      void writeActivityLog({
+        req,
+        userId: req.auth.user.id,
+        targetUserId:
+          req.auth.user.id,
+        category: "security",
+        action:
+          "account.other_sessions_revoked",
+        status: "success",
+        description:
+          `${req.auth.profile.username} signed out all other devices.`,
+        resourceType: "user",
+        resourceId:
+          req.auth.user.id,
+        responseStatus: 200,
+        metadata: {
+          revokedCount:
+            data?.length || 0,
+        },
+      });
+
+      return res.json({
+        success: true,
+        revokedCount:
+          data?.length || 0,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        error:
+          "Your other sessions could not be signed out.",
+      });
+    }
+  },
+);
+
+app.post(
+  "/api/account/password",
+  requireApiAuth,
+  async (req, res) => {
+    const currentPassword = String(
+      req.body.currentPassword || "",
+    );
+    const newPassword = String(
+      req.body.newPassword || "",
+    );
+
+    if (!currentPassword) {
+      return res.status(400).json({
+        error:
+          "Enter your current password.",
+      });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({
+        error:
+          "Your new password must be at least 8 characters.",
+      });
+    }
+
+    if (currentPassword === newPassword) {
+      return res.status(400).json({
+        error:
+          "Choose a password different from your current password.",
+      });
+    }
+
+    try {
+      const verificationClient =
+        createClient(
+          supabaseUrl,
+          supabaseAnonKey,
+          {
+            auth: {
+              autoRefreshToken: false,
+              persistSession: false,
+              detectSessionInUrl: false,
+            },
+          },
+        );
+
+      const { error: verifyError } =
+        await verificationClient.auth
+          .signInWithPassword({
+            email: req.auth.user.email,
+            password: currentPassword,
+          });
+
+      if (verifyError) {
+        return res.status(400).json({
+          error:
+            "Your current password is incorrect.",
+        });
+      }
+
+      const { error: updateError } =
+        await supabaseAdmin.auth.admin
+          .updateUserById(
+            req.auth.user.id,
+            {
+              password: newPassword,
+            },
+          );
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      const currentHash =
+        getSecuritySessionHash(req);
+      let revokeQuery = supabaseAdmin
+        .from("user_security_sessions")
+        .update({
+          revoked_at:
+            new Date().toISOString(),
+          revoke_reason:
+            "Password changed",
+        })
+        .eq("user_id", req.auth.user.id)
+        .is("revoked_at", null);
+
+      if (currentHash) {
+        revokeQuery = revokeQuery.neq(
+          "session_token_hash",
+          currentHash,
+        );
+      }
+
+      await revokeQuery;
+
+      void writeActivityLog({
+        req,
+        userId: req.auth.user.id,
+        targetUserId:
+          req.auth.user.id,
+        category: "security",
+        action:
+          "account.password_changed",
+        status: "success",
+        description:
+          `${req.auth.profile.username} changed their password.`,
+        resourceType: "user",
+        resourceId:
+          req.auth.user.id,
+        responseStatus: 200,
+      });
+
+      return res.json({
+        success: true,
+        message:
+          "Password changed. Other tracked devices were signed out.",
+      });
+    } catch (error) {
+      console.error(
+        "Password change failed:",
+        error,
+      );
+
+      return res.status(500).json({
+        error:
+          "Your password could not be changed.",
+      });
+    }
+  },
+);
+
+app.get(
+  "/api/account/ai/chats",
+  requireApiAuth,
+  async (req, res) => {
+    const page = clampInteger(
+      req.query.page,
+      1,
+      1,
+      100000,
+    );
+    const limit = clampInteger(
+      req.query.limit,
+      30,
+      1,
+      100,
+    );
+    const search = String(
+      req.query.search || "",
+    )
+      .trim()
+      .slice(0, 80);
+    const offset = (page - 1) * limit;
+
+    try {
+      let query = supabaseAdmin
+        .from("ai_chats")
+        .select(
+          "id, title, created_at, updated_at",
+          { count: "exact" },
+        )
+        .eq(
+          "user_id",
+          req.auth.user.id,
+        )
+        .order("updated_at", {
+          ascending: false,
+        })
+        .range(
+          offset,
+          offset + limit - 1,
+        );
+
+      if (search) {
+        query = query.ilike(
+          "title",
+          `%${search.replaceAll("%", "")}%`,
+        );
+      }
+
+      const {
+        data: chats,
+        count,
+        error,
+      } = await query;
+
+      if (error) {
+        throw error;
+      }
+
+      const rows = chats || [];
+      const chatIds = rows.map(
+        (chat) => chat.id,
+      );
+      let messages = [];
+
+      if (chatIds.length > 0) {
+        const { data, error: messageError } =
+          await supabaseAdmin
+            .from("ai_messages")
+            .select(
+              "chat_id, role, content, has_image, created_at",
+            )
+            .eq(
+              "user_id",
+              req.auth.user.id,
+            )
+            .in("chat_id", chatIds)
+            .order("created_at", {
+              ascending: true,
+            });
+
+        if (messageError) {
+          throw messageError;
+        }
+
+        messages = data || [];
+      }
+
+      const byChat = new Map();
+
+      for (const message of messages) {
+        if (!byChat.has(message.chat_id)) {
+          byChat.set(message.chat_id, []);
+        }
+
+        byChat.get(message.chat_id).push(
+          message,
+        );
+      }
+
+      return res.json({
+        chats: rows.map((chat) => {
+          const chatMessages =
+            byChat.get(chat.id) || [];
+          const lastMessage =
+            chatMessages.at(-1);
+
+          return {
+            id: chat.id,
+            title: chat.title,
+            createdAt:
+              chat.created_at,
+            updatedAt:
+              chat.updated_at,
+            messageCount:
+              chatMessages.length,
+            hasImages:
+              chatMessages.some(
+                (message) =>
+                  message.has_image === true,
+              ),
+            lastMessagePreview:
+              lastMessage?.content
+                ? String(
+                    lastMessage.content,
+                  )
+                    .replace(/\s+/g, " ")
+                    .slice(0, 180)
+                : null,
+          };
+        }),
+        pagination: {
+          page,
+          limit,
+          total: count || 0,
+          totalPages: Math.max(
+            1,
+            Math.ceil(
+              (count || 0) / limit,
+            ),
+          ),
+        },
+      });
+    } catch (error) {
+      return res.status(500).json({
+        error:
+          "Your AI chats could not be loaded.",
+      });
+    }
+  },
+);
+
+app.delete(
+  "/api/account/ai/history",
+  requireApiAuth,
+  async (req, res) => {
+    if (
+      String(req.body.confirm || "") !==
+      "DELETE"
+    ) {
+      return res.status(400).json({
+        error:
+          "Enter DELETE to confirm.",
+      });
+    }
+
+    try {
+      const userId = req.auth.user.id;
+
+      const [messagesResult, chatsResult] =
+        await Promise.all([
+          supabaseAdmin
+            .from("ai_messages")
+            .select("id", {
+              count: "exact",
+              head: true,
+            })
+            .eq("user_id", userId),
+          supabaseAdmin
+            .from("ai_chats")
+            .select("id", {
+              count: "exact",
+              head: true,
+            })
+            .eq("user_id", userId),
+        ]);
+
+      const countError =
+        messagesResult.error ||
+        chatsResult.error;
+
+      if (countError) {
+        throw countError;
+      }
+
+      const { error: messagesError } =
+        await supabaseAdmin
+          .from("ai_messages")
+          .delete()
+          .eq("user_id", userId);
+
+      if (messagesError) {
+        throw messagesError;
+      }
+
+      const { error: chatsError } =
+        await supabaseAdmin
+          .from("ai_chats")
+          .delete()
+          .eq("user_id", userId);
+
+      if (chatsError) {
+        throw chatsError;
+      }
+
+      invalidateAdminCache();
+
+      void writeActivityLog({
+        req,
+        userId,
+        targetUserId: userId,
+        category: "privacy",
+        action:
+          "account.ai_history_cleared",
+        status: "success",
+        description:
+          `${req.auth.profile.username} deleted all of their saved AI history.`,
+        resourceType: "user",
+        resourceId: userId,
+        responseStatus: 200,
+        metadata: {
+          deletedChats:
+            chatsResult.count || 0,
+          deletedMessages:
+            messagesResult.count || 0,
+        },
+      });
+
+      return res.json({
+        success: true,
+        deletedChats:
+          chatsResult.count || 0,
+        deletedMessages:
+          messagesResult.count || 0,
+      });
+    } catch (error) {
+      console.error(
+        "AI history clear failed:",
+        error,
+      );
+
+      return res.status(500).json({
+        error:
+          "Your saved AI history could not be deleted.",
+      });
+    }
+  },
+);
+
+app.get(
+  "/api/account/proxy-history",
+  requireApiAuth,
+  async (req, res) => {
+    const page = clampInteger(
+      req.query.page,
+      1,
+      1,
+      100000,
+    );
+    const limit = clampInteger(
+      req.query.limit,
+      40,
+      1,
+      100,
+    );
+    const search = String(
+      req.query.search || "",
+    )
+      .trim()
+      .slice(0, 100);
+    const offset = (page - 1) * limit;
+
+    try {
+      let query = supabaseAdmin
+        .from("activity_logs")
+        .select(
+          "id, action, status, response_status, duration_ms, proxy_query, proxy_target_url, proxy_target_domain, proxy_engine, created_at",
+          { count: "exact" },
+        )
+        .eq(
+          "user_id",
+          req.auth.user.id,
+        )
+        .eq("category", "proxy")
+        .order("created_at", {
+          ascending: false,
+        })
+        .range(
+          offset,
+          offset + limit - 1,
+        );
+
+      if (search) {
+        const safeSearch = search
+          .replace(/[%,()]/g, " ")
+          .trim();
+
+        query = query.or(
+          [
+            `proxy_query.ilike.%${safeSearch}%`,
+            `proxy_target_url.ilike.%${safeSearch}%`,
+            `proxy_target_domain.ilike.%${safeSearch}%`,
+          ].join(","),
+        );
+      }
+
+      const {
+        data,
+        count,
+        error,
+      } = await query;
+
+      if (error) {
+        throw error;
+      }
+
+      return res.json({
+        history: (data || []).map(
+          (row) => ({
+            id: row.id,
+            action: row.action,
+            status: row.status,
+            responseStatus:
+              row.response_status,
+            durationMs:
+              row.duration_ms,
+            query: row.proxy_query,
+            targetUrl:
+              row.proxy_target_url,
+            targetDomain:
+              row.proxy_target_domain,
+            engine: row.proxy_engine,
+            createdAt:
+              row.created_at,
+          }),
+        ),
+        pagination: {
+          page,
+          limit,
+          total: count || 0,
+          totalPages: Math.max(
+            1,
+            Math.ceil(
+              (count || 0) / limit,
+            ),
+          ),
+        },
+      });
+    } catch (error) {
+      return res.status(500).json({
+        error:
+          "Your proxy history could not be loaded.",
+      });
+    }
+  },
+);
+
+app.delete(
+  "/api/account/proxy-history",
+  requireApiAuth,
+  async (req, res) => {
+    if (
+      String(req.body.confirm || "") !==
+      "CLEAR"
+    ) {
+      return res.status(400).json({
+        error:
+          "Enter CLEAR to confirm.",
+      });
+    }
+
+    try {
+      const { data, error } =
+        await supabaseAdmin
+          .from("activity_logs")
+          .delete()
+          .eq(
+            "user_id",
+            req.auth.user.id,
+          )
+          .eq("category", "proxy")
+          .select("id");
+
+      if (error) {
+        throw error;
+      }
+
+      invalidateAdminCache();
+
+      void writeActivityLog({
+        req,
+        userId: req.auth.user.id,
+        targetUserId:
+          req.auth.user.id,
+        category: "privacy",
+        action:
+          "account.proxy_history_cleared",
+        status: "success",
+        description:
+          `${req.auth.profile.username} cleared their proxy history.`,
+        resourceType: "user",
+        resourceId:
+          req.auth.user.id,
+        responseStatus: 200,
+        metadata: {
+          deletedRows:
+            data?.length || 0,
+        },
+      });
+
+      return res.json({
+        success: true,
+        deletedRows:
+          data?.length || 0,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        error:
+          "Your proxy history could not be cleared.",
+      });
+    }
+  },
+);
+
+app.get(
+  "/api/account/export",
+  requireApiAuth,
+  async (req, res) => {
+    const userId = req.auth.user.id;
+
+    try {
+      const [
+        preferences,
+        profileResult,
+        inviteResult,
+        chatsResult,
+        messagesResult,
+        activityResult,
+        usageResult,
+        sessionsResult,
+        deletionResult,
+      ] = await Promise.all([
+        getAccountCenterPreferences(userId),
+        supabaseAdmin
+          .from("profiles")
+          .select(
+            "id, username, role, banned, suspended_until, suspension_reason, created_at, updated_at",
+          )
+          .eq("id", userId)
+          .maybeSingle(),
+        supabaseAdmin
+          .from("invite_codes")
+          .select("code")
+          .eq("used_by", userId),
+        supabaseAdmin
+          .from("ai_chats")
+          .select("*")
+          .eq("user_id", userId)
+          .order("created_at", {
+            ascending: true,
+          }),
+        supabaseAdmin
+          .from("ai_messages")
+          .select("*")
+          .eq("user_id", userId)
+          .order("created_at", {
+            ascending: true,
+          }),
+        supabaseAdmin
+          .from("activity_logs")
+          .select("*")
+          .eq("user_id", userId)
+          .order("created_at", {
+            ascending: true,
+          }),
+        supabaseAdmin
+          .from("usage_events")
+          .select("*")
+          .eq("user_id", userId)
+          .order("created_at", {
+            ascending: true,
+          }),
+        supabaseAdmin
+          .from("user_security_sessions")
+          .select(
+            "id, ip_address, user_agent, browser, operating_system, device_type, first_seen_at, last_seen_at, expires_at, revoked_at, revoke_reason, metadata",
+          )
+          .eq("user_id", userId)
+          .order("first_seen_at", {
+            ascending: true,
+          }),
+        supabaseAdmin
+          .from("account_deletion_requests")
+          .select(
+            "id, status, reason, requested_at, cancelled_at, reviewed_at",
+          )
+          .eq("user_id", userId)
+          .order("requested_at", {
+            ascending: true,
+          }),
+      ]);
+
+      const results = [
+        profileResult,
+        inviteResult,
+        chatsResult,
+        messagesResult,
+        activityResult,
+        usageResult,
+        sessionsResult,
+        deletionResult,
+      ];
+      const error = results.find(
+        (result) => result.error,
+      )?.error;
+
+      if (error) {
+        throw error;
+      }
+
+      const exportPayload = {
+        exportVersion: 1,
+        generatedAt:
+          new Date().toISOString(),
+        account: {
+          id: userId,
+          email: req.auth.user.email,
+          emailVerified: Boolean(
+            req.auth.user.email_confirmed_at,
+          ),
+          createdAt:
+            req.auth.user.created_at,
+          lastSignInAt:
+            req.auth.user.last_sign_in_at,
+          profile: profileResult.data,
+        },
+        preferences,
+        inviteCodes:
+          inviteResult.data || [],
+        aiChats:
+          chatsResult.data || [],
+        aiMessages:
+          messagesResult.data || [],
+        activity:
+          activityResult.data || [],
+        usageEvents:
+          usageResult.data || [],
+        securitySessions:
+          sessionsResult.data || [],
+        deletionRequests:
+          deletionResult.data || [],
+      };
+
+      void writeActivityLog({
+        req,
+        userId,
+        targetUserId: userId,
+        category: "privacy",
+        action:
+          "account.personal_data_exported",
+        status: "success",
+        description:
+          `${req.auth.profile.username} downloaded a copy of their personal data.`,
+        resourceType: "user",
+        resourceId: userId,
+        responseStatus: 200,
+      });
+
+      const filename =
+        `${accountCenterCsvSafeFilename(req.auth.profile.username)}-fuzz-data-${new Date().toISOString().slice(0, 10)}.json`;
+
+      res.setHeader(
+        "Content-Type",
+        "application/json; charset=utf-8",
+      );
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${filename}"`,
+      );
+      res.setHeader(
+        "Cache-Control",
+        "no-store",
+      );
+
+      return res.send(
+        JSON.stringify(
+          exportPayload,
+          null,
+          2,
+        ),
+      );
+    } catch (error) {
+      console.error(
+        "Personal data export failed:",
+        error,
+      );
+
+      return res.status(500).json({
+        error:
+          "Your data export could not be generated.",
+      });
+    }
+  },
+);
+
+app.get(
+  "/api/account/deletion-request",
+  requireApiAuth,
+  async (req, res) => {
+    try {
+      const { data, error } =
+        await supabaseAdmin
+          .from("account_deletion_requests")
+          .select("*")
+          .eq(
+            "user_id",
+            req.auth.user.id,
+          )
+          .eq("status", "pending")
+          .order("requested_at", {
+            ascending: false,
+          })
+          .limit(1)
+          .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      return res.json({
+        request: data || null,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        error:
+          "Your deletion-request status could not be loaded.",
+      });
+    }
+  },
+);
+
+app.post(
+  "/api/account/deletion-request",
+  requireApiAuth,
+  async (req, res) => {
+    const reason = String(
+      req.body.reason || "",
+    )
+      .trim()
+      .slice(0, 1000);
+
+    if (
+      String(req.body.confirm || "") !==
+      "DELETE MY ACCOUNT"
+    ) {
+      return res.status(400).json({
+        error:
+          "Enter DELETE MY ACCOUNT to confirm the request.",
+      });
+    }
+
+    try {
+      const { data: existing, error } =
+        await supabaseAdmin
+          .from("account_deletion_requests")
+          .select("*")
+          .eq(
+            "user_id",
+            req.auth.user.id,
+          )
+          .eq("status", "pending")
+          .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      if (existing) {
+        return res.status(409).json({
+          error:
+            "You already have a pending account-deletion request.",
+        });
+      }
+
+      const { data, error: insertError } =
+        await supabaseAdmin
+          .from("account_deletion_requests")
+          .insert({
+            user_id:
+              req.auth.user.id,
+            reason: reason || null,
+            status: "pending",
+            requested_at:
+              new Date().toISOString(),
+          })
+          .select("*")
+          .single();
+
+      if (insertError) {
+        throw insertError;
+      }
+
+      void createOrBumpAdminNotification({
+        notificationType:
+          "account.deletion_requested",
+        severity: "warning",
+        title:
+          "Account deletion requested",
+        message:
+          `${req.auth.profile.username} requested account deletion.`,
+        targetUserId:
+          req.auth.user.id,
+        resourceType:
+          "account_deletion_request",
+        resourceId: data.id,
+        dedupeKey:
+          `deletion-request:${req.auth.user.id}`,
+        metadata: {
+          reason: reason || null,
+          username:
+            req.auth.profile.username,
+        },
+      });
+
+      void writeActivityLog({
+        req,
+        userId: req.auth.user.id,
+        targetUserId:
+          req.auth.user.id,
+        category: "privacy",
+        action:
+          "account.deletion_requested",
+        status: "warning",
+        description:
+          `${req.auth.profile.username} requested account deletion.`,
+        resourceType:
+          "account_deletion_request",
+        resourceId: data.id,
+        responseStatus: 201,
+        metadata: {
+          reason: reason || null,
+        },
+      });
+
+      return res.status(201).json({
+        success: true,
+        request: data,
+      });
+    } catch (error) {
+      console.error(
+        "Account deletion request failed:",
+        error,
+      );
+
+      return res.status(500).json({
+        error:
+          "Your account-deletion request could not be submitted.",
+      });
+    }
+  },
+);
+
+app.delete(
+  "/api/account/deletion-request",
+  requireApiAuth,
+  async (req, res) => {
+    try {
+      const { data, error } =
+        await supabaseAdmin
+          .from("account_deletion_requests")
+          .update({
+            status: "cancelled",
+            cancelled_at:
+              new Date().toISOString(),
+          })
+          .eq(
+            "user_id",
+            req.auth.user.id,
+          )
+          .eq("status", "pending")
+          .select("id");
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data?.length) {
+        return res.status(404).json({
+          error:
+            "There is no pending deletion request to cancel.",
+        });
+      }
+
+      void writeActivityLog({
+        req,
+        userId: req.auth.user.id,
+        targetUserId:
+          req.auth.user.id,
+        category: "privacy",
+        action:
+          "account.deletion_request_cancelled",
+        status: "success",
+        description:
+          `${req.auth.profile.username} cancelled their account-deletion request.`,
+        resourceType:
+          "account_deletion_request",
+        resourceId: data[0].id,
+        responseStatus: 200,
+      });
+
+      return res.json({
+        success: true,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        error:
+          "Your deletion request could not be cancelled.",
+      });
+    }
+  },
+);
+
 app.get(
   "/api/admin/users",
   requireRole("admin"),
@@ -4410,6 +6070,36 @@ app.post(
       }
     }
 
+    let retainDetailedProxyHistory = true;
+
+    try {
+      const preferences =
+        await getAccountCenterPreferences(
+          req.auth.user.id,
+        );
+
+      retainDetailedProxyHistory =
+        preferences.retainProxyHistory;
+    } catch (preferenceError) {
+      console.error(
+        "Proxy privacy preference lookup failed:",
+        preferenceError,
+      );
+    }
+
+    const loggedTargetDomain =
+      retainDetailedProxyHistory
+        ? targetDomain
+        : null;
+    const loggedTargetUrl =
+      retainDetailedProxyHistory
+        ? targetUrl
+        : null;
+    const loggedQuery =
+      retainDetailedProxyHistory
+        ? query
+        : null;
+
     void writeActivityLog({
       req,
       userId: req.auth.user.id,
@@ -4421,9 +6111,11 @@ app.post(
       status: allowedStatuses.has(status)
         ? status
         : "success",
-      description: targetDomain
-        ? `Opened ${targetDomain} through the proxy.`
-        : "A proxy navigation was started.",
+      description: loggedTargetDomain
+        ? `Opened ${loggedTargetDomain} through the proxy.`
+        : retainDetailedProxyHistory
+          ? "A proxy navigation was started."
+          : "A private proxy navigation was recorded without destination details.",
       resourceType: "proxy_navigation",
       responseStatus:
         Number.isFinite(
@@ -4440,9 +6132,11 @@ app.post(
               Number(req.body.durationMs),
             )
           : null,
-      proxyQuery: query || null,
-      proxyTargetUrl: targetUrl || null,
-      proxyTargetDomain: targetDomain,
+      proxyQuery: loggedQuery || null,
+      proxyTargetUrl:
+        loggedTargetUrl || null,
+      proxyTargetDomain:
+        loggedTargetDomain,
       proxyEngine: engine || "bare",
       metadata: {
         source:
@@ -6884,6 +8578,13 @@ app.get(
           "charts growth trends",
       },
       {
+        id: "exports",
+        title: "Open Backups & Export",
+        route: "exports",
+        keywords:
+          "backup download export csv json data",
+      },
+      {
         id: "settings",
         title: "Open Settings",
         route: "settings",
@@ -7624,11 +9325,29 @@ app.post(
     );
 
     try {
+      let accountAiBehavior =
+        ACCOUNT_CENTER_DEFAULTS.aiBehavior;
+
+      try {
+        const accountPreferences =
+          await getAccountCenterPreferences(
+            requestingUserId,
+          );
+
+        accountAiBehavior =
+          accountPreferences.aiBehavior;
+      } catch (preferenceError) {
+        console.error(
+          "AI preference lookup failed:",
+          preferenceError,
+        );
+      }
+
       const stream =
         await openai.responses.create({
           model: "gpt-5-mini",
           instructions:
-            "You are Fuzz AI, the helpful AI assistant built into FuzzTheHuzz. Give clear, accurate, natural answers. Analyze attached images when provided. Use markdown when helpful.",
+            `You are Fuzz AI, the helpful AI assistant built into FuzzTheHuzz. Give clear, accurate, natural answers. Analyze attached images when provided. Use markdown when helpful. ${accountCenterAiInstruction(accountAiBehavior)}`,
           input: cleanedMessages,
           max_output_tokens: 2000,
           store: false,
@@ -9663,6 +11382,877 @@ app.post(
 );
 
 /* =======================================================
+   OWNER BACKUPS + DATA EXPORTS
+======================================================= */
+
+const ADMIN_EXPORT_PAGE_SIZE = 1000;
+const ADMIN_EXPORT_MAX_ROWS = 50000;
+
+const ADMIN_EXPORT_TABLES = {
+  profiles: {
+    table: "profiles",
+    orderColumn: "created_at",
+  },
+  inviteCodes: {
+    table: "invite_codes",
+    orderColumn: "id",
+  },
+  aiChats: {
+    table: "ai_chats",
+    orderColumn: "created_at",
+  },
+  aiMessages: {
+    table: "ai_messages",
+    orderColumn: "created_at",
+  },
+  activityLogs: {
+    table: "activity_logs",
+    orderColumn: "created_at",
+  },
+  announcements: {
+    table: "announcements",
+    orderColumn: "created_at",
+  },
+  platformSettings: {
+    table: "platform_settings",
+    orderColumn: "id",
+  },
+  adminNotifications: {
+    table: "admin_notifications",
+    orderColumn: "last_occurred_at",
+  },
+  adminNotificationStates: {
+    table: "admin_notification_states",
+    orderColumn: "updated_at",
+  },
+  securitySessions: {
+    table: "user_security_sessions",
+    orderColumn: "first_seen_at",
+  },
+  usagePolicies: {
+    table: "usage_policies",
+    orderColumn: "role",
+  },
+  userUsageOverrides: {
+    table: "user_usage_overrides",
+    orderColumn: "updated_at",
+  },
+  usageEvents: {
+    table: "usage_events",
+    orderColumn: "created_at",
+  },
+};
+
+function parseAdminExportDate(value, endOfDay = false) {
+  const raw = String(value || "").trim();
+
+  if (!raw) {
+    return null;
+  }
+
+  const normalized = /^\d{4}-\d{2}-\d{2}$/.test(raw)
+    ? `${raw}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}Z`
+    : raw;
+
+  const date = new Date(normalized);
+
+  if (!Number.isFinite(date.getTime())) {
+    return null;
+  }
+
+  return date.toISOString();
+}
+
+function getAdminExportRange(req) {
+  const from = parseAdminExportDate(req.query.from, false);
+  const to = parseAdminExportDate(req.query.to, true);
+
+  if (req.query.from && !from) {
+    return {
+      error: "Choose a valid export start date.",
+    };
+  }
+
+  if (req.query.to && !to) {
+    return {
+      error: "Choose a valid export end date.",
+    };
+  }
+
+  if (from && to && new Date(from).getTime() > new Date(to).getTime()) {
+    return {
+      error: "The export start date must be before the end date.",
+    };
+  }
+
+  return { from, to };
+}
+
+async function fetchAdminExportRows({
+  table,
+  select = "*",
+  orderColumn = null,
+  dateColumn = null,
+  from = null,
+  to = null,
+  equals = {},
+  maximumRows = ADMIN_EXPORT_MAX_ROWS,
+}) {
+  const rows = [];
+  let offset = 0;
+  let truncated = false;
+
+  while (offset < maximumRows) {
+    const remaining = maximumRows - offset;
+    const pageSize = Math.min(ADMIN_EXPORT_PAGE_SIZE, remaining);
+
+    let query = supabaseAdmin
+      .from(table)
+      .select(select)
+      .range(offset, offset + pageSize - 1);
+
+    if (orderColumn) {
+      query = query.order(orderColumn, {
+        ascending: true,
+      });
+    }
+
+    if (dateColumn && from) {
+      query = query.gte(dateColumn, from);
+    }
+
+    if (dateColumn && to) {
+      query = query.lte(dateColumn, to);
+    }
+
+    for (const [column, value] of Object.entries(equals || {})) {
+      query = query.eq(column, value);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    const pageRows = data || [];
+    rows.push(...pageRows);
+
+    if (pageRows.length < pageSize) {
+      break;
+    }
+
+    offset += pageSize;
+  }
+
+  if (rows.length >= maximumRows) {
+    truncated = true;
+  }
+
+  return {
+    rows,
+    truncated,
+  };
+}
+
+async function fetchAllAdminAuthUsers() {
+  const users = [];
+  const perPage = 1000;
+  let page = 1;
+  let truncated = false;
+
+  while (users.length < ADMIN_EXPORT_MAX_ROWS) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({
+      page,
+      perPage,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    const pageUsers = data?.users || [];
+    users.push(...pageUsers);
+
+    if (pageUsers.length < perPage) {
+      break;
+    }
+
+    page += 1;
+  }
+
+  if (users.length >= ADMIN_EXPORT_MAX_ROWS) {
+    truncated = true;
+  }
+
+  return {
+    rows: users.slice(0, ADMIN_EXPORT_MAX_ROWS).map((user) => ({
+      id: user.id,
+      aud: user.aud,
+      role: user.role,
+      email: user.email,
+      phone: user.phone,
+      created_at: user.created_at,
+      confirmed_at: user.confirmed_at,
+      email_confirmed_at: user.email_confirmed_at,
+      phone_confirmed_at: user.phone_confirmed_at,
+      last_sign_in_at: user.last_sign_in_at,
+      banned_until: user.banned_until,
+      is_anonymous: user.is_anonymous === true,
+      app_metadata: user.app_metadata || {},
+      user_metadata: user.user_metadata || {},
+    })),
+    truncated,
+  };
+}
+
+function sanitizeAdminSecuritySession(row) {
+  const safe = { ...row };
+  delete safe.session_token_hash;
+  return safe;
+}
+
+function createProfileExportMap(profiles) {
+  return new Map(
+    (profiles || []).map((profile) => [
+      profile.id,
+      profile,
+    ]),
+  );
+}
+
+function mergeAdminUserExports(authUsers, profiles) {
+  const authMap = new Map(
+    (authUsers || []).map((user) => [user.id, user]),
+  );
+  const profileMap = createProfileExportMap(profiles);
+  const ids = new Set([
+    ...authMap.keys(),
+    ...profileMap.keys(),
+  ]);
+
+  return [...ids].map((id) => {
+    const authUser = authMap.get(id) || {};
+    const profile = profileMap.get(id) || {};
+
+    return {
+      id,
+      username: profile.username || null,
+      email: authUser.email || null,
+      phone: authUser.phone || null,
+      role: profile.role || authUser.role || null,
+      banned: profile.banned === true,
+      suspended_until: profile.suspended_until || null,
+      suspension_reason: profile.suspension_reason || null,
+      suspension_source: profile.suspension_source || null,
+      profile_created_at: profile.created_at || null,
+      profile_updated_at: profile.updated_at || null,
+      auth_created_at: authUser.created_at || null,
+      confirmed_at: authUser.confirmed_at || null,
+      last_sign_in_at: authUser.last_sign_in_at || null,
+      banned_until: authUser.banned_until || null,
+      app_metadata: authUser.app_metadata || {},
+      user_metadata: authUser.user_metadata || {},
+    };
+  });
+}
+
+function adminCsvCell(value) {
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  let text = typeof value === "object"
+    ? JSON.stringify(value)
+    : String(value);
+
+  text = text.replace(/\u0000/g, "");
+
+  if (/^[=+\-@]/.test(text)) {
+    text = `'${text}`;
+  }
+
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function adminRowsToCsv(rows) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+
+  if (safeRows.length === 0) {
+    return "No data\n";
+  }
+
+  const columns = [];
+  const seen = new Set();
+
+  for (const row of safeRows) {
+    for (const key of Object.keys(row || {})) {
+      if (!seen.has(key)) {
+        seen.add(key);
+        columns.push(key);
+      }
+    }
+  }
+
+  const lines = [
+    columns.map(adminCsvCell).join(","),
+  ];
+
+  for (const row of safeRows) {
+    lines.push(
+      columns
+        .map((column) => adminCsvCell(row?.[column]))
+        .join(","),
+    );
+  }
+
+  return `${lines.join("\n")}\n`;
+}
+
+function adminExportFilename(dataset, format) {
+  const timestamp = new Date()
+    .toISOString()
+    .replace(/[:.]/g, "-");
+
+  return `fuzz-${dataset}-${timestamp}.${format}`;
+}
+
+async function countAdminExportRows(table, equals = {}) {
+  let query = supabaseAdmin
+    .from(table)
+    .select("id", {
+      count: "exact",
+      head: true,
+    });
+
+  for (const [column, value] of Object.entries(equals)) {
+    query = query.eq(column, value);
+  }
+
+  const { count, error } = await query;
+
+  if (error) {
+    throw error;
+  }
+
+  return count || 0;
+}
+
+async function buildAdminExportDataset(dataset, range) {
+  const dateOptions = {
+    from: range.from,
+    to: range.to,
+  };
+
+  if (dataset === "users") {
+    const [authResult, profileResult] = await Promise.all([
+      fetchAllAdminAuthUsers(),
+      fetchAdminExportRows({
+        ...ADMIN_EXPORT_TABLES.profiles,
+      }),
+    ]);
+
+    const rows = mergeAdminUserExports(
+      authResult.rows,
+      profileResult.rows,
+    );
+
+    return {
+      json: {
+        users: rows,
+      },
+      csvRows: rows,
+      truncated: authResult.truncated || profileResult.truncated,
+    };
+  }
+
+  if (dataset === "activity") {
+    const [logResult, profileResult] = await Promise.all([
+      fetchAdminExportRows({
+        ...ADMIN_EXPORT_TABLES.activityLogs,
+        dateColumn: "created_at",
+        ...dateOptions,
+      }),
+      fetchAdminExportRows({
+        ...ADMIN_EXPORT_TABLES.profiles,
+      }),
+    ]);
+
+    const profiles = createProfileExportMap(profileResult.rows);
+    const rows = logResult.rows.map((log) => ({
+      ...log,
+      username: profiles.get(log.user_id)?.username || null,
+      actor_username: profiles.get(log.actor_user_id)?.username || null,
+      target_username: profiles.get(log.target_user_id)?.username || null,
+    }));
+
+    return {
+      json: { activity_logs: rows },
+      csvRows: rows,
+      truncated: logResult.truncated,
+    };
+  }
+
+  if (dataset === "ai") {
+    const [chatResult, messageResult, profileResult] = await Promise.all([
+      fetchAdminExportRows({
+        ...ADMIN_EXPORT_TABLES.aiChats,
+        dateColumn: "created_at",
+        ...dateOptions,
+      }),
+      fetchAdminExportRows({
+        ...ADMIN_EXPORT_TABLES.aiMessages,
+        dateColumn: "created_at",
+        ...dateOptions,
+      }),
+      fetchAdminExportRows({
+        ...ADMIN_EXPORT_TABLES.profiles,
+      }),
+    ]);
+
+    const chats = new Map(
+      chatResult.rows.map((chat) => [chat.id, chat]),
+    );
+    const profiles = createProfileExportMap(profileResult.rows);
+
+    const csvRows = messageResult.rows.map((message) => {
+      const chat = chats.get(message.chat_id) || {};
+
+      return {
+        message_id: message.id,
+        chat_id: message.chat_id,
+        user_id: message.user_id || chat.user_id || null,
+        username:
+          profiles.get(message.user_id || chat.user_id)?.username || null,
+        chat_title: chat.title || null,
+        role: message.role,
+        content: message.content,
+        has_image: message.has_image,
+        image_name: message.image_name,
+        message_created_at: message.created_at,
+        chat_created_at: chat.created_at || null,
+        chat_updated_at: chat.updated_at || null,
+      };
+    });
+
+    return {
+      json: {
+        ai_chats: chatResult.rows,
+        ai_messages: messageResult.rows,
+      },
+      csvRows,
+      truncated: chatResult.truncated || messageResult.truncated,
+    };
+  }
+
+  if (dataset === "proxy") {
+    const [logResult, profileResult] = await Promise.all([
+      fetchAdminExportRows({
+        ...ADMIN_EXPORT_TABLES.activityLogs,
+        dateColumn: "created_at",
+        equals: { category: "proxy" },
+        ...dateOptions,
+      }),
+      fetchAdminExportRows({
+        ...ADMIN_EXPORT_TABLES.profiles,
+      }),
+    ]);
+
+    const profiles = createProfileExportMap(profileResult.rows);
+    const rows = logResult.rows.map((log) => ({
+      ...log,
+      username: profiles.get(log.user_id)?.username || null,
+    }));
+
+    return {
+      json: { proxy_activity: rows },
+      csvRows: rows,
+      truncated: logResult.truncated,
+    };
+  }
+
+  if (dataset === "announcements") {
+    const result = await fetchAdminExportRows({
+      ...ADMIN_EXPORT_TABLES.announcements,
+      dateColumn: "created_at",
+      ...dateOptions,
+    });
+
+    return {
+      json: { announcements: result.rows },
+      csvRows: result.rows,
+      truncated: result.truncated,
+    };
+  }
+
+  if (dataset === "invites") {
+    const result = await fetchAdminExportRows({
+      ...ADMIN_EXPORT_TABLES.inviteCodes,
+    });
+
+    return {
+      json: { invite_codes: result.rows },
+      csvRows: result.rows,
+      truncated: result.truncated,
+    };
+  }
+
+  if (dataset === "security") {
+    const [sessionResult, notificationResult, stateResult] = await Promise.all([
+      fetchAdminExportRows({
+        ...ADMIN_EXPORT_TABLES.securitySessions,
+        dateColumn: "first_seen_at",
+        ...dateOptions,
+      }),
+      fetchAdminExportRows({
+        ...ADMIN_EXPORT_TABLES.adminNotifications,
+        dateColumn: "created_at",
+        ...dateOptions,
+      }),
+      fetchAdminExportRows({
+        ...ADMIN_EXPORT_TABLES.adminNotificationStates,
+      }),
+    ]);
+
+    const sessions = sessionResult.rows.map(sanitizeAdminSecuritySession);
+
+    return {
+      json: {
+        user_security_sessions: sessions,
+        admin_notifications: notificationResult.rows,
+        admin_notification_states: stateResult.rows,
+      },
+      csvRows: sessions,
+      truncated:
+        sessionResult.truncated ||
+        notificationResult.truncated ||
+        stateResult.truncated,
+    };
+  }
+
+  if (dataset === "usage") {
+    const [policyResult, overrideResult, eventResult] = await Promise.all([
+      fetchAdminExportRows({
+        ...ADMIN_EXPORT_TABLES.usagePolicies,
+      }),
+      fetchAdminExportRows({
+        ...ADMIN_EXPORT_TABLES.userUsageOverrides,
+      }),
+      fetchAdminExportRows({
+        ...ADMIN_EXPORT_TABLES.usageEvents,
+        dateColumn: "created_at",
+        ...dateOptions,
+      }),
+    ]);
+
+    return {
+      json: {
+        usage_policies: policyResult.rows,
+        user_usage_overrides: overrideResult.rows,
+        usage_events: eventResult.rows,
+      },
+      csvRows: eventResult.rows,
+      truncated:
+        policyResult.truncated ||
+        overrideResult.truncated ||
+        eventResult.truncated,
+    };
+  }
+
+  if (dataset === "settings") {
+    const result = await fetchAdminExportRows({
+      ...ADMIN_EXPORT_TABLES.platformSettings,
+    });
+
+    return {
+      json: { platform_settings: result.rows },
+      csvRows: result.rows,
+      truncated: result.truncated,
+    };
+  }
+
+  if (dataset === "notifications") {
+    const [notificationResult, stateResult] = await Promise.all([
+      fetchAdminExportRows({
+        ...ADMIN_EXPORT_TABLES.adminNotifications,
+        dateColumn: "created_at",
+        ...dateOptions,
+      }),
+      fetchAdminExportRows({
+        ...ADMIN_EXPORT_TABLES.adminNotificationStates,
+      }),
+    ]);
+
+    return {
+      json: {
+        admin_notifications: notificationResult.rows,
+        admin_notification_states: stateResult.rows,
+      },
+      csvRows: notificationResult.rows,
+      truncated: notificationResult.truncated || stateResult.truncated,
+    };
+  }
+
+  if (dataset === "full") {
+    const [authResult, ...tableResults] = await Promise.all([
+      fetchAllAdminAuthUsers(),
+      ...Object.values(ADMIN_EXPORT_TABLES).map((config) =>
+        fetchAdminExportRows(config),
+      ),
+    ]);
+
+    const tableEntries = Object.keys(ADMIN_EXPORT_TABLES).map(
+      (key, index) => [key, tableResults[index]],
+    );
+
+    const tables = {};
+    const truncatedTables = [];
+
+    for (const [key, result] of tableEntries) {
+      if (key === "securitySessions") {
+        tables[key] = result.rows.map(sanitizeAdminSecuritySession);
+      } else {
+        tables[key] = result.rows;
+      }
+
+      if (result.truncated) {
+        truncatedTables.push(key);
+      }
+    }
+
+    if (authResult.truncated) {
+      truncatedTables.push("authUsers");
+    }
+
+    return {
+      json: {
+        metadata: {
+          application: "FuzzTheHuzz",
+          backupVersion: 1,
+          generatedAt: new Date().toISOString(),
+          notes: [
+            "Authentication password hashes and refresh tokens are never included.",
+            "Security session token hashes are intentionally excluded.",
+            "Environment variables, API keys and cached remote assets are not included.",
+            "This is a data export, not an automatic one-click restore file.",
+          ],
+          rowLimitPerTable: ADMIN_EXPORT_MAX_ROWS,
+          truncatedTables,
+        },
+        authUsers: authResult.rows,
+        tables,
+      },
+      csvRows: [],
+      truncated: truncatedTables.length > 0,
+    };
+  }
+
+  throw new Error("That export dataset is not supported.");
+}
+
+app.get(
+  "/api/admin/exports/summary",
+  requireRole("owner"),
+  async (_req, res) => {
+    try {
+      const [
+        users,
+        activity,
+        aiChats,
+        aiMessages,
+        proxy,
+        announcements,
+        invites,
+        notifications,
+        securitySessions,
+        usageEvents,
+        lastExportResult,
+      ] = await Promise.all([
+        countAdminExportRows("profiles"),
+        countAdminExportRows("activity_logs"),
+        countAdminExportRows("ai_chats"),
+        countAdminExportRows("ai_messages"),
+        countAdminExportRows("activity_logs", { category: "proxy" }),
+        countAdminExportRows("announcements"),
+        countAdminExportRows("invite_codes"),
+        countAdminExportRows("admin_notifications"),
+        countAdminExportRows("user_security_sessions"),
+        countAdminExportRows("usage_events"),
+        supabaseAdmin
+          .from("activity_logs")
+          .select("created_at, description, metadata")
+          .eq("action", "admin.data_export_downloaded")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]);
+
+      if (lastExportResult.error) {
+        throw lastExportResult.error;
+      }
+
+      return res.json({
+        counts: {
+          users,
+          activity,
+          aiChats,
+          aiMessages,
+          proxy,
+          announcements,
+          invites,
+          notifications,
+          securitySessions,
+          usageEvents,
+        },
+        lastExport: lastExportResult.data || null,
+        limits: {
+          maximumRowsPerTable: ADMIN_EXPORT_MAX_ROWS,
+        },
+        exclusions: [
+          "Passwords and password hashes",
+          "Refresh tokens and security-session token hashes",
+          "Environment variables and API keys",
+          "Cached proxy assets and uploaded storage objects",
+        ],
+      });
+    } catch (error) {
+      console.error("Export summary failed:", error);
+
+      return res.status(500).json({
+        error: "Backup and export information could not be loaded.",
+      });
+    }
+  },
+);
+
+app.get(
+  "/api/admin/exports/download",
+  requireRole("owner"),
+  async (req, res) => {
+    const dataset = String(req.query.dataset || "")
+      .trim()
+      .toLowerCase();
+    const format = String(req.query.format || "json")
+      .trim()
+      .toLowerCase();
+
+    const supportedDatasets = new Set([
+      "full",
+      "users",
+      "activity",
+      "ai",
+      "proxy",
+      "announcements",
+      "invites",
+      "security",
+      "usage",
+      "settings",
+      "notifications",
+    ]);
+
+    if (!supportedDatasets.has(dataset)) {
+      return res.status(400).json({
+        error: "Choose a valid export dataset.",
+      });
+    }
+
+    if (!["json", "csv"].includes(format)) {
+      return res.status(400).json({
+        error: "Choose JSON or CSV as the export format.",
+      });
+    }
+
+    if (dataset === "full" && format !== "json") {
+      return res.status(400).json({
+        error: "Full backups are available as JSON only.",
+      });
+    }
+
+    const range = getAdminExportRange(req);
+
+    if (range.error) {
+      return res.status(400).json({
+        error: range.error,
+      });
+    }
+
+    try {
+      const result = await buildAdminExportDataset(dataset, range);
+      const generatedAt = new Date().toISOString();
+      const filename = adminExportFilename(dataset, format);
+
+      const payload = format === "csv"
+        ? adminRowsToCsv(result.csvRows)
+        : JSON.stringify(
+            {
+              export: {
+                dataset,
+                format,
+                generatedAt,
+                generatedBy: {
+                  id: req.auth.user.id,
+                  username: req.auth.profile.username,
+                },
+                dateRange: {
+                  from: range.from,
+                  to: range.to,
+                },
+                truncated: result.truncated === true,
+                maximumRowsPerTable: ADMIN_EXPORT_MAX_ROWS,
+              },
+              data: result.json,
+            },
+            null,
+            2,
+          );
+
+      await writeActivityLog({
+        req,
+        userId: req.auth.user.id,
+        actorUserId: req.auth.user.id,
+        category: "admin",
+        action: "admin.data_export_downloaded",
+        status: "success",
+        description:
+          `${req.auth.profile.username} downloaded the ${dataset} ${format.toUpperCase()} export.`,
+        resourceType: "data_export",
+        resourceId: dataset,
+        responseStatus: 200,
+        metadata: {
+          dataset,
+          format,
+          from: range.from,
+          to: range.to,
+          truncated: result.truncated === true,
+          filename,
+        },
+      });
+
+      res.setHeader("Cache-Control", "no-store, private");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader(
+        "Content-Type",
+        format === "csv"
+          ? "text/csv; charset=utf-8"
+          : "application/json; charset=utf-8",
+      );
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${filename}"`,
+      );
+
+      return res.status(200).send(payload);
+    } catch (error) {
+      console.error("Data export failed:", error);
+
+      return res.status(500).json({
+        error: "That data export could not be generated.",
+      });
+    }
+  },
+);
+
+/* =======================================================
    STATIC FILES
 
    Protect private HTML before static serving, but keep
@@ -9781,6 +12371,10 @@ const protectedRoutes = [
   {
     route: "/ai",
     file: "ai.html",
+  },
+  {
+    route: "/account",
+    file: "account.html",
   },
 ];
 

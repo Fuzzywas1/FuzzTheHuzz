@@ -276,6 +276,16 @@ export const api = {
       },
     ),
 
+  exportsSummary: () =>
+    request("/api/admin/exports/summary"),
+
+  exportDownloadUrl: (dataset, format = "json", params = {}) =>
+    withQuery("/api/admin/exports/download", {
+      dataset,
+      format,
+      ...params,
+    }),
+
   search: (query = "") =>
     request(withQuery("/api/admin/search", { q: query })),
 };

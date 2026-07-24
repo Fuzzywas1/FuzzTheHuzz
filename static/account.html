@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="referrer" content="no-referrer" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="shortcut icon" href="/favicon.png" />
+  <title>My Account · FuzzTheHuzz</title>
+
+  <link rel="stylesheet" href="/assets/css/global.css?v=7" />
+  <link rel="stylesheet" href="/assets/css/nav.css?v=2" />
+  <link rel="stylesheet" href="/assets/css/account.css?v=1" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <script src="/assets/js/m1.js?v=account1" defer></script>
+  <script src="/assets/js/account-shell.js?v=1" defer></script>
+  <script src="/assets/js/account.js?v=1" type="module"></script>
+</head>
+<body>
+  <div class="f-nav"></div>
+
+  <main class="account-layout">
+    <header class="account-hero">
+      <div>
+        <p class="account-eyebrow">FuzzTheHuzz</p>
+        <h1>My Account</h1>
+        <p>Manage your account, security, saved chats, privacy, and preferences.</p>
+      </div>
+      <div id="account-status-chip" class="account-status-chip">Loading account…</div>
+    </header>
+
+    <div class="account-workspace">
+      <nav class="account-sidebar" aria-label="Account sections">
+        <button type="button" data-account-route="overview">
+          <i class="fa-solid fa-table-cells-large"></i><span>Overview</span>
+        </button>
+        <button type="button" data-account-route="security">
+          <i class="fa-solid fa-shield-halved"></i><span>Security</span>
+        </button>
+        <button type="button" data-account-route="ai">
+          <i class="fa-solid fa-robot"></i><span>Fuzz AI</span>
+        </button>
+        <button type="button" data-account-route="privacy">
+          <i class="fa-solid fa-user-shield"></i><span>Privacy</span>
+        </button>
+        <button type="button" data-account-route="preferences">
+          <i class="fa-solid fa-sliders"></i><span>Preferences</span>
+        </button>
+      </nav>
+
+      <section id="account-content" class="account-content" aria-live="polite">
+        <div class="account-loading"><span></span><p>Loading your account…</p></div>
+      </section>
+    </div>
+  </main>
+
+  <div id="account-modal-root"></div>
+  <div id="account-toast-root" class="account-toast-root" aria-live="polite"></div>
+  <script src="/assets/js/site-control.js" defer></script>
+</body>
+</html>
