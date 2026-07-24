@@ -17,6 +17,10 @@
     "media",
     "game",
     "cloud",
+    "school",
+    "productivity",
+    "coding",
+    "music",
     "tool",
     "ai",
     "emu",
@@ -35,6 +39,10 @@
     media: "TV & Movies",
     game: "Game sites",
     cloud: "Cloud gaming",
+    school: "School",
+    productivity: "Productivity",
+    coding: "Coding",
+    music: "Music",
     tool: "Tools",
     ai: "AI",
     emu: "Emulators",
@@ -53,6 +61,10 @@
     media: "fa-film",
     game: "fa-gamepad",
     cloud: "fa-cloud",
+    school: "fa-graduation-cap",
+    productivity: "fa-briefcase",
+    coding: "fa-code",
+    music: "fa-music",
     tool: "fa-screwdriver-wrench",
     ai: "fa-wand-magic-sparkles",
     emu: "fa-microchip",
@@ -85,6 +97,8 @@
     elements.loading = document.querySelector("#apps-loading");
     elements.allApps = document.querySelector("#all-apps");
     elements.empty = document.querySelector("#apps-empty");
+    elements.featuredSection = document.querySelector("#featured-section");
+    elements.featuredApps = document.querySelector("#featured-apps");
     elements.favoritesSection = document.querySelector("#favorites-section");
     elements.favoriteApps = document.querySelector("#favorite-apps");
     elements.recentSection = document.querySelector("#recent-section");
@@ -149,6 +163,10 @@
       link: String(rawApp.link || "").trim(),
       image: String(rawApp.image || "").trim(),
       categories: normalizeCategories(rawApp.categories),
+      description: String(rawApp.description || "").trim(),
+      iconFit: rawApp.iconFit === "contain" ? "contain" : "cover",
+      featured: rawApp.featured === true,
+      featuredRank: Number(rawApp.featuredRank || 9999),
       isCustom: custom === true,
       isCreateAction:
         rawApp.custom === true ||
@@ -161,7 +179,7 @@
     }
 
     app.id = String(rawApp.id || createAppId(app));
-    app.searchText = `${app.name} ${app.categories.join(" ")}`.toLowerCase();
+    app.searchText = `${app.name} ${app.description} ${app.categories.join(" ")}`.toLowerCase();
     return app;
   }
 
@@ -434,7 +452,7 @@
               app.image
                 ? `
                   <img
-                    class="app-card-icon"
+                    class="app-card-icon ${app.iconFit === "contain" ? "app-card-icon-contain" : ""}"
                     src="${escapeHtml(app.image)}"
                     alt=""
                     loading="lazy"
@@ -459,11 +477,14 @@
           </span>
 
           <span class="app-card-copy">
-            <span>
+            <span class="app-card-text">
               <strong class="app-card-name">${escapeHtml(app.name)}</strong>
-              <span class="app-card-meta">${escapeHtml(categoryForLabel(app))}</span>
+              <span class="app-card-description">${escapeHtml(app.description || categoryForLabel(app))}</span>
+              <span class="app-card-footer">
+                <span class="app-card-category">${escapeHtml(categoryForLabel(app))}</span>
+                <i class="fa-solid fa-arrow-up-right-from-square app-card-arrow" aria-hidden="true"></i>
+              </span>
             </span>
-            <i class="fa-solid fa-arrow-up-right-from-square app-card-arrow" aria-hidden="true"></i>
           </span>
         </button>
       </article>
@@ -559,6 +580,13 @@
     );
   }
 
+  function featuredApps() {
+    return state.apps
+      .filter((app) => app.featured === true)
+      .sort((a, b) => a.featuredRank - b.featuredRank || a.name.localeCompare(b.name))
+      .slice(0, 10);
+  }
+
   function recentApps() {
     const appMap = new Map(state.apps.map((app) => [app.id, app]));
     return state.recent.map((item) => appMap.get(item.id)).filter(Boolean).slice(0, MAX_RECENT);
@@ -578,6 +606,12 @@
     elements.count.textContent = `${state.filteredApps.length} ${state.filteredApps.length === 1 ? "app" : "apps"}`;
 
     renderCards(elements.allApps, state.filteredApps);
+
+    const featured = featuredApps();
+    elements.featuredSection.hidden = featured.length === 0 || state.search || state.category !== "all";
+    if (!elements.featuredSection.hidden) {
+      renderCards(elements.featuredApps, featured);
+    }
 
     const favorites = favoriteApps();
     elements.favoritesSection.hidden = favorites.length === 0 || state.search || state.category !== "all";

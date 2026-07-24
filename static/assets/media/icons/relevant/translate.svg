@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <rect width="256" height="256" rx="48" fill="#4285f4"/>
+  
+  <rect x="39" y="53" width="105" height="120" rx="18" fill="#fff"/><text x="91" y="135" text-anchor="middle" font-family="Arial,sans-serif" font-size="73" font-weight="800" fill="#4285f4">A</text><rect x="111" y="84" width="105" height="120" rx="18" fill="#e8f0fe"/><text x="164" y="166" text-anchor="middle" font-family="Arial,sans-serif" font-size="61" font-weight="800" fill="#4285f4">文</text>
+</svg>
