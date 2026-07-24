@@ -178,15 +178,7 @@
   });
 
   window.Home = () => {
-    const tab = activeTab();
-    if (!tab) return;
-    tab.view?.destroy?.();
-    tab.host.innerHTML = '<iframe class="fuzz-proxy-frame" src="/"></iframe>';
-    const iframe = tab.host.querySelector("iframe");
-    tab.view = { element: iframe, destroy: () => iframe.remove(), engine: "local", url: "/" };
-    tab.url = "";
-    tab.title.textContent = "Home";
-    input.value = "";
+    window.location.assign("/");
   };
 
   window.reload = () => {
