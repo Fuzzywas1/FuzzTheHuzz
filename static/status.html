@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="referrer" content="no-referrer" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#050713" />
+  <title>Home</title>
+  <link rel="shortcut icon" href="/assets/media/favicon/classroom.png" />
+  <link rel="stylesheet" href="/assets/css/global.css?v=8" />
+  <link rel="stylesheet" href="/assets/css/nav.css?v=6" />
+  <link rel="stylesheet" href="/assets/css/fuzz-ui.css?v=1" />
+  <link rel="stylesheet" href="/assets/css/status.css?v=1" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <script src="/assets/js/fuzz-ui.js?v=1"></script>
+  <script src="/assets/js/fuzz-diagnostics.js?v=1"></script>
+</head>
+<body>
+  <div class="f-nav"></div>
+  <main class="status-main">
+    <header class="status-hero">
+      <div>
+        <p>FuzzTheHuzz diagnostics</p>
+        <h1>System Status</h1>
+        <span>Check the server, proxy files, database, and this browser in one place.</span>
+      </div>
+      <div class="status-actions">
+        <button id="copy-diagnostics" type="button"><i class="fa-regular fa-copy"></i>Copy diagnostics</button>
+        <button id="refresh-status" class="primary" type="button"><i class="fa-solid fa-rotate"></i>Run checks</button>
+      </div>
+    </header>
+
+    <section class="status-summary" id="status-summary">
+      <div class="status-loading"><span></span>Running checks…</div>
+    </section>
+
+    <section class="status-grid" id="status-grid"></section>
+
+    <section class="status-panel">
+      <header><div><h2>Browser diagnostics</h2><p>Local features required for proxy browsing.</p></div></header>
+      <div class="status-browser-grid" id="browser-checks"></div>
+    </section>
+
+    <section class="status-panel">
+      <header><div><h2>Need help?</h2><p>Send the copied diagnostic summary together with any visible error ID.</p></div></header>
+      <div class="status-help-actions">
+        <a href="/d">Open Tabs</a>
+        <a href="/account#preferences">Open preferences</a>
+        <button type="button" data-fuzz-open-changelog>View changelog</button>
+      </div>
+    </section>
+  </main>
+  <div id="status-toast" class="status-toast" hidden></div>
+  <script src="/assets/js/m1.js?v=status1" defer></script>
+  <script src="/assets/js/status.js?v=1" defer></script>
+  <script src="/assets/js/account-shell.js?v=2" defer></script>
+  <script src="/assets/js/site-control.js?v=2" defer></script>
+</body>
+</html>

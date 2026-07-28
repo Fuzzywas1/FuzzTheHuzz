@@ -1067,3 +1067,56 @@ body.is-loading #reload-button svg {
     grid-template-columns: 1fr;
   }
 }
+
+/* =======================================================
+   MEGA UPDATE · PROXY CHOOSER, BOOKMARKS + LIBRARY
+======================================================= */
+.bookmark-button.is-saved { color:#ffd66b; background:rgba(255,214,107,.08); }
+.bookmark-button.is-saved svg { fill:currentColor; }
+.start-proxy-chooser { margin-top:14px; text-align:left; }
+.start-proxy-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px; padding:0 2px; }
+.start-proxy-heading strong { color:#edf0ff; font-size:10px; }
+.start-proxy-heading span { color:#69738f; font-size:8px; }
+.start-proxy-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
+.start-proxy-card { display:flex; min-height:75px; align-items:center; gap:10px; padding:12px; border:1px solid var(--browser-border); border-radius:14px; color:#aeb7d2; background:rgba(10,15,31,.78); cursor:pointer; text-align:left; transition:transform var(--ease),border-color var(--ease),background var(--ease); }
+.start-proxy-card:hover { transform:translateY(-2px); border-color:var(--browser-border-strong); background:rgba(18,25,48,.92); }
+.start-proxy-card.is-selected { border-color:rgba(var(--fuzz-accent-rgb),.65); background:rgba(var(--fuzz-accent-rgb),.12); box-shadow:0 0 0 3px rgba(var(--fuzz-accent-rgb),.08); }
+.start-proxy-radio { width:13px; height:13px; flex:0 0 auto; border:2px solid #66718e; border-radius:50%; }
+.start-proxy-card.is-selected .start-proxy-radio { border-color:var(--fuzz-accent); background:var(--fuzz-accent); box-shadow:inset 0 0 0 3px #151d3d,0 0 12px rgba(var(--fuzz-accent-rgb),.55); }
+.start-proxy-card > span:last-child { display:grid; gap:4px; }
+.start-proxy-card strong { color:#f2f4ff; font-size:10px; }
+.start-proxy-card small { color:#6e7892; font-size:8px; line-height:1.4; }
+.start-proxy-help { margin:7px 2px 0; color:#606a83; font-size:7px; line-height:1.45; }
+.browser-library { position:fixed; top:var(--browser-chrome-height); right:0; bottom:0; z-index:1200; display:flex; width:min(420px,calc(100vw - 24px)); flex-direction:column; border-left:1px solid var(--browser-border-strong); background:rgba(7,11,24,.985); box-shadow:-24px 0 70px rgba(0,0,0,.48); backdrop-filter:blur(20px); transform:translateX(104%); transition:transform 180ms ease; }
+.browser-library[hidden] { display:none; }
+.browser-library.is-open { transform:translateX(0); }
+.browser-library-header { display:flex; min-height:66px; align-items:center; justify-content:space-between; gap:12px; padding:13px 15px; border-bottom:1px solid var(--browser-border); }
+.browser-library-header > div { display:grid; gap:4px; }
+.browser-library-header strong { color:#f4f6ff; font-size:12px; }
+.browser-library-header span { color:#707a94; font-size:8px; }
+.browser-library-header button { display:grid; width:32px; height:32px; place-items:center; border:1px solid var(--browser-border); border-radius:9px; color:#b9c1d8; background:rgba(255,255,255,.035); cursor:pointer; }
+.browser-library-tabs { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; padding:9px; border-bottom:1px solid var(--browser-border); }
+.browser-library-tabs button { min-height:34px; border:1px solid transparent; border-radius:9px; color:#7f89a4; background:transparent; font-size:8px; font-weight:800; cursor:pointer; }
+.browser-library-tabs button.is-active { color:white; border-color:rgba(var(--fuzz-accent-rgb),.25); background:rgba(var(--fuzz-accent-rgb),.1); }
+.browser-library-content { display:grid; flex:1; align-content:start; gap:7px; overflow:auto; padding:10px; }
+.browser-library-entry { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:6px; border:1px solid rgba(255,255,255,.06); border-radius:12px; background:rgba(255,255,255,.025); }
+.browser-library-open { display:flex; min-width:0; min-height:60px; align-items:center; gap:10px; padding:8px 4px 8px 9px; border:0; color:#aeb7d2; background:transparent; cursor:pointer; text-align:left; }
+.browser-library-entry-icon { display:grid; width:34px; height:34px; flex:0 0 auto; place-items:center; border-radius:10px; color:#dce0ff; background:rgba(var(--fuzz-accent-rgb),.1); font-size:10px; font-weight:900; }
+.browser-library-entry-copy { display:grid; min-width:0; gap:4px; }
+.browser-library-entry-copy strong,.browser-library-entry-copy small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.browser-library-entry-copy strong { color:#eef0ff; font-size:9px; }
+.browser-library-entry-copy small { color:#68728d; font-size:7px; }
+.browser-library-entry-actions { display:flex; padding-right:7px; }
+.browser-library-entry-actions button { display:grid; width:27px; height:27px; place-items:center; border:0; border-radius:8px; color:#76809a; background:transparent; cursor:pointer; }
+.browser-library-entry-actions button:hover { color:white; background:rgba(255,255,255,.06); }
+.browser-library-footer { display:flex; gap:7px; padding:10px; border-top:1px solid var(--browser-border); }
+.browser-library-footer button { min-height:35px; flex:1; border:1px solid var(--browser-border); border-radius:9px; color:#c1c8dd; background:rgba(255,255,255,.035); font-size:8px; font-weight:800; cursor:pointer; }
+.browser-library-footer button:first-child { border-color:rgba(var(--fuzz-accent-rgb),.28); background:rgba(var(--fuzz-accent-rgb),.1); }
+.browser-library-empty,.browser-library-loading { display:grid; min-height:190px; place-items:center; align-content:center; gap:7px; color:#77819a; text-align:center; font-size:9px; }
+.browser-library-empty strong { color:#e8ebff; font-size:11px; }
+.browser-library-empty span { max-width:250px; line-height:1.5; }
+.browser-library-loading span { width:24px; height:24px; border:3px solid rgba(255,255,255,.07); border-top-color:var(--fuzz-accent); border-radius:50%; animation:browser-spin .7s linear infinite; }
+html[data-fuzz-density="compact"] { --tab-strip-height:40px; --toolbar-height:50px; }
+html[data-fuzz-density="compact"] .browser-toolbar { padding-top:6px; padding-bottom:6px; }
+html[data-fuzz-density="compact"] .browser-tab { height:31px; }
+@media(max-width:620px){.start-proxy-grid{grid-template-columns:1fr}.browser-library{width:100vw}}

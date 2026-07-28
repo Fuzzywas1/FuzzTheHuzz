@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="referrer" content="no-referrer" />
@@ -9,15 +8,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#050713" />
 
-  <link rel="shortcut icon" id="tab-favicon" href="favicon.png" />
+  <link rel="shortcut icon" id="tab-favicon" href="/assets/media/favicon/classroom.png" />
   <title id="t">Home</title>
 
   <script src="./assets/mathematics/bundle.js?v=2025-04-15"></script>
   <script src="./assets/mathematics/config.js?v=2025-04-15"></script>
 
   <link rel="stylesheet" href="/assets/css/global.css?v=6" />
-  <link rel="stylesheet" href="/assets/css/apps.css?v=2" />
-  <link rel="stylesheet" href="/assets/css/nav.css?v=02" />
+  <link rel="stylesheet" href="/assets/css/apps.css?v=3" />
+  <link rel="stylesheet" href="/assets/css/nav.css?v=6" />
   <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
@@ -25,8 +24,11 @@
 
   <script src="/baremux/index.js"></script>
   <script src="/scram/scramjet.all.js"></script>
-  <script src="/assets/js/proxy-engine.js?v=2"></script>
+  <script src="/assets/js/proxy-engine.js?v=4"></script>
   <script src="/assets/js/index-3.js?v=7"></script>
+  <link rel="stylesheet" href="/assets/css/fuzz-ui.css?v=1" />
+  <script src="/assets/js/fuzz-ui.js?v=1"></script>
+  <script src="/assets/js/fuzz-diagnostics.js?v=1"></script>
 </head>
 
 <body class="apps-page">
@@ -39,120 +41,128 @@
   <div class="f-nav"></div>
 
   <main class="apps-shell" id="apps-shell">
-    <section class="apps-hero" aria-labelledby="apps-title">
-      <div class="apps-hero-copy">
+    <header class="apps-page-header">
+      <div>
         <div class="apps-eyebrow">
           <span class="apps-eyebrow-dot"></span>
-          App library
+          Fuzz library
         </div>
-
-        <h1 id="apps-title">Everything, one click away.</h1>
-        <p>
-          Search, favorite, and quickly reopen the apps you use most.
-        </p>
+        <h1 id="apps-title">Apps</h1>
+        <p>Everything you use, organized into one clean launcher.</p>
       </div>
 
       <button class="apps-add-button" id="add-custom-app" type="button">
         <i class="fa-solid fa-plus" aria-hidden="true"></i>
-        <span>Add custom app</span>
+        <span>Add app</span>
       </button>
-    </section>
+    </header>
 
-    <section class="apps-command-bar" aria-label="App filters">
-      <label class="apps-search-wrap" for="app-search">
-        <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-        <input
-          id="app-search"
-          type="search"
-          autocomplete="off"
-          spellcheck="false"
-          placeholder="Search apps..."
-        />
-        <kbd>/</kbd>
-      </label>
-
-      <label class="apps-sort-wrap" for="app-sort">
-        <i class="fa-solid fa-arrow-down-wide-short" aria-hidden="true"></i>
-        <select id="app-sort" title="Sort apps">
-          <option value="name">Name</option>
-          <option value="recent">Recently opened</option>
-          <option value="used">Most used</option>
-          <option value="favorites">Favorites first</option>
-        </select>
-      </label>
-    </section>
-
-    <section class="apps-category-strip" aria-label="App categories">
-      <div id="category-chips" class="apps-category-chips"></div>
-    </section>
-
-    <div id="apps-status" class="apps-status-row" aria-live="polite">
-      <span>Loading your apps...</span>
-    </div>
-
-
-    <section id="featured-section" class="apps-section apps-featured-section" hidden>
-      <div class="apps-section-heading">
-        <div>
-          <span class="apps-section-kicker">Recommended</span>
-          <h2>Popular picks</h2>
+    <section class="apps-workspace" aria-labelledby="apps-title">
+      <aside class="apps-sidebar" aria-label="App filters">
+        <div class="apps-sidebar-heading">
+          <span>Browse</span>
+          <small>Filter your library</small>
         </div>
-        <span class="apps-section-note">Useful apps people open the most</span>
-      </div>
-      <div id="featured-apps" class="apps-grid apps-grid-featured"></div>
-    </section>
 
-    <section id="favorites-section" class="apps-section" hidden>
-      <div class="apps-section-heading">
-        <div>
-          <span class="apps-section-kicker">Quick access</span>
-          <h2>Favorites</h2>
+        <section class="apps-command-bar" aria-label="Search and sort apps">
+          <label class="apps-search-wrap" for="app-search">
+            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+            <input
+              id="app-search"
+              type="search"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="Search apps"
+            />
+            <kbd>/</kbd>
+          </label>
+
+          <label class="apps-sort-wrap" for="app-sort">
+            <i class="fa-solid fa-arrow-down-wide-short" aria-hidden="true"></i>
+            <select id="app-sort" title="Sort apps">
+              <option value="name">Name</option>
+              <option value="recent">Recently opened</option>
+              <option value="used">Most used</option>
+              <option value="favorites">Favorites first</option>
+            </select>
+          </label>
+        </section>
+
+        <div class="apps-sidebar-label">Categories</div>
+        <section class="apps-category-strip" aria-label="App categories">
+          <div id="category-chips" class="apps-category-chips"></div>
+        </section>
+
+        <div id="apps-status" class="apps-status-row" aria-live="polite">
+          <span>Loading your apps...</span>
         </div>
-        <button class="apps-text-button" type="button" data-clear-favorites>
-          Clear favorites
-        </button>
-      </div>
-      <div id="favorite-apps" class="apps-grid apps-grid-compact"></div>
-    </section>
+      </aside>
 
-    <section id="recent-section" class="apps-section" hidden>
-      <div class="apps-section-heading">
-        <div>
-          <span class="apps-section-kicker">Jump back in</span>
-          <h2>Recently opened</h2>
-        </div>
-        <button class="apps-text-button" type="button" data-clear-recents>
-          Clear history
-        </button>
-      </div>
-      <div id="recent-apps" class="apps-grid apps-grid-compact"></div>
-    </section>
+      <div class="apps-content">
+        <section id="featured-section" class="apps-section apps-featured-section" hidden>
+          <div class="apps-section-heading">
+            <div>
+              <span class="apps-section-kicker">Discover</span>
+              <h2>Popular picks</h2>
+            </div>
+            <span class="apps-section-note">A few good places to start</span>
+          </div>
+          <div id="featured-apps" class="apps-grid apps-grid-featured"></div>
+        </section>
 
-    <section class="apps-section apps-all-section">
-      <div class="apps-section-heading">
-        <div>
-          <span class="apps-section-kicker">Browse</span>
-          <h2>All apps</h2>
-        </div>
-        <span id="app-count" class="apps-count-pill">0 apps</span>
-      </div>
+        <section id="favorites-section" class="apps-section" hidden>
+          <div class="apps-section-heading">
+            <div>
+              <span class="apps-section-kicker">Quick access</span>
+              <h2>Favorites</h2>
+            </div>
+            <button class="apps-text-button" type="button" data-clear-favorites>
+              Clear favorites
+            </button>
+          </div>
+          <div id="favorite-apps" class="apps-grid apps-grid-compact"></div>
+        </section>
 
-      <div id="apps-loading" class="apps-loading-grid" aria-hidden="true">
-        <span></span><span></span><span></span><span></span><span></span><span></span>
-        <span></span><span></span><span></span><span></span><span></span><span></span>
-      </div>
+        <section id="recent-section" class="apps-section" hidden>
+          <div class="apps-section-heading">
+            <div>
+              <span class="apps-section-kicker">Jump back in</span>
+              <h2>Recently opened</h2>
+            </div>
+            <button class="apps-text-button" type="button" data-clear-recents>
+              Clear history
+            </button>
+          </div>
+          <div id="recent-apps" class="apps-grid apps-grid-compact"></div>
+        </section>
 
-      <div id="all-apps" class="apps-grid" hidden></div>
+        <section class="apps-section apps-all-section">
+          <div class="apps-section-heading apps-all-heading">
+            <div>
+              <span class="apps-section-kicker">Library</span>
+              <h2>All apps</h2>
+            </div>
+            <span id="app-count" class="apps-count-pill">0 apps</span>
+          </div>
 
-      <div id="apps-empty" class="apps-empty" hidden>
-        <div class="apps-empty-icon">
-          <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-        </div>
-        <h3>No apps found</h3>
-        <p>Try another search or category.</p>
-        <button class="apps-secondary-button" id="reset-app-filters" type="button">
-          Reset filters
-        </button>
+          <div id="apps-loading" class="apps-loading-grid" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+          </div>
+
+          <div id="all-apps" class="apps-grid" hidden></div>
+
+          <div id="apps-empty" class="apps-empty" hidden>
+            <div class="apps-empty-icon">
+              <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+            </div>
+            <h3>No apps found</h3>
+            <p>Try another search or category.</p>
+            <button class="apps-secondary-button" id="reset-app-filters" type="button">
+              Reset filters
+            </button>
+          </div>
+        </section>
       </div>
     </section>
   </main>
@@ -165,5 +175,4 @@
   <script src="/assets/js/account-shell.js?v=1" defer></script>
   <script src="/assets/js/site-control.js" defer></script>
 </body>
-
 </html>

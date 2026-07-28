@@ -1,6 +1,7 @@
 import "dotenv/config";
 
 import crypto from "node:crypto";
+import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
 
@@ -39,6 +40,23 @@ Object.assign(wispServer.options, {
 
 const CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
 const cache = new Map();
+
+const FUZZ_RELEASE = Object.freeze({
+  version: "5.3.0",
+  releasedAt: "2026-07-24T00:00:00.000Z",
+  summary:
+    "A major browsing, reliability, customization, and diagnostics update.",
+  items: [
+    "Redesigned proxy selection on Home and New Tab.",
+    "Synced bookmarks with browser-storage fallback.",
+    "Recently visited and recently closed tab recovery.",
+    "System Status page and owner health dashboard.",
+    "Client error IDs with searchable activity logs.",
+    "First-run onboarding and expanded appearance controls.",
+    "Update notices, changelog, and safer response headers.",
+    "Improved proxy errors with one-click engine fallback.",
+  ],
+});
 
 const ADMIN_DASHBOARD_CACHE_TTL = 5 * 1000;
 let adminDashboardCache = {
@@ -138,6 +156,96 @@ app.use((req, res, next) => {
 });
 
 /*
+ * Normal application pages get defensive browser headers. Proxy runtime
+ * paths are intentionally excluded because rewritten sites, workers, and
+ * embedded frames need a less restrictive environment.
+ */
+const PROXY_RUNTIME_PREFIXES = [
+  "/a/",
+  "/scram/",
+  "/baremux/",
+  "/libcurl/",
+  "/ca/",
+  "/wisp/",
+];
+
+const PROXY_BROWSER_PATHS = new Set([
+  "/d",
+  "/p",
+  "/tabs.html",
+  "/proxy.html",
+  "/scramjet-sw.js",
+  "/sw.js",
+]);
+
+const APPLICATION_PAGE_PATHS = new Set([
+  "/",
+  "/b",
+  "/a",
+  "/c",
+  "/ai",
+  "/account",
+  "/admin",
+  "/status",
+  "/login",
+  "/signup",
+  "/verified",
+  "/suspended",
+  "/maintenance",
+  "/feature-unavailable",
+  "/index.html",
+  "/apps.html",
+  "/games.html",
+  "/settings.html",
+  "/ai.html",
+  "/account.html",
+  "/admin.html",
+  "/status.html",
+  "/login.html",
+  "/signup.html",
+]);
+
+function isProxyRuntimeRequest(reqPath = "") {
+  return (
+    PROXY_BROWSER_PATHS.has(reqPath) ||
+    PROXY_RUNTIME_PREFIXES.some((prefix) =>
+      reqPath.startsWith(prefix),
+    )
+  );
+}
+
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Referrer-Policy", "no-referrer");
+
+  if (!isProxyRuntimeRequest(req.path)) {
+    res.setHeader(
+      "Permissions-Policy",
+      "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+    );
+    res.setHeader(
+      "Content-Security-Policy",
+      [
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://www.googletagmanager.com",
+        "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com",
+        "font-src 'self' data: https://cdnjs.cloudflare.com",
+        "img-src 'self' data: blob: https:",
+        "connect-src 'self' https: wss:",
+        "worker-src 'self' blob:",
+        "frame-src 'self' blob:",
+        "object-src 'none'",
+        "base-uri 'self'",
+        "form-action 'self'",
+        "frame-ancestors 'self'",
+      ].join("; "),
+    );
+  }
+
+  next();
+});
+
+/*
  * The Bare server is handled before Express at the bottom of
  * this file. This CORS middleware is only a fallback.
  */
@@ -157,7 +265,15 @@ app.get("/health", (_req, res) => {
   res.status(200).json({
     success: true,
     service: "FuzzTheHuzz",
+    version: FUZZ_RELEASE.version,
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
   });
+});
+
+app.get("/api/release", (_req, res) => {
+  res.setHeader("Cache-Control", "public, max-age=300");
+  return res.json(FUZZ_RELEASE);
 });
 
 /* =======================================================
@@ -1255,6 +1371,10 @@ const PLATFORM_MIDDLEWARE_EXEMPT_PATHS =
     "/api/auth/suspension",
     "/api/platform/config",
     "/api/announcements/active",
+    "/api/release",
+    "/api/status",
+    "/status",
+    "/status.html",
   ]);
 
 app.use(async (req, res, next) => {
@@ -6559,6 +6679,361 @@ app.post(
 
     return res.status(202).json({
       success: true,
+    });
+  },
+);
+
+/* =======================================================
+   BOOKMARKS, CLIENT DIAGNOSTICS + SYSTEM STATUS
+======================================================= */
+
+function cleanBookmarkUrl(value) {
+  const raw = String(value || "").trim().slice(0, 4000);
+
+  try {
+    const parsed = new URL(raw);
+    if (!["http:", "https:"].includes(parsed.protocol)) {
+      return "";
+    }
+    parsed.username = "";
+    parsed.password = "";
+    return parsed.toString();
+  } catch {
+    return "";
+  }
+}
+
+function cleanBookmarkTitle(value, url = "") {
+  const title = String(value || "").trim().slice(0, 160);
+  if (title) return title;
+
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "Saved page";
+  }
+}
+
+function serializeBookmark(row) {
+  return {
+    id: row.id,
+    title: row.title,
+    url: row.url,
+    engine:
+      row.engine === "ultraviolet"
+        ? "ultraviolet"
+        : "scramjet",
+    pinned: row.pinned === true,
+    position: Number(row.position || 0),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function bookmarkSetupError(res, error) {
+  console.error("Bookmark storage failed:", error);
+  return res.status(503).json({
+    error:
+      "Synced bookmarks are not configured yet. Fuzz will use this browser's local bookmark storage.",
+    code: "BOOKMARKS_SETUP_REQUIRED",
+  });
+}
+
+app.get(
+  "/api/bookmarks",
+  requireApiAuth,
+  async (req, res) => {
+    const { data, error } = await supabaseAdmin
+      .from("user_bookmarks")
+      .select("id, title, url, engine, pinned, position, created_at, updated_at")
+      .eq("user_id", req.auth.user.id)
+      .order("pinned", { ascending: false })
+      .order("position", { ascending: true })
+      .order("updated_at", { ascending: false })
+      .limit(250);
+
+    if (error) return bookmarkSetupError(res, error);
+
+    return res.json({
+      bookmarks: (data || []).map(serializeBookmark),
+    });
+  },
+);
+
+app.post(
+  "/api/bookmarks",
+  requireApiAuth,
+  async (req, res) => {
+    const url = cleanBookmarkUrl(req.body.url);
+    if (!url) {
+      return res.status(400).json({
+        error: "Enter a valid http:// or https:// address.",
+      });
+    }
+
+    const values = {
+      user_id: req.auth.user.id,
+      title: cleanBookmarkTitle(req.body.title, url),
+      url,
+      engine:
+        req.body.engine === "ultraviolet"
+          ? "ultraviolet"
+          : "scramjet",
+      pinned: req.body.pinned === true,
+      position: clampInteger(req.body.position, 0, 0, 100000),
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabaseAdmin
+      .from("user_bookmarks")
+      .upsert(values, {
+        onConflict: "user_id,url",
+      })
+      .select("id, title, url, engine, pinned, position, created_at, updated_at")
+      .single();
+
+    if (error) return bookmarkSetupError(res, error);
+
+    void writeActivityLog({
+      req,
+      userId: req.auth.user.id,
+      category: "bookmarks",
+      action: "bookmark.saved",
+      status: "success",
+      description: `Saved bookmark for ${new URL(url).hostname}.`,
+      resourceType: "bookmark",
+      resourceId: data.id,
+      responseStatus: 201,
+      metadata: { domain: new URL(url).hostname },
+    });
+
+    return res.status(201).json({
+      bookmark: serializeBookmark(data),
+    });
+  },
+);
+
+app.patch(
+  "/api/bookmarks/:bookmarkId",
+  requireApiAuth,
+  async (req, res) => {
+    const updates = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (Object.hasOwn(req.body, "title")) {
+      updates.title = String(req.body.title || "Saved page").trim().slice(0, 160) || "Saved page";
+    }
+    if (Object.hasOwn(req.body, "url")) {
+      const url = cleanBookmarkUrl(req.body.url);
+      if (!url) return res.status(400).json({ error: "Enter a valid bookmark URL." });
+      updates.url = url;
+    }
+    if (Object.hasOwn(req.body, "engine")) {
+      updates.engine = req.body.engine === "ultraviolet" ? "ultraviolet" : "scramjet";
+    }
+    if (Object.hasOwn(req.body, "pinned")) {
+      updates.pinned = req.body.pinned === true;
+    }
+    if (Object.hasOwn(req.body, "position")) {
+      updates.position = clampInteger(req.body.position, 0, 0, 100000);
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("user_bookmarks")
+      .update(updates)
+      .eq("id", req.params.bookmarkId)
+      .eq("user_id", req.auth.user.id)
+      .select("id, title, url, engine, pinned, position, created_at, updated_at")
+      .maybeSingle();
+
+    if (error) return bookmarkSetupError(res, error);
+    if (!data) return res.status(404).json({ error: "Bookmark not found." });
+
+    return res.json({ bookmark: serializeBookmark(data) });
+  },
+);
+
+app.delete(
+  "/api/bookmarks/:bookmarkId",
+  requireApiAuth,
+  async (req, res) => {
+    const { error } = await supabaseAdmin
+      .from("user_bookmarks")
+      .delete()
+      .eq("id", req.params.bookmarkId)
+      .eq("user_id", req.auth.user.id);
+
+    if (error) return bookmarkSetupError(res, error);
+    return res.json({ success: true });
+  },
+);
+
+app.post(
+  "/api/client-errors",
+  requireApiAuth,
+  async (req, res) => {
+    const providedId = String(req.body.errorId || "")
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9-]/g, "")
+      .slice(0, 80);
+    const errorId = providedId || `FX-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
+    const message = String(req.body.message || "Unknown client error").trim().slice(0, 1200);
+    const stack = String(req.body.stack || "").trim().slice(0, 6000);
+    const targetUrl = cleanBookmarkUrl(req.body.targetUrl);
+
+    void writeActivityLog({
+      req,
+      userId: req.auth.user.id,
+      category: "client_error",
+      action: String(req.body.action || "client.error").trim().slice(0, 120),
+      status: "failure",
+      description: `${errorId}: ${message}`.slice(0, 1000),
+      resourceType: "client_error",
+      resourceId: errorId,
+      responseStatus: 202,
+      proxyTargetUrl: targetUrl || null,
+      proxyTargetDomain: targetUrl ? new URL(targetUrl).hostname : null,
+      proxyEngine: String(req.body.engine || "").trim().slice(0, 50) || null,
+      metadata: {
+        errorId,
+        page: String(req.body.page || "").trim().slice(0, 1000),
+        component: String(req.body.component || "browser").trim().slice(0, 120),
+        stack,
+        clientMetadata:
+          req.body.metadata && typeof req.body.metadata === "object"
+            ? req.body.metadata
+            : {},
+      },
+    });
+
+    return res.status(202).json({ success: true, errorId });
+  },
+);
+
+async function runSystemHealthChecks() {
+  const checks = {
+    server: {
+      status: "online",
+      message: "The Express server is responding normally.",
+      critical: true,
+    },
+    database: {
+      status: "offline",
+      message: "Supabase has not been checked yet.",
+      critical: true,
+    },
+    openai: {
+      status: openaiApiKey ? "configured" : "offline",
+      message: openaiApiKey
+        ? "The OpenAI API key is configured."
+        : "The OpenAI API key is missing.",
+      critical: false,
+    },
+    scramjet: {
+      status: fs.existsSync(path.join(scramjetPath, "scramjet.all.js"))
+        ? "online"
+        : "offline",
+      message: fs.existsSync(path.join(scramjetPath, "scramjet.all.js"))
+        ? "Scramjet client files are installed."
+        : "Scramjet client files are missing.",
+      critical: true,
+    },
+    ultraviolet: {
+      status: fs.existsSync(path.join(__dirname, "static", "assets", "mathematics", "bundle.js"))
+        ? "online"
+        : "offline",
+      message: fs.existsSync(path.join(__dirname, "static", "assets", "mathematics", "bundle.js"))
+        ? "Ultraviolet client files are installed."
+        : "Ultraviolet client files are missing.",
+      critical: false,
+    },
+    wisp: {
+      status: "online",
+      message: "The Wisp WebSocket route is registered.",
+      critical: true,
+    },
+  };
+
+  try {
+    const databaseResult = await Promise.race([
+      supabaseAdmin
+        .from("profiles")
+        .select("id", { count: "exact", head: true }),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Supabase health check timed out.")), 4500),
+      ),
+    ]);
+
+    if (databaseResult.error) throw databaseResult.error;
+    checks.database = {
+      status: "online",
+      message: "Supabase responded to a protected database query.",
+      critical: true,
+    };
+  } catch (error) {
+    checks.database = {
+      status: "offline",
+      message: String(error?.message || "Supabase did not respond.").slice(0, 300),
+      critical: true,
+    };
+  }
+
+  let platform = null;
+  try {
+    platform = await getPlatformSettings();
+  } catch {}
+
+  const criticalOffline = Object.values(checks).some(
+    (check) => check.critical && !["online", "configured"].includes(check.status),
+  );
+
+  return {
+    overall: criticalOffline ? "degraded" : "online",
+    version: FUZZ_RELEASE.version,
+    checkedAt: new Date().toISOString(),
+    uptime: process.uptime(),
+    memory: process.memoryUsage().rss,
+    cacheEntries: cache.size,
+    platform: {
+      maintenance: platform ? isMaintenanceActive(platform) : false,
+      proxyEnabled: platform?.proxy_enabled !== false,
+      aiEnabled: platform?.ai_enabled !== false,
+    },
+    checks,
+  };
+}
+
+app.get(
+  "/api/status",
+  requireApiAuth,
+  async (_req, res) => {
+    const payload = await runSystemHealthChecks();
+    res.setHeader("Cache-Control", "no-store");
+    return res.json(payload);
+  },
+);
+
+app.get(
+  "/api/admin/system-health",
+  requireRole("admin"),
+  async (_req, res) => {
+    const [health, recentErrorsResult] = await Promise.all([
+      runSystemHealthChecks(),
+      supabaseAdmin
+        .from("activity_logs")
+        .select("id, user_id, description, resource_id, browser, operating_system, created_at, metadata")
+        .eq("category", "client_error")
+        .order("created_at", { ascending: false })
+        .limit(30),
+    ]);
+
+    return res.json({
+      ...health,
+      recentErrors: recentErrorsResult.error
+        ? []
+        : recentErrorsResult.data || [],
     });
   },
 );
@@ -12828,6 +13303,7 @@ const protectedHtmlFiles = new Set([
   "/proxy.html",
   "/ai.html",
   "/admin.html",
+  "/status.html",
 ]);
 
 app.use((req, res, next) => {
@@ -12983,6 +13459,10 @@ const protectedRoutes = [
   {
     route: "/account",
     file: "account.html",
+  },
+  {
+    route: "/status",
+    file: "status.html",
   },
 ];
 

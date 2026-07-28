@@ -34,7 +34,14 @@
     event.preventDefault();
     submit(input?.value).catch((error) => {
       console.error("Proxy navigation failed:", error);
-      window.alert(`The page could not be opened: ${error.message}`);
+      const errorId = window.FuzzDiagnostics?.report?.(error, {
+        prefix: "HM",
+        component: "home-search",
+        action: "proxy.home_navigation_failed",
+        engine: window.FuzzProxy?.getEngine?.(),
+        targetUrl: input?.value,
+      });
+      window.alert(`The page could not be opened: ${error.message}${errorId ? `\nError ID: ${errorId}` : ""}`);
     });
   });
 

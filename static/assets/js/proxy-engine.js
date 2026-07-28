@@ -398,7 +398,13 @@
     location.href = "/p";
   }
 
-  function logNavigation(url, engine, query = "", source = "proxy-ui") {
+  function logNavigation(
+    url,
+    engine,
+    query = "",
+    source = "proxy-ui",
+    status = "success",
+  ) {
     fetch("/api/proxy/log", {
       method: "POST",
       credentials: "same-origin",
@@ -407,7 +413,12 @@
         targetUrl: normalizeInput(url),
         query: String(query || ""),
         engine: normalizeEngine(engine),
-        status: "success",
+        status:
+          status === "failure"
+            ? "failure"
+            : status === "informational"
+              ? "informational"
+              : "success",
         source,
       }),
     }).catch(() => {});

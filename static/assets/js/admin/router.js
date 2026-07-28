@@ -7,6 +7,7 @@ import { renderExports } from "./exports.js";
 import { renderInvites } from "./invites.js";
 import { renderLimits } from "./limits.js";
 import { renderHistory } from "./history.js";
+import { renderHealth } from "./health.js";
 import { renderProxy } from "./proxy.js";
 import { renderSecurityCenter } from "./security-center.js";
 import { renderSettings } from "./settings.js";
@@ -43,6 +44,11 @@ const routes = {
     title: "Limits & Abuse",
     subtitle: "Set usage limits, automatic suspensions and abuse controls.",
     render: renderLimits,
+  },
+  health: {
+    title: "System Health",
+    subtitle: "Deep checks, proxy assets, platform switches, and client error IDs.",
+    render: renderHealth,
   },
   history: {
     title: "History",

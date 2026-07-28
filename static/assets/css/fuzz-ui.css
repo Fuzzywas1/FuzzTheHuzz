@@ -1,0 +1,223 @@
+:root {
+  --fuzz-accent: #7f8cff;
+  --fuzz-accent-strong: #7256e8;
+  --fuzz-accent-rgb: 127, 140, 255;
+  --fuzz-density-scale: 1;
+}
+
+html[data-fuzz-accent="cyan"] {
+  --fuzz-accent: #51c9f5;
+  --fuzz-accent-strong: #258fc8;
+  --fuzz-accent-rgb: 81, 201, 245;
+}
+
+html[data-fuzz-accent="green"] {
+  --fuzz-accent: #52d79d;
+  --fuzz-accent-strong: #2aa875;
+  --fuzz-accent-rgb: 82, 215, 157;
+}
+
+html[data-fuzz-accent="rose"] {
+  --fuzz-accent: #f478aa;
+  --fuzz-accent-strong: #c84d82;
+  --fuzz-accent-rgb: 244, 120, 170;
+}
+
+html[data-fuzz-accent="amber"] {
+  --fuzz-accent: #f4bd58;
+  --fuzz-accent-strong: #ca8d28;
+  --fuzz-accent-rgb: 244, 189, 88;
+}
+
+html[data-fuzz-density="compact"] {
+  --fuzz-density-scale: .88;
+}
+
+html[data-fuzz-motion="reduced"] *,
+html[data-fuzz-motion="reduced"] *::before,
+html[data-fuzz-motion="reduced"] *::after {
+  scroll-behavior: auto !important;
+  animation-duration: .001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: .001ms !important;
+}
+
+html[data-fuzz-background="quiet"] #stars,
+html[data-fuzz-background="quiet"] .home-grid,
+html[data-fuzz-background="quiet"] .space-grid,
+html[data-fuzz-background="quiet"] .space-orb,
+html[data-fuzz-background="quiet"] .home-glow {
+  display: none !important;
+}
+
+html[data-fuzz-density="compact"] .f-nav,
+html[data-fuzz-density="compact"] .browser-toolbar,
+html[data-fuzz-density="compact"] .account-panel-body,
+html[data-fuzz-density="compact"] .content {
+  --fuzz-compact-active: 1;
+}
+
+.home-search-button,
+.account-button.primary,
+.button-primary,
+.start-search button,
+.browser-brand,
+.fuzz-onboarding-primary {
+  background: linear-gradient(135deg, var(--fuzz-accent), var(--fuzz-accent-strong)) !important;
+}
+
+.address-form:focus-within,
+.account-field:focus,
+.account-select:focus,
+.account-textarea:focus,
+.home-search-form:focus-within {
+  border-color: rgba(var(--fuzz-accent-rgb), .72) !important;
+  box-shadow: 0 0 0 3px rgba(var(--fuzz-accent-rgb), .13) !important;
+}
+
+.fuzz-release-banner {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2147482500;
+  display: grid;
+  width: min(360px, calc(100vw - 32px));
+  gap: 11px;
+  padding: 15px;
+  border: 1px solid rgba(var(--fuzz-accent-rgb), .28);
+  border-radius: 16px;
+  color: #f5f7ff;
+  background: rgba(8, 12, 27, .97);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .48);
+  backdrop-filter: blur(18px);
+}
+
+.fuzz-release-banner[hidden] { display: none; }
+.fuzz-release-banner strong { font-size: 13px; }
+.fuzz-release-banner p { margin: 0; color: #9ca6c2; font-size: 10px; line-height: 1.55; }
+.fuzz-release-actions { display: flex; gap: 8px; }
+.fuzz-release-actions button {
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 10px;
+  color: white;
+  background: rgba(255,255,255,.055);
+  font: inherit;
+  font-size: 9px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.fuzz-release-actions button:first-child {
+  border-color: rgba(var(--fuzz-accent-rgb), .35);
+  background: rgba(var(--fuzz-accent-rgb), .14);
+}
+
+.fuzz-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(1, 3, 10, .82);
+  backdrop-filter: blur(14px);
+}
+
+.fuzz-modal {
+  width: min(720px, calc(100vw - 44px));
+  max-height: calc(100vh - 44px);
+  overflow: auto;
+  border: 1px solid rgba(var(--fuzz-accent-rgb), .28);
+  border-radius: 21px;
+  color: #f4f6ff;
+  background:
+    radial-gradient(circle at 50% -20%, rgba(var(--fuzz-accent-rgb), .16), transparent 42%),
+    #080c1c;
+  box-shadow: 0 36px 110px rgba(0,0,0,.62);
+}
+
+.fuzz-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(255,255,255,.075);
+}
+.fuzz-modal-header h2 { margin: 0; font-size: 17px; }
+.fuzz-modal-close {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 10px;
+  color: #cbd1e6;
+  background: rgba(255,255,255,.04);
+  cursor: pointer;
+}
+.fuzz-modal-body { padding: 20px; }
+
+.fuzz-changelog-list { display: grid; gap: 9px; margin: 0; padding: 0; list-style: none; }
+.fuzz-changelog-list li {
+  padding: 12px 13px;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 12px;
+  color: #aeb7d2;
+  background: rgba(255,255,255,.028);
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.fuzz-onboarding {
+  display: grid;
+  gap: 18px;
+}
+.fuzz-onboarding-progress { display: flex; gap: 7px; }
+.fuzz-onboarding-progress span {
+  height: 4px;
+  flex: 1;
+  border-radius: 99px;
+  background: rgba(255,255,255,.08);
+}
+.fuzz-onboarding-progress span.is-active { background: var(--fuzz-accent); }
+.fuzz-onboarding h3 { margin: 0; font-size: 24px; letter-spacing: -.04em; }
+.fuzz-onboarding p { margin: 0; color: #9ea8c4; font-size: 11px; line-height: 1.65; }
+.fuzz-onboarding-options { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+.fuzz-onboarding-option {
+  display: grid;
+  gap: 5px;
+  min-height: 82px;
+  padding: 13px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 14px;
+  color: #b7c0d9;
+  background: rgba(255,255,255,.03);
+  cursor: pointer;
+  text-align: left;
+}
+.fuzz-onboarding-option strong { color: white; font-size: 11px; }
+.fuzz-onboarding-option small { color: #77819c; font-size: 9px; line-height: 1.45; }
+.fuzz-onboarding-option.is-selected {
+  border-color: rgba(var(--fuzz-accent-rgb), .65);
+  background: rgba(var(--fuzz-accent-rgb), .12);
+  box-shadow: 0 0 0 3px rgba(var(--fuzz-accent-rgb), .08);
+}
+.fuzz-onboarding-footer { display: flex; justify-content: space-between; gap: 10px; }
+.fuzz-onboarding-footer button {
+  min-height: 40px;
+  padding: 0 15px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 11px;
+  color: white;
+  background: rgba(255,255,255,.05);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+@media (max-width: 620px) {
+  .fuzz-onboarding-options { grid-template-columns: 1fr; }
+}

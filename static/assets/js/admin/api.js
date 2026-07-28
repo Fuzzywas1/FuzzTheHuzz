@@ -66,6 +66,8 @@ export const api = {
   stats: (days = 30) =>
     request(withQuery("/api/admin/stats", { days })),
 
+  systemHealth: () => request("/api/admin/system-health"),
+
   users: () => request("/api/admin/users"),
 
   updateRole: (userId, role) =>

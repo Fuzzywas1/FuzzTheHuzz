@@ -453,13 +453,23 @@ function readBrowserSettings() {
     backgroundImage:
       localStorage.getItem("backgroundImage") || "",
     proxyMode:
-      localStorage.getItem("fuzz_proxy_engine") ||
-      (localStorage.getItem("dy") === "true"
-        ? "scramjet"
-        : "ultraviolet"),
+      ["scramjet", "ultraviolet"].includes(
+        localStorage.getItem("fuzz_proxy_engine"),
+      )
+        ? localStorage.getItem("fuzz_proxy_engine")
+        : "scramjet",
     particles:
       localStorage.getItem("Particles") === "true" ||
       localStorage.getItem("particles") === "true",
+    ui:
+      window.FuzzUI?.getSettings?.() || {
+        accent: "violet",
+        density: "comfortable",
+        motion: "system",
+        background: "stars",
+        showNewTabShortcuts: true,
+        showUpdateNotices: true,
+      },
   };
 }
 
@@ -583,6 +593,9 @@ function exportBrowserSettings() {
     "engine",
     "enginename",
     "theme",
+    "fuzz_ui_settings_v1",
+    "fuzz_onboarding_complete_v1",
+    "fuzz_seen_release",
   ];
 
   const browserSettings = {};
@@ -640,6 +653,9 @@ function importBrowserSettings(file) {
           "engine",
           "enginename",
           "theme",
+          "fuzz_ui_settings_v1",
+          "fuzz_onboarding_complete_v1",
+          "fuzz_seen_release",
         ]);
 
         for (const [key, value] of Object.entries(values)) {
@@ -729,6 +745,18 @@ async function renderPreferences() {
             </div>
           `)}
 
+          ${panel("Workspace appearance", "Accent, spacing, motion, and New Tab controls", `
+            <div class="account-form">
+              <label class="account-label">Accent color<select class="account-select" id="browser-accent"><option value="violet" ${browser.ui.accent === "violet" ? "selected" : ""}>Violet</option><option value="cyan" ${browser.ui.accent === "cyan" ? "selected" : ""}>Cyan</option><option value="green" ${browser.ui.accent === "green" ? "selected" : ""}>Green</option><option value="rose" ${browser.ui.accent === "rose" ? "selected" : ""}>Rose</option><option value="amber" ${browser.ui.accent === "amber" ? "selected" : ""}>Amber</option></select></label>
+              <label class="account-label">Interface density<select class="account-select" id="browser-density"><option value="comfortable" ${browser.ui.density === "comfortable" ? "selected" : ""}>Comfortable</option><option value="compact" ${browser.ui.density === "compact" ? "selected" : ""}>Compact</option></select></label>
+              <label class="account-label">Animated background<select class="account-select" id="browser-ui-background"><option value="stars" ${browser.ui.background === "stars" ? "selected" : ""}>Stars and effects</option><option value="quiet" ${browser.ui.background === "quiet" ? "selected" : ""}>Quiet background</option></select></label>
+              <div class="account-switch-row"><div class="account-switch-copy"><strong>Reduce interface motion locally</strong><span>Overrides animations on this browser without changing your synced account setting.</span></div><label class="account-switch"><input id="browser-ui-motion" type="checkbox" ${browser.ui.motion === "reduced" ? "checked" : ""} /><span></span></label></div>
+              <div class="account-switch-row"><div class="account-switch-copy"><strong>Show New Tab shortcuts</strong><span>Display Home, Apps, Fuzz AI, and Settings shortcuts under the proxy selector.</span></div><label class="account-switch"><input id="browser-new-tab-shortcuts" type="checkbox" ${browser.ui.showNewTabShortcuts !== false ? "checked" : ""} /><span></span></label></div>
+              <div class="account-switch-row"><div class="account-switch-copy"><strong>Show update notices</strong><span>Display a small banner when a new Fuzz version is installed.</span></div><label class="account-switch"><input id="browser-update-notices" type="checkbox" ${browser.ui.showUpdateNotices !== false ? "checked" : ""} /><span></span></label></div>
+              <div class="account-toolbar-group"><button class="account-button" id="restart-onboarding" type="button"><i class="fa-solid fa-graduation-cap"></i>Restart onboarding</button><button class="account-button" type="button" data-fuzz-open-changelog><i class="fa-solid fa-sparkles"></i>View changelog</button><a class="account-button" href="/status"><i class="fa-solid fa-heart-pulse"></i>System status</a></div>
+            </div>
+          `)}
+
           ${panel("Effects", "Local visual effects for this browser", `
             <div class="account-form">
               <div class="account-switch-row"><div class="account-switch-copy"><strong>Particles</strong><span>Show the legacy particle effect on supported pages.</span></div><label class="account-switch"><input id="browser-particles" type="checkbox" ${browser.particles ? "checked" : ""} /><span></span></label></div>
@@ -790,6 +818,14 @@ async function renderPreferences() {
         proxyMode: state.preferences?.proxyTechnology || browser.proxyMode,
         particles: content.querySelector("#browser-particles").checked,
       });
+      window.FuzzUI?.saveSettings?.({
+        accent: content.querySelector("#browser-accent").value,
+        density: content.querySelector("#browser-density").value,
+        background: content.querySelector("#browser-ui-background").value,
+        motion: content.querySelector("#browser-ui-motion").checked ? "reduced" : "system",
+        showNewTabShortcuts: content.querySelector("#browser-new-tab-shortcuts").checked,
+        showUpdateNotices: content.querySelector("#browser-update-notices").checked,
+      });
       toast("Browser settings saved. Reloading to apply them…");
       window.setTimeout(() => window.location.reload(), 650);
     } catch (error) {
@@ -804,6 +840,12 @@ async function renderPreferences() {
     } catch (error) {
       toast(error.message, "error");
     }
+  });
+
+  content.querySelector("#restart-onboarding")?.addEventListener("click", () => {
+    window.FuzzUI?.resetOnboarding?.();
+    toast("Onboarding reset. Opening Home…");
+    window.setTimeout(() => { window.location.href = "/"; }, 450);
   });
 
   content.querySelector("#reset-browser-background")?.addEventListener("click", () => {
