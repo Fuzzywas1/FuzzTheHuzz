@@ -1,143 +1,743 @@
-import { api } from "./api.js";
-import {
-  emptyState,
-  errorState,
-  loadingState,
-  metricCard,
-  panel,
-} from "./components.js";
-import { lineChart } from "./charts.js";
-import {
-  escapeHtml,
-  formatDuration,
-  formatNumber,
-} from "./utils.js";
+const conversation = [];
 
-let selectedDays = 30;
+let currentChatId = null;
+let loadedChats = [];
 
-export async function renderAi(container) {
-  container.innerHTML = loadingState("Loading Fuzz AI analytics...");
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
-  try {
-    const payload = await api.aiAnalytics(selectedDays);
-    paint(container, payload);
-  } catch (error) {
-    container.innerHTML = errorState(error.message);
-    container.querySelector("[data-action='retry']")?.addEventListener("click", () => {
-      renderAi(container);
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+]);
+
+let attachedImage = null;
+let dragDepth = 0;
+
+document.addEventListener("DOMContentLoaded", () => {
+  const aiPage = document.getElementById("ai-page");
+  const form = document.getElementById("chat-form");
+  const input = document.getElementById("chat-input");
+  const imageInput = document.getElementById("image-input");
+  const attachButton = document.getElementById("attach-button");
+  const sendButton = document.getElementById("send-button");
+  const newChatButton = document.getElementById("new-chat-button");
+
+  configureMarkdown();
+
+  attachButton.addEventListener("click", () => {
+    if (!sendButton.disabled) {
+      imageInput.click();
+    }
+  });
+
+  imageInput.addEventListener("change", async () => {
+    const file = imageInput.files?.[0];
+
+    if (file) {
+      await attachImageFile(file);
+    }
+  });
+
+  newChatButton.addEventListener("click", () => {
+    startNewChat();
+  });
+
+  input.addEventListener("input", () => {
+    resizeTextarea(input);
+    updateSendButton();
+  });
+
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      form.requestSubmit();
+    }
+  });
+
+  input.addEventListener("paste", async (event) => {
+    const items = Array.from(event.clipboardData?.items || []);
+
+    const imageItem = items.find((item) => {
+      return item.kind === "file" && item.type.startsWith("image/");
     });
+
+    if (!imageItem) {
+      return;
+    }
+
+    const file = imageItem.getAsFile();
+
+    if (!file) {
+      return;
+    }
+
+    event.preventDefault();
+    await attachImageFile(file);
+  });
+
+  setupDragAndDrop(aiPage);
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const message = input.value.trim();
+
+    if ((!message && !attachedImage) || sendButton.disabled) {
+      return;
+    }
+
+    const userMessage = {
+      role: "user",
+      content: message || "Please analyze this image.",
+    };
+
+    if (attachedImage) {
+      userMessage.image = {
+        dataUrl: attachedImage.dataUrl,
+        name: attachedImage.name,
+        type: attachedImage.type,
+      };
+    }
+
+    conversation.push(userMessage);
+    addUserMessage(userMessage);
+
+    input.value = "";
+    resizeTextarea(input);
+
+    const sentImage = attachedImage;
+    clearAttachedImage();
+
+    setLoading(true);
+
+    const assistantBody = addMessage("assistant", "");
+    assistantBody.classList.add("thinking");
+
+    try {
+      const response = await fetch("/api/ai/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          messages: conversation,
+        }),
+      });
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({
+          error: "The server returned an invalid response.",
+        }));
+
+        throw new Error(
+          result.error || "Fuzz AI request failed.",
+        );
+      }
+
+      if (!response.body) {
+        throw new Error("Streaming is unavailable in this browser.");
+      }
+
+      assistantBody.classList.remove("thinking");
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      let fullReply = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+
+        if (done) {
+          break;
+        }
+
+        fullReply += decoder.decode(value, {
+          stream: true,
+        });
+
+        renderAssistantMarkdown(assistantBody, fullReply);
+        scrollToLatestMessage();
+      }
+
+      fullReply += decoder.decode();
+      renderAssistantMarkdown(assistantBody, fullReply);
+
+      if (!fullReply.trim()) {
+        throw new Error("Fuzz AI returned an empty response.");
+      }
+
+      conversation.push({
+        role: "assistant",
+        content: fullReply,
+      });
+
+      addCodeCopyButtons(assistantBody);
+    } catch (error) {
+      console.error("Fuzz AI error:", error);
+
+      assistantBody.textContent =
+        error.message ||
+        "Fuzz AI could not answer. Try again.";
+
+      assistantBody.classList.remove("thinking");
+      assistantBody.classList.add("error");
+
+      if (sentImage) {
+        attachedImage = sentImage;
+        renderImagePreview();
+      }
+    } finally {
+      setLoading(false);
+      updateSendButton();
+      input.focus();
+    }
+  });
+
+  updateSendButton();
+});
+
+function configureMarkdown() {
+  if (!window.marked) {
+    return;
+  }
+
+  window.marked.setOptions({
+    breaks: true,
+    gfm: true,
+  });
+}
+
+function setupDragAndDrop(element) {
+  const overlay = document.getElementById("drop-overlay");
+
+  element.addEventListener("dragenter", (event) => {
+    event.preventDefault();
+
+    if (!containsImageFiles(event.dataTransfer)) {
+      return;
+    }
+
+    dragDepth += 1;
+    overlay.classList.add("visible");
+  });
+
+  element.addEventListener("dragover", (event) => {
+    event.preventDefault();
+
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = "copy";
+    }
+  });
+
+  element.addEventListener("dragleave", (event) => {
+    event.preventDefault();
+
+    dragDepth = Math.max(0, dragDepth - 1);
+
+    if (dragDepth === 0) {
+      overlay.classList.remove("visible");
+    }
+  });
+
+  element.addEventListener("drop", async (event) => {
+    event.preventDefault();
+
+    dragDepth = 0;
+    overlay.classList.remove("visible");
+
+    const files = Array.from(event.dataTransfer?.files || []);
+    const imageFile = files.find((file) => {
+      return file.type.startsWith("image/");
+    });
+
+    if (!imageFile) {
+      showTemporaryComposerError(
+        "Drop a PNG, JPEG, WebP, or GIF image.",
+      );
+      return;
+    }
+
+    await attachImageFile(imageFile);
+  });
+}
+
+function containsImageFiles(dataTransfer) {
+  if (!dataTransfer) {
+    return false;
+  }
+
+  return Array.from(dataTransfer.items || []).some((item) => {
+    return item.kind === "file" && item.type.startsWith("image/");
+  });
+}
+
+async function attachImageFile(file) {
+  try {
+    attachedImage = await prepareImage(file);
+    renderImagePreview();
+    updateSendButton();
+  } catch (error) {
+    attachedImage = null;
+
+    const imageInput = document.getElementById("image-input");
+
+    if (imageInput) {
+      imageInput.value = "";
+    }
+
+    showTemporaryComposerError(
+      error.message || "That image could not be attached.",
+    );
   }
 }
 
-function paint(container, payload) {
-  const totals = payload.totals || {};
-  const performance = payload.performance || {};
+async function prepareImage(file) {
+  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+    throw new Error("Use a PNG, JPEG, WebP, or GIF image.");
+  }
 
-  container.innerHTML = `
-    <div class="page-section">
-      <div class="toolbar">
-        <div class="toolbar-group">
-          <select class="select-field" id="ai-period">
-            ${[7, 30, 60, 90]
-              .map(
-                (days) => `
-                  <option value="${days}" ${selectedDays === days ? "selected" : ""}>
-                    Last ${days} days
-                  </option>
-                `,
-              )
-              .join("")}
-          </select>
-        </div>
-      </div>
+  if (file.size > MAX_IMAGE_BYTES) {
+    throw new Error("The image must be smaller than 8 MB.");
+  }
 
-      <section class="metric-grid">
-        ${metricCard("Total chats", formatNumber(totals.chats), "All time")}
-        ${metricCard("Total messages", formatNumber(totals.messages), "All time")}
-        ${metricCard("Responses in period", formatNumber(totals.responses), `Last ${selectedDays} days`)}
-        ${metricCard("Image messages", formatNumber(totals.imageMessages), "Messages with images")}
-        ${metricCard("Average response", formatDuration(performance.averageDurationMs), "Generation duration")}
-        ${metricCard("Average output", formatNumber(performance.averageOutputLength), "Characters per response")}
-      </section>
+  const dataUrl = await readFileAsDataUrl(file);
 
-      <section class="dashboard-grid">
-        ${panel({
-          title: "AI usage",
-          subtitle: `Messages and completed responses over ${selectedDays} days`,
-          body: lineChart(
-            [
-              { name: "Messages", data: payload.charts?.messages },
-              { name: "Responses", data: payload.charts?.responses },
-            ],
-            { label: "Fuzz AI usage" },
-          ),
-        })}
+  return {
+    name: file.name || "pasted-image",
+    type: file.type,
+    size: file.size,
+    dataUrl,
+  };
+}
 
-        ${panel({
-          title: "Token accounting",
-          subtitle: "Available when OpenAI usage data is logged",
-          body: `
-            <div class="settings-list">
-              <div class="setting-row">
-                <div class="setting-copy">
-                  <strong>Input tokens</strong>
-                  <span>User prompts and conversation context</span>
-                </div>
-                <strong>${escapeHtml(formatNumber(totals.inputTokens))}</strong>
-              </div>
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
 
-              <div class="setting-row">
-                <div class="setting-copy">
-                  <strong>Output tokens</strong>
-                  <span>Generated response tokens</span>
-                </div>
-                <strong>${escapeHtml(formatNumber(totals.outputTokens))}</strong>
-              </div>
+    reader.onload = () => {
+      resolve(String(reader.result));
+    };
 
-              <div class="setting-row">
-                <div class="setting-copy">
-                  <strong>Total tokens</strong>
-                  <span>Combined usage</span>
-                </div>
-                <strong>${escapeHtml(formatNumber(totals.totalTokens))}</strong>
-              </div>
-            </div>
-          `,
-        })}
-      </section>
+    reader.onerror = () => {
+      reject(new Error("The image could not be read."));
+    };
 
-      <div style="height:14px"></div>
-
-      ${panel({
-        title: "Most active AI users",
-        subtitle: `Top accounts during the last ${selectedDays} days`,
-        body:
-          payload.topUsers?.length
-            ? `
-              <div class="rank-list">
-                ${payload.topUsers
-                  .map(
-                    (user, index) => `
-                      <div class="rank-row">
-                        <span class="rank-index">${String(index + 1).padStart(2, "0")}</span>
-                        <span class="rank-label">${escapeHtml(user.username)}</span>
-                        <span class="rank-value">${escapeHtml(formatNumber(user.messages))} messages</span>
-                      </div>
-                    `,
-                  )
-                  .join("")}
-              </div>
-            `
-            : emptyState(
-                "No AI usage yet",
-                "AI activity will appear after users send messages.",
-              ),
-      })}
-    </div>
-  `;
-
-  container.querySelector("#ai-period")?.addEventListener("change", (event) => {
-    selectedDays = Number(event.target.value || 30);
-    renderAi(container);
+    reader.readAsDataURL(file);
   });
+}
+
+function renderImagePreview() {
+  const previewArea = document.getElementById("image-preview-area");
+
+  previewArea.innerHTML = "";
+
+  if (!attachedImage) {
+    previewArea.classList.remove("visible");
+    return;
+  }
+
+  const preview = document.createElement("div");
+  preview.className = "image-preview";
+
+  const image = document.createElement("img");
+  image.src = attachedImage.dataUrl;
+  image.alt = attachedImage.name;
+
+  const details = document.createElement("div");
+  details.className = "image-preview-details";
+
+  const name = document.createElement("strong");
+  name.textContent = attachedImage.name;
+
+  const size = document.createElement("span");
+  size.textContent = formatFileSize(attachedImage.size);
+
+  const removeButton = document.createElement("button");
+  removeButton.type = "button";
+  removeButton.className = "remove-image-button";
+  removeButton.setAttribute("aria-label", "Remove attached image");
+  removeButton.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+
+  removeButton.addEventListener("click", () => {
+    clearAttachedImage();
+    updateSendButton();
+  });
+
+  details.append(name, size);
+  preview.append(image, details, removeButton);
+  previewArea.appendChild(preview);
+  previewArea.classList.add("visible");
+}
+
+function clearAttachedImage() {
+  attachedImage = null;
+
+  const imageInput = document.getElementById("image-input");
+  const previewArea = document.getElementById("image-preview-area");
+
+  imageInput.value = "";
+  previewArea.innerHTML = "";
+  previewArea.classList.remove("visible");
+}
+
+function addUserMessage(message) {
+  const body = addMessage("user", "");
+
+  if (message.image) {
+    const image = document.createElement("img");
+    image.className = "message-image";
+    image.src = message.image.dataUrl;
+    image.alt = message.image.name;
+
+    body.appendChild(image);
+  }
+
+  if (message.content) {
+    const text = document.createElement("div");
+    text.className = "message-text";
+    text.textContent = message.content;
+
+    body.appendChild(text);
+  }
+}
+
+function addMessage(role, content) {
+  const welcome = document.getElementById("welcome-screen");
+  const messages = document.getElementById("chat-messages");
+
+  welcome.classList.add("hidden");
+
+  const wrapper = document.createElement("article");
+  wrapper.className = `chat-message ${role}`;
+
+  const avatar = document.createElement("div");
+  avatar.className = "message-avatar";
+  avatar.innerHTML =
+    role === "user"
+      ? '<i class="fa-solid fa-user"></i>'
+      : '<i class="fa-solid fa-robot"></i>';
+
+  const contentWrapper = document.createElement("div");
+  contentWrapper.className = "message-content";
+
+  const label = document.createElement("strong");
+  label.className = "message-label";
+  label.textContent = role === "user" ? "You" : "Fuzz AI";
+
+  const body = document.createElement("div");
+  body.className = "message-body";
+
+  if (content) {
+    body.textContent = content;
+  }
+
+  contentWrapper.append(label, body);
+  wrapper.append(avatar, contentWrapper);
+  messages.appendChild(wrapper);
+
+  scrollToLatestMessage();
+
+  return body;
+}
+
+function renderAssistantMarkdown(element, markdown) {
+  if (!window.marked || !window.DOMPurify) {
+    element.textContent = markdown;
+    return;
+  }
+
+  const rendered = window.marked.parse(markdown);
+
+  element.innerHTML = window.DOMPurify.sanitize(rendered);
+}
+
+function addCodeCopyButtons(container) {
+  const codeBlocks = container.querySelectorAll("pre");
+
+  codeBlocks.forEach((pre) => {
+    if (pre.querySelector(".copy-code-button")) {
+      return;
+    }
+
+    const code = pre.querySelector("code");
+
+    if (!code) {
+      return;
+    }
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "copy-code-button";
+    button.innerHTML =
+      '<i class="fa-regular fa-copy"></i><span>Copy</span>';
+
+    button.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(code.textContent || "");
+
+        button.innerHTML =
+          '<i class="fa-solid fa-check"></i><span>Copied</span>';
+
+        window.setTimeout(() => {
+          button.innerHTML =
+            '<i class="fa-regular fa-copy"></i><span>Copy</span>';
+        }, 1600);
+      } catch (error) {
+        console.error("Copy failed:", error);
+      }
+    });
+
+    pre.appendChild(button);
+  });
+}
+
+function startNewChat() {
+  const messages = document.getElementById("chat-messages");
+  const welcome = document.getElementById("welcome-screen");
+  const input = document.getElementById("chat-input");
+
+  conversation.length = 0;
+  messages.innerHTML = "";
+  welcome.classList.remove("hidden");
+
+  clearAttachedImage();
+
+  input.value = "";
+  resizeTextarea(input);
+  updateSendButton();
+  input.focus();
+}
+
+function setLoading(loading) {
+  const sendButton = document.getElementById("send-button");
+  const attachButton = document.getElementById("attach-button");
+  const input = document.getElementById("chat-input");
+  const newChatButton = document.getElementById("new-chat-button");
+
+  sendButton.disabled = loading;
+  attachButton.disabled = loading;
+  input.disabled = loading;
+  newChatButton.disabled = loading;
+}
+
+function updateSendButton() {
+  const sendButton = document.getElementById("send-button");
+  const input = document.getElementById("chat-input");
+
+  if (!sendButton || !input || input.disabled) {
+    return;
+  }
+
+  sendButton.disabled =
+    input.value.trim().length === 0 && !attachedImage;
+}
+
+function resizeTextarea(textarea) {
+  textarea.style.height = "auto";
+
+  textarea.style.height = `${Math.min(
+    textarea.scrollHeight,
+    180,
+  )}px`;
+}
+
+function scrollToLatestMessage() {
+  const messages = document.getElementById("chat-messages");
+
+  window.requestAnimationFrame(() => {
+    messages.scrollTo({
+      top: messages.scrollHeight,
+      behavior: "smooth",
+    });
+  });
+}
+
+function showTemporaryComposerError(message) {
+  const composer = document.getElementById("chat-form");
+
+  let error = composer.querySelector(".composer-error");
+
+  if (!error) {
+    error = document.createElement("div");
+    error.className = "composer-error";
+    composer.prepend(error);
+  }
+
+  error.textContent = message;
+
+  window.setTimeout(() => {
+    error.remove();
+  }, 3500);
+}
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+async function loadChatList() {
+  try {
+    const response = await fetch("/api/ai/chats", {
+      credentials: "same-origin",
+    });
+
+    const result = await response.json();
+
+    loadedChats = result.chats || [];
+
+    renderChatList();
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+function renderChatList() {
+  const container =
+    document.getElementById("chat-list");
+
+  if (!container) {
+    return;
+  }
+
+  container.innerHTML = "";
+
+  loadedChats.forEach((chat) => {
+    const item =
+      document.createElement("button");
+
+    item.className =
+      currentChatId === chat.id
+        ? "chat-item active"
+        : "chat-item";
+
+    item.innerHTML = `
+      <div class="chat-item-title">
+        ${escapeHtml(chat.title)}
+      </div>
+    `;
+
+    item.addEventListener("click", () => {
+      openChat(chat.id);
+    });
+
+    container.appendChild(item);
+  });
+}
+
+async function createChat() {
+  const response = await fetch(
+    "/api/ai/chats",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "same-origin",
+      body: JSON.stringify({
+        title: "New Chat",
+      }),
+    },
+  );
+
+  const result = await response.json();
+
+  currentChatId = result.chat.id;
+
+  await loadChatList();
+
+  return result.chat;
+}
+
+async function openChat(chatId) {
+  try {
+    const response = await fetch(
+      `/api/ai/chats/${chatId}`,
+      {
+        credentials: "same-origin",
+      },
+    );
+
+    const result = await response.json();
+
+    currentChatId = chatId;
+
+    conversation.length = 0;
+
+    const messages =
+      document.getElementById("chat-messages");
+
+    messages.innerHTML = "";
+
+    const welcome =
+      document.getElementById("welcome-screen");
+
+    welcome.classList.add("hidden");
+
+    result.messages.forEach((message) => {
+      conversation.push({
+        role: message.role,
+        content: message.content,
+      });
+
+      addMessage(
+        message.role,
+        message.content,
+      );
+    });
+
+    renderChatList();
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function saveMessage(
+  role,
+  content,
+  hasImage = false,
+  imageName = null,
+) {
+  if (!currentChatId) {
+    return;
+  }
+
+  try {
+    await fetch(
+      `/api/ai/chats/${currentChatId}/messages`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          role,
+          content,
+          hasImage,
+          imageName,
+        }),
+      },
+    );
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+function escapeHtml(value) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
 }
