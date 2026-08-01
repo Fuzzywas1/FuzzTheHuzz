@@ -78,6 +78,7 @@
         density: $("density")?.value || "comfortable",
         defaultPage: $("default-page")?.value || "/",
         reducedMotion: $("reduced-motion")?.checked === true,
+        showDeviceStatus: $("show-device-status")?.checked !== false,
         homeShowQuickLinks: $("show-quick-links")?.checked !== false,
         homeShowBookmarks: $("show-bookmarks")?.checked !== false,
         homeShowRecents: $("show-recents")?.checked !== false,
@@ -133,6 +134,11 @@
       setValue("density", prefs.density || "comfortable");
       setValue("default-page", prefs.defaultPage || "/");
       setChecked("reduced-motion", prefs.reducedMotion === true);
+      let localDeviceStatus = true;
+      try {
+        localDeviceStatus = localStorage.getItem("fuzzDeviceStatusEnabled") !== "false";
+      } catch {}
+      setChecked("show-device-status", localDeviceStatus);
       setChecked("show-quick-links", prefs.homeShowQuickLinks !== false);
       setChecked("show-bookmarks", prefs.homeShowBookmarks !== false);
       setChecked("show-recents", prefs.homeShowRecents !== false);
@@ -180,6 +186,7 @@
         state = data.preferences || prefs;
         uploadedWallpaperUrl = state.wallpaperUrl || "";
         localStorage.setItem("fuzzSidebarMode", state.sidebarMode || "expanded");
+        localStorage.setItem("fuzzDeviceStatusEnabled", prefs.showDeviceStatus === false ? "false" : "true");
         window.FuzzPersonalization?.apply?.(state);
         renderPreview(state);
         toast("Customization saved.");
@@ -228,6 +235,7 @@
         localStorage.removeItem("fuzzPersonalization");
         localStorage.removeItem("backgroundImage");
         localStorage.setItem("fuzzSidebarMode", "expanded");
+        localStorage.setItem("fuzzDeviceStatusEnabled", "true");
         toast("Customization reset.");
       } finally {
         if (button) button.disabled = false;
@@ -259,7 +267,7 @@
         });
       });
 
-      $$('input[name="sidebar-mode"],#show-quick-links,#show-bookmarks,#show-recents').forEach((node) => {
+      $$('input[name="sidebar-mode"],#show-quick-links,#show-bookmarks,#show-recents,#show-device-status').forEach((node) => {
         node.addEventListener("change", () => renderPreview(collect()));
       });
 

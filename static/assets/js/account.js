@@ -736,6 +736,7 @@ function customizationSettingsMarkup() {
               <label class="settings-field"><span>Default page</span><select id="default-page"><option value="/">Home</option><option value="/chat">Chat</option><option value="/ai">Fuzz AI</option><option value="/b">Apps</option><option value="/d">Tabs</option></select></label>
             </div>
             <label class="settings-toggle"><span><strong>Reduce motion</strong><small>Minimize animations and transitions.</small></span><input id="reduced-motion" type="checkbox" /><span class="toggle-track"></span></label>
+            <label class="settings-toggle"><span><strong>Show device status</strong><small>Display local time, date, connection, device type, and battery when supported.</small></span><input id="show-device-status" type="checkbox" checked /><span class="toggle-track"></span></label>
           </article>
 
           <article class="settings-card">

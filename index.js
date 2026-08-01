@@ -238,7 +238,7 @@ app.use((req, res, next) => {
   if (!isProxyRuntimeRequest(req.path)) {
     res.setHeader(
       "Permissions-Policy",
-      "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+      "camera=(), microphone=(), geolocation=(), payment=(), usb=(), battery=(self)",
     );
     res.setHeader(
       "Content-Security-Policy",

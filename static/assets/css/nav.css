@@ -149,6 +149,192 @@ body.has-fuzz-sidebar.fuzz-sidebar-collapsed {
   text-transform: uppercase;
 }
 
+
+.fuzz-device-status {
+  display: grid;
+  gap: 5px;
+  margin-top: 12px;
+  padding: 10px 11px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .055);
+  border-radius: 13px;
+  background: rgba(5, 8, 20, .34);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .025);
+  transition: padding var(--fuzz-sidebar-ease), margin var(--fuzz-sidebar-ease), border-radius var(--fuzz-sidebar-ease);
+}
+
+.fuzz-device-status[hidden],
+.fuzz-device-battery[hidden] {
+  display: none !important;
+}
+
+.fuzz-device-time-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.fuzz-device-time {
+  color: #f8f9ff;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: -.035em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.fuzz-device-online {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #55e6a5;
+  box-shadow: 0 0 10px rgba(85, 230, 165, .55);
+}
+
+.fuzz-device-online.is-offline {
+  background: #ff7188;
+  box-shadow: 0 0 10px rgba(255, 113, 136, .45);
+}
+
+.fuzz-device-date {
+  overflow: hidden;
+  color: #747f9f;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: .09em;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.fuzz-device-meta {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  color: #929dbc;
+  font-size: 8px;
+  font-weight: 760;
+}
+
+.fuzz-device-battery {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.fuzz-battery-shell {
+  position: relative;
+  display: inline-block;
+  width: 19px;
+  height: 9px;
+  overflow: visible;
+  border: 1px solid #65708f;
+  border-radius: 3px;
+}
+
+.fuzz-battery-shell::after {
+  position: absolute;
+  top: 2px;
+  right: -3px;
+  width: 2px;
+  height: 3px;
+  border-radius: 0 2px 2px 0;
+  content: "";
+  background: #65708f;
+}
+
+.fuzz-battery-shell > span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: 2px;
+  background: #65dfa7;
+  transition: width 250ms ease, background 180ms ease;
+}
+
+.fuzz-device-battery.is-low .fuzz-battery-shell > span {
+  background: #ff7188;
+}
+
+.fuzz-device-battery.is-charging .fuzz-battery-shell > span {
+  background: #8b85ff;
+}
+
+.fuzz-device-battery small {
+  color: #7f89a8;
+  font-size: 7px;
+}
+
+.fuzz-device-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fuzz-sidebar-collapsed .fuzz-device-status {
+  width: 48px;
+  min-height: 53px;
+  gap: 4px;
+  margin: 10px auto 0;
+  padding: 8px 4px;
+  place-items: center;
+  border-radius: 12px;
+}
+
+.fuzz-sidebar-collapsed .fuzz-device-time-row {
+  width: 100%;
+  justify-content: center;
+}
+
+.fuzz-sidebar-collapsed .fuzz-device-time {
+  max-width: 40px;
+  overflow: hidden;
+  font-size: 10px;
+  letter-spacing: -.04em;
+  text-align: center;
+}
+
+.fuzz-sidebar-collapsed .fuzz-device-online,
+.fuzz-sidebar-collapsed .fuzz-device-date,
+.fuzz-sidebar-collapsed .fuzz-device-label,
+.fuzz-sidebar-collapsed .fuzz-device-battery small {
+  display: none;
+}
+
+.fuzz-sidebar-collapsed .fuzz-device-meta {
+  justify-content: center;
+  gap: 0;
+}
+
+.fuzz-sidebar-collapsed .fuzz-device-battery {
+  gap: 3px;
+  font-size: 7px;
+}
+
+.fuzz-sidebar-collapsed .fuzz-battery-shell {
+  width: 15px;
+  height: 8px;
+}
+
+@media (max-height: 700px) {
+  .fuzz-device-date,
+  .fuzz-device-label {
+    display: none;
+  }
+
+  .fuzz-device-status {
+    padding-block: 8px;
+  }
+}
+
 .fuzz-sidebar-nav {
   display: flex;
   min-height: 0;

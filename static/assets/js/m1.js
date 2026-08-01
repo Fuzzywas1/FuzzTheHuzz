@@ -292,6 +292,128 @@
     </a>`;
   }
 
+  function deviceStatusEnabled() {
+    try {
+      return localStorage.getItem("fuzzDeviceStatusEnabled") !== "false";
+    } catch {
+      return true;
+    }
+  }
+
+  function detectDeviceLabel() {
+    const ua = navigator.userAgent || "";
+    const platform = navigator.userAgentData?.platform || navigator.platform || "";
+    const isMobile = navigator.userAgentData?.mobile === true || /Android|iPhone|iPod|Mobile/i.test(ua);
+    const isTablet = /iPad|Tablet/i.test(ua) || (
+      platform === "MacIntel" &&
+      navigator.maxTouchPoints > 1
+    );
+
+    let system = "Computer";
+    if (/Windows/i.test(platform) || /Windows/i.test(ua)) system = "Windows";
+    else if (/Mac/i.test(platform) || /Macintosh|Mac OS X/i.test(ua)) system = "Mac";
+    else if (/Chrome OS|CrOS/i.test(ua)) system = "Chromebook";
+    else if (/Android/i.test(ua)) system = "Android";
+    else if (/iPhone|iPad|iPod/i.test(ua)) system = "iOS";
+    else if (/Linux/i.test(platform) || /Linux/i.test(ua)) system = "Linux";
+
+    if (isTablet) return `${system} tablet`;
+    if (isMobile) return `${system} phone`;
+
+    const compactWidth = Math.min(window.screen?.width || 1920, window.screen?.height || 1080);
+    const coarsePointer = window.matchMedia?.("(pointer: coarse)")?.matches;
+    return `${system} ${compactWidth <= 1440 || coarsePointer ? "laptop" : "desktop"}`;
+  }
+
+  function initializeDeviceStatus(container) {
+    const root = container.querySelector("[data-fuzz-device-status]");
+    if (!root) return;
+
+    root.hidden = !deviceStatusEnabled();
+    if (root.hidden) return;
+
+    const timeNode = root.querySelector("[data-fuzz-device-time]");
+    const dateNode = root.querySelector("[data-fuzz-device-date]");
+    const onlineNode = root.querySelector("[data-fuzz-device-online]");
+    const labelNode = root.querySelector("[data-fuzz-device-label]");
+    const batteryNode = root.querySelector("[data-fuzz-device-battery]");
+    const fillNode = root.querySelector("[data-fuzz-battery-fill]");
+    const percentNode = root.querySelector("[data-fuzz-battery-percent]");
+    const stateNode = root.querySelector("[data-fuzz-battery-state]");
+
+    const updateClock = () => {
+      const now = new Date();
+      if (timeNode) {
+        timeNode.textContent = new Intl.DateTimeFormat(undefined, {
+          hour: "numeric",
+          minute: "2-digit",
+        }).format(now);
+        timeNode.dateTime = now.toISOString();
+      }
+      if (dateNode) {
+        dateNode.textContent = new Intl.DateTimeFormat(undefined, {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        }).format(now);
+      }
+    };
+
+    const updateConnection = () => {
+      const online = navigator.onLine !== false;
+      if (!onlineNode) return;
+      onlineNode.classList.toggle("is-offline", !online);
+      onlineNode.title = online ? "Online" : "Offline";
+      onlineNode.setAttribute("aria-label", online ? "Online" : "Offline");
+    };
+
+    updateClock();
+    updateConnection();
+    if (labelNode) labelNode.textContent = detectDeviceLabel();
+
+    const clockTimer = window.setInterval(updateClock, 30_000);
+    window.addEventListener("online", updateConnection);
+    window.addEventListener("offline", updateConnection);
+
+    let battery = null;
+    const updateBattery = () => {
+      if (!battery || !batteryNode) return;
+      const percentage = Math.round(Math.max(0, Math.min(1, battery.level)) * 100);
+      batteryNode.hidden = false;
+      batteryNode.classList.toggle("is-low", percentage <= 20 && !battery.charging);
+      batteryNode.classList.toggle("is-charging", battery.charging);
+      if (fillNode) fillNode.style.width = `${percentage}%`;
+      if (percentNode) percentNode.textContent = `${percentage}%`;
+      if (stateNode) stateNode.textContent = battery.charging ? "Charging" : "";
+      batteryNode.title = battery.charging
+        ? `${percentage}% battery, charging`
+        : `${percentage}% battery`;
+    };
+
+    if (typeof navigator.getBattery === "function") {
+      navigator.getBattery()
+        .then((manager) => {
+          battery = manager;
+          updateBattery();
+          manager.addEventListener("levelchange", updateBattery);
+          manager.addEventListener("chargingchange", updateBattery);
+        })
+        .catch(() => {
+          if (batteryNode) batteryNode.hidden = true;
+        });
+    } else if (batteryNode) {
+      batteryNode.hidden = true;
+    }
+
+    window.addEventListener("pagehide", () => {
+      window.clearInterval(clockTimer);
+      if (battery) {
+        battery.removeEventListener("levelchange", updateBattery);
+        battery.removeEventListener("chargingchange", updateBattery);
+      }
+    }, { once: true });
+  }
+
   function renderShell(container, account = {}) {
     let savedMode = "expanded";
     try {
@@ -333,6 +455,22 @@
             <span class="fuzz-sidebar-logo" aria-hidden="true"><span>F</span></span>
             <span class="fuzz-sidebar-brand-copy"><strong>FuzzTheHuzz</strong><small>Private workspace</small></span>
           </a>
+
+          <section class="fuzz-device-status" data-fuzz-device-status aria-label="Device status">
+            <div class="fuzz-device-time-row">
+              <time class="fuzz-device-time" data-fuzz-device-time>--:--</time>
+              <span class="fuzz-device-online" data-fuzz-device-online title="Connection status"></span>
+            </div>
+            <div class="fuzz-device-date" data-fuzz-device-date>Loading date…</div>
+            <div class="fuzz-device-meta">
+              <span class="fuzz-device-battery" data-fuzz-device-battery hidden>
+                <span class="fuzz-battery-shell" aria-hidden="true"><span data-fuzz-battery-fill></span></span>
+                <strong data-fuzz-battery-percent>--%</strong>
+                <small data-fuzz-battery-state></small>
+              </span>
+              <span class="fuzz-device-label" data-fuzz-device-label>Device</span>
+            </div>
+          </section>
         </header>
 
         <nav class="fuzz-sidebar-nav" aria-label="Main navigation">
@@ -375,6 +513,8 @@
           </div>
         </footer>
       </aside>`;
+
+    initializeDeviceStatus(container);
 
     let scrim = document.querySelector(".fuzz-sidebar-scrim");
     if (!scrim) {
