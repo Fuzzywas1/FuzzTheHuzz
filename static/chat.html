@@ -5,11 +5,11 @@
   <meta name="referrer" content="no-referrer" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#050713" />
-  <title>Chat</title>
+  <title>Home</title>
   <link rel="shortcut icon" href="/favicon.png" />
   <link rel="stylesheet" href="/assets/css/global.css?v=8" />
   <link rel="stylesheet" href="/assets/css/nav.css?v=12" />
-  <link rel="stylesheet" href="/assets/css/chat.css?v=2" />
+  <link rel="stylesheet" href="/assets/css/chat.css?v=3" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <script src="/assets/js/fuzz-ui.js?v=1"></script>
   <script src="/assets/js/fuzz-diagnostics.js?v=1"></script>
@@ -48,8 +48,8 @@
         <div class="chat-empty-state"><span><i class="fa-regular fa-message"></i></span><h2>Your Fuzz conversations</h2><p>Open <strong>Everyone</strong> or start a direct message.</p></div>
       </section>
 
-      <div id="reply-banner" class="reply-banner" hidden><span><small>Replying to</small><strong id="reply-label"></strong></span><button id="cancel-reply" type="button"><i class="fa-solid fa-xmark"></i></button></div>
-      <div id="typing-indicator" class="typing-indicator" hidden><span></span><span></span><span></span><em>Someone is typing</em></div>
+      <div id="reply-banner" class="reply-banner" hidden aria-hidden="true"><span><small>Replying to</small><strong id="reply-label"></strong></span><button id="cancel-reply" type="button"><i class="fa-solid fa-xmark"></i></button></div>
+      <div id="typing-indicator" class="typing-indicator" hidden aria-hidden="true" aria-live="polite"><span></span><span></span><span></span><em></em></div>
       <form id="message-form" class="message-composer">
         <input id="chat-attachment-input" type="file" accept="image/png,image/jpeg,image/webp" hidden />
         <button id="chat-attachment-button" type="button" title="Attach an image" disabled><i class="fa-solid fa-paperclip"></i></button>
@@ -65,7 +65,7 @@
   <div id="chat-modal-root"></div>
   <div id="chat-toast" class="chat-toast" hidden></div>
   <script src="/assets/js/m1.js?v=12" defer></script>
-  <script src="/assets/js/chat.js?v=1" defer></script>
+  <script src="/assets/js/chat.js?v=2" defer></script>
   <script src="/assets/js/account-shell.js?v=2" defer></script>
   <script src="/assets/js/site-control.js?v=2" defer></script>
 </body>

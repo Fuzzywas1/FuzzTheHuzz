@@ -14292,6 +14292,22 @@ app.post("/api/chat/conversations/:conversationId/typing", requireApiAuth, async
   }
 });
 
+app.delete("/api/chat/conversations/:conversationId/typing", requireApiAuth, async (req, res) => {
+  try {
+    const conversation = await v6ConversationAccess(req.auth.user.id, req.params.conversationId);
+    if (!conversation) return res.status(404).json({ error: "Conversation not found." });
+    const { error } = await supabaseAdmin
+      .from("chat_typing")
+      .delete()
+      .eq("conversation_id", conversation.id)
+      .eq("user_id", req.auth.user.id);
+    if (error) throw error;
+    return res.json({ success: true });
+  } catch {
+    return res.status(500).json({ error: "Typing status could not be cleared." });
+  }
+});
+
 app.get("/api/chat/conversations/:conversationId/typing", requireApiAuth, async (req, res) => {
   try {
     const conversation = await v6ConversationAccess(req.auth.user.id, req.params.conversationId);

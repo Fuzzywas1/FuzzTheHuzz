@@ -1,6 +1,6 @@
 (() => {
   const $ = (id) => document.getElementById(id);
-  const state = { user:null, conversations:[], users:[], current:null, messages:[], filter:"all", search:"", reply:null, attachment:null, lastPoll:null, typingSentAt:0 };
+  const state = { user:null, conversations:[], users:[], current:null, messages:[], filter:"all", search:"", reply:null, attachment:null, lastPoll:null, typingSentAt:0, typingHideTimer:null };
 
   async function request(url, options = {}) {
     const response = await fetch(url, { credentials:"same-origin", ...options });
@@ -14,6 +14,31 @@
   function timeAgo(value) { const date=new Date(value); const diff=Date.now()-date.getTime(); if(!Number.isFinite(diff))return""; if(diff<60000)return"now"; if(diff<3600000)return`${Math.floor(diff/60000)}m`; if(diff<86400000)return`${Math.floor(diff/3600000)}h`; return date.toLocaleDateString([], {month:"short",day:"numeric"}); }
   function fullTime(value){ return new Date(value).toLocaleString([], {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}); }
   function toast(message){ const node=$("chat-toast"); node.textContent=message; node.hidden=false; clearTimeout(toast.timer); toast.timer=setTimeout(()=>node.hidden=true,3200); }
+
+  function hideTyping(){
+    const node=$("typing-indicator");
+    if(!node)return;
+    clearTimeout(state.typingHideTimer);
+    state.typingHideTimer=null;
+    node.hidden=true;
+    node.setAttribute("aria-hidden","true");
+    const label=node.querySelector("em");
+    if(label)label.textContent="";
+  }
+
+  function showTyping(names,conversationId){
+    const node=$("typing-indicator");
+    if(!node||!names.length){hideTyping();return;}
+    node.querySelector("em").textContent=names.length===1
+      ? `${names[0]} is typing`
+      : `${names.slice(0,2).join(", ")} are typing`;
+    node.hidden=false;
+    node.setAttribute("aria-hidden","false");
+    clearTimeout(state.typingHideTimer);
+    state.typingHideTimer=setTimeout(()=>{
+      if(state.current?.id===conversationId)hideTyping();
+    },6500);
+  }
 
   function conversationName(conversation){ return conversation.title || (conversation.type === "global" ? "Everyone" : conversation.otherUser?.username || "Direct message"); }
   function conversationSubtitle(conversation){ if(conversation.type === "global") return "Everyone on Fuzz"; return conversation.otherUser?.online ? "Online" : conversation.otherUser?.lastSeenAt ? `Active ${timeAgo(conversation.otherUser.lastSeenAt)} ago` : "Direct message"; }
@@ -88,6 +113,9 @@
 
   async function openConversation(id){
     const conversation=state.conversations.find((item)=>item.id===id); if(!conversation)return;
+    const previousConversationId=state.current?.id;
+    if(previousConversationId&&previousConversationId!==id)void clearTyping(previousConversationId);
+    hideTyping();
     state.current=conversation; state.reply=null; updateReply(); renderConversations(); renderHeader();
     $("message-input").disabled=false; $("message-input").placeholder=`Message ${conversationName(conversation)}`; $("message-send-button").disabled=false; $("chat-attachment-button").disabled=false;
     $("message-list").innerHTML='<div class="chat-loading"><span></span>Loading messages…</div>';
@@ -100,8 +128,16 @@
 
   function updateReply(){
     const banner=$("reply-banner");
-    if(!state.reply){banner.hidden=true;return;}
-    $("reply-label").textContent=`${state.reply.sender?.username||"User"}: ${state.reply.body}`; banner.hidden=false;
+    const label=$("reply-label");
+    if(!state.reply){
+      label.textContent="";
+      banner.hidden=true;
+      banner.setAttribute("aria-hidden","true");
+      return;
+    }
+    label.textContent=`${state.reply.sender?.username||"User"}: ${state.reply.body}`;
+    banner.hidden=false;
+    banner.setAttribute("aria-hidden","false");
   }
 
   function handleMessageAction(id,action){
@@ -124,11 +160,25 @@
   function renderAttachment(){const root=$("attachment-preview");if(!state.attachment){root.hidden=true;root.innerHTML="";return;}root.hidden=false;root.innerHTML=`<img src="${state.attachment.dataUrl}" alt="Attachment preview"/><button type="button" aria-label="Remove attachment"><i class="fa-solid fa-xmark"></i></button>`;root.querySelector("button").addEventListener("click",()=>{state.attachment=null;renderAttachment();});}
 
   async function sendMessage(){
-    if(!state.current)return; const input=$("message-input"); const body=input.value.trim(); if(!body&&!state.attachment)return;
+    if(!state.current)return;
+    const conversationId=state.current.id;
+    const input=$("message-input");
+    const body=input.value.trim();
+    if(!body&&!state.attachment)return;
     $("message-send-button").disabled=true;
+    hideTyping();
+    void clearTyping(conversationId);
     try{
-      const data=await request(`/api/chat/conversations/${state.current.id}/messages`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({body,replyTo:state.reply?.id||null,attachment:state.attachment})});
-      state.messages.push(data.message); input.value=""; input.style.height="auto"; state.reply=null; state.attachment=null; updateReply();renderAttachment();renderMessages(true); await refreshBootstrap();
+      const data=await request(`/api/chat/conversations/${conversationId}/messages`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({body,replyTo:state.reply?.id||null,attachment:state.attachment})});
+      state.messages.push(data.message);
+      input.value="";
+      input.style.height="auto";
+      state.reply=null;
+      state.attachment=null;
+      updateReply();
+      renderAttachment();
+      renderMessages(true);
+      await refreshBootstrap();
     }catch(error){toast(error.message)} finally{$("message-send-button").disabled=false;}
   }
 
@@ -148,8 +198,34 @@
     }catch(error){if(!silent)console.error(error);}
   }
 
-  async function sendTyping(){if(!state.current||Date.now()-state.typingSentAt<1800)return;state.typingSentAt=Date.now();request(`/api/chat/conversations/${state.current.id}/typing`,{method:"POST"}).catch(()=>{});}
-  async function refreshTyping(){if(!state.current)return;try{const data=await request(`/api/chat/conversations/${state.current.id}/typing`);const names=(data.users||[]).map((u)=>u.username);const node=$("typing-indicator");node.hidden=!names.length;node.querySelector("em").textContent=names.length===1?`${names[0]} is typing`:`${names.slice(0,2).join(", ")} are typing`;}catch{}}
+  async function sendTyping(){
+    const conversationId=state.current?.id;
+    if(!conversationId||!$("message-input").value.trim()||Date.now()-state.typingSentAt<1800)return;
+    state.typingSentAt=Date.now();
+    request(`/api/chat/conversations/${conversationId}/typing`,{method:"POST"}).catch(()=>{});
+  }
+
+  async function clearTyping(conversationId=state.current?.id){
+    state.typingSentAt=0;
+    if(!conversationId)return;
+    try{
+      await request(`/api/chat/conversations/${conversationId}/typing`,{method:"DELETE",keepalive:true});
+    }catch{}
+  }
+
+  async function refreshTyping(){
+    const conversationId=state.current?.id;
+    if(!conversationId){hideTyping();return;}
+    try{
+      const data=await request(`/api/chat/conversations/${conversationId}/typing`);
+      if(state.current?.id!==conversationId)return;
+      const names=(data.users||[]).map((user)=>user.username).filter(Boolean);
+      if(!names.length){hideTyping();return;}
+      showTyping(names,conversationId);
+    }catch{
+      if(state.current?.id===conversationId)hideTyping();
+    }
+  }
 
   function openDmModal(){
     const root=$("chat-modal-root"); root.innerHTML=`<div class="chat-modal-backdrop"><section class="chat-modal"><header><h2>New direct message</h2><button type="button" data-close><i class="fa-solid fa-xmark"></i></button></header><input id="dm-user-search" type="search" placeholder="Search people" autocomplete="off"/><div id="dm-user-list" class="dm-user-list"></div></section></div>`;
@@ -213,7 +289,17 @@
     $("cancel-reply").addEventListener("click",()=>{state.reply=null;updateReply();});
     $("message-form").addEventListener("submit",(event)=>{event.preventDefault();sendMessage();});
     $("message-input").addEventListener("keydown",(event)=>{if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();sendMessage();}});
-    $("message-input").addEventListener("input",(event)=>{event.target.style.height="auto";event.target.style.height=`${Math.min(145,event.target.scrollHeight)}px`;sendTyping();});
+    $("message-input").addEventListener("input",(event)=>{
+      event.target.style.height="auto";
+      event.target.style.height=`${Math.min(145,event.target.scrollHeight)}px`;
+      if(event.target.value.trim())sendTyping();
+      else void clearTyping();
+    });
+    $("message-input").addEventListener("blur",()=>void clearTyping());
+    window.addEventListener("pagehide",()=>{
+      const conversationId=state.current?.id;
+      if(conversationId)fetch(`/api/chat/conversations/${conversationId}/typing`,{method:"DELETE",credentials:"same-origin",keepalive:true}).catch(()=>{});
+    });
     $("chat-attachment-button").addEventListener("click",()=>$("chat-attachment-input").click());
     $("chat-attachment-input").addEventListener("change",async()=>{try{const file=$("chat-attachment-input").files?.[0];if(file)state.attachment={dataUrl:await fileToDataUrl(file),filename:file.name};renderAttachment();}catch(error){toast(error.message)}finally{$("chat-attachment-input").value="";}});
     try{await loadBootstrap();}catch(error){$("conversation-list").innerHTML=`<div class="chat-loading">${esc(error.message)}</div>`;toast(error.message);}
