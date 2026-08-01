@@ -1,0 +1,29 @@
+FuzzTheHuzz v6.0 Community + Customization
+
+Major new areas
+- Universal collapsible left sidebar
+- Everyone community Chat
+- Direct messages
+- Chat replies, reactions, editing, deletion, images, typing, presence, unread counts
+- Blocking and moderator report queue
+- Notification center
+- Synced wallpaper and interface customization
+- Feedback portal with screenshots, replies, status, and staff controls
+
+Required migration order
+1. supabase/FUZZ_STABILITY_SCHEMA.sql
+2. supabase/FUZZ_6_COMMUNITY_SCHEMA.sql
+
+Primary new files
+- static/chat.html
+- static/feedback.html
+- static/assets/js/chat.js
+- static/assets/js/feedback.js
+- static/assets/js/settings.js
+- static/assets/css/chat.css
+- static/assets/css/feedback.css
+- supabase/FUZZ_6_COMMUNITY_SCHEMA.sql
+
+Version
+- package.json: 6.0.0
+- server release metadata: 6.0.0

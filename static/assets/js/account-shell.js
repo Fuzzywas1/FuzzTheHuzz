@@ -121,7 +121,6 @@
     }
 
     try {
-      localStorage.clear();
       sessionStorage.clear();
     } catch {}
 
@@ -150,6 +149,10 @@
     }
 
     applyPreferences(payload.preferences);
+
+    // Fuzz 6.0 uses the universal left sidebar. The old top-nav profile menu
+    // remains only as a compatibility fallback for cached legacy pages.
+    if (document.querySelector(".fuzz-sidebar")) return;
 
     let attempts = 0;
     const placeMenu = () => {

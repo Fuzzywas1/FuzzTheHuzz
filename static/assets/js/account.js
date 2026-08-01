@@ -753,7 +753,7 @@ async function renderPreferences() {
               <div class="account-switch-row"><div class="account-switch-copy"><strong>Reduce interface motion locally</strong><span>Overrides animations on this browser without changing your synced account setting.</span></div><label class="account-switch"><input id="browser-ui-motion" type="checkbox" ${browser.ui.motion === "reduced" ? "checked" : ""} /><span></span></label></div>
               <div class="account-switch-row"><div class="account-switch-copy"><strong>Show New Tab shortcuts</strong><span>Display Home, Apps, Fuzz AI, and Settings shortcuts under the proxy selector.</span></div><label class="account-switch"><input id="browser-new-tab-shortcuts" type="checkbox" ${browser.ui.showNewTabShortcuts !== false ? "checked" : ""} /><span></span></label></div>
               <div class="account-switch-row"><div class="account-switch-copy"><strong>Show update notices</strong><span>Display a small banner when a new Fuzz version is installed.</span></div><label class="account-switch"><input id="browser-update-notices" type="checkbox" ${browser.ui.showUpdateNotices !== false ? "checked" : ""} /><span></span></label></div>
-              <div class="account-toolbar-group"><button class="account-button" id="restart-onboarding" type="button"><i class="fa-solid fa-graduation-cap"></i>Restart onboarding</button><button class="account-button" type="button" data-fuzz-open-changelog><i class="fa-solid fa-sparkles"></i>View changelog</button><a class="account-button" href="/status"><i class="fa-solid fa-heart-pulse"></i>System status</a></div>
+              <div class="account-toolbar-group"><button class="account-button" id="reset-interface-defaults" type="button"><i class="fa-solid fa-rotate-left"></i>Reset interface defaults</button><button class="account-button" type="button" data-fuzz-open-changelog><i class="fa-solid fa-sparkles"></i>View changelog</button><a class="account-button" href="/status"><i class="fa-solid fa-heart-pulse"></i>System status</a></div>
             </div>
           `)}
 
@@ -842,10 +842,10 @@ async function renderPreferences() {
     }
   });
 
-  content.querySelector("#restart-onboarding")?.addEventListener("click", () => {
-    window.FuzzUI?.resetOnboarding?.();
-    toast("Onboarding reset. Opening Home…");
-    window.setTimeout(() => { window.location.href = "/"; }, 450);
+  content.querySelector("#reset-interface-defaults")?.addEventListener("click", () => {
+    window.FuzzUI?.resetSettings?.();
+    toast("Interface defaults restored. Reloading…");
+    window.setTimeout(() => window.location.reload(), 450);
   });
 
   content.querySelector("#reset-browser-background")?.addEventListener("click", () => {

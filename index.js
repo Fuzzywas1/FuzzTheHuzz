@@ -27,6 +27,7 @@ const __dirname = process.cwd();
 const app = express();
 const server = http.createServer();
 
+app.disable("x-powered-by");
 app.set("trust proxy", 1);
 
 const PORT = Number(process.env.PORT) || 8080;
@@ -42,19 +43,18 @@ const CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
 const cache = new Map();
 
 const FUZZ_RELEASE = Object.freeze({
-  version: "5.3.0",
-  releasedAt: "2026-07-24T00:00:00.000Z",
+  version: "6.1.0",
+  releasedAt: "2026-08-01T03:00:00.000Z",
   summary:
-    "A major browsing, reliability, customization, and diagnostics update.",
+    "A complete sidebar repair, page-layout refresh, and rebuilt Fuzz AI workspace.",
   items: [
-    "Redesigned proxy selection on Home and New Tab.",
-    "Synced bookmarks with browser-storage fallback.",
-    "Recently visited and recently closed tab recovery.",
-    "System Status page and owner health dashboard.",
-    "Client error IDs with searchable activity logs.",
-    "First-run onboarding and expanded appearance controls.",
-    "Update notices, changelog, and safer response headers.",
-    "Improved proxy errors with one-click engine fallback.",
+    "Rebuilt the universal sidebar with consistent inline SVG icons and reliable collapsed navigation.",
+    "Fixed sidebar spacing across Home, Apps, Account, Status, Tabs, Proxy, Chat, and Fuzz AI.",
+    "Added a cleaner grouped navigation structure, mobile drawer, notifications, account controls, and unread badges.",
+    "Reworked Fuzz AI with searchable saved conversations, prompt starters, status feedback, and stop generation.",
+    "Improved Fuzz AI saved-chat loading, image attachment history, rename, delete, and error handling.",
+    "Updated fixed browser and proxy views so they resize correctly when the sidebar expands or collapses.",
+    "Preserved Fuzz Chat, customization, feedback, Apps, Tabs, proxy engines, account, and admin features.",
   ],
 });
 
@@ -78,6 +78,7 @@ function invalidateAdminCache() {
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 const openaiApiKey = process.env.OPENAI_API_KEY;
+const openaiModel = String(process.env.OPENAI_MODEL || "gpt-5-mini").trim();
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
@@ -86,28 +87,39 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 if (!openaiApiKey) {
-  throw new Error("Missing OPENAI_API_KEY.");
+  console.warn(
+    "OPENAI_API_KEY is not configured. Fuzz AI will return a setup error, but the rest of the site can still run.",
+  );
 }
 
 /* =======================================================
    CLIENTS
 ======================================================= */
 
-const supabasePublic = createClient(
-  supabaseUrl,
-  supabaseAnonKey,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-      detectSessionInUrl: false,
+function createSupabasePublicClient() {
+  return createClient(
+    supabaseUrl,
+    supabaseAnonKey,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
+      },
     },
-  },
-);
+  );
+}
 
-const openai = new OpenAI({
-  apiKey: openaiApiKey,
-});
+// getUser(accessToken) is stateless, so a shared client is safe for token
+// validation. Operations that create or refresh sessions use a fresh client
+// per request below to prevent one user's auth state from affecting another.
+const supabasePublic = createSupabasePublicClient();
+
+const openai = openaiApiKey
+  ? new OpenAI({
+      apiKey: openaiApiKey,
+    })
+  : null;
 
 /* =======================================================
    GENERAL MIDDLEWARE
@@ -183,7 +195,10 @@ const APPLICATION_PAGE_PATHS = new Set([
   "/b",
   "/a",
   "/c",
+  "/settings",
   "/ai",
+  "/chat",
+  "/feedback",
   "/account",
   "/admin",
   "/status",
@@ -198,6 +213,8 @@ const APPLICATION_PAGE_PATHS = new Set([
   "/games.html",
   "/settings.html",
   "/ai.html",
+  "/chat.html",
+  "/feedback.html",
   "/account.html",
   "/admin.html",
   "/status.html",
@@ -227,9 +244,9 @@ app.use((req, res, next) => {
       "Content-Security-Policy",
       [
         "default-src 'self'",
-        "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://www.googletagmanager.com",
-        "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com",
-        "font-src 'self' data: https://cdnjs.cloudflare.com",
+        "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net",
+        "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com",
+        "font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com",
         "img-src 'self' data: blob: https:",
         "connect-src 'self' https: wss:",
         "worker-src 'self' blob:",
@@ -267,6 +284,10 @@ app.get("/health", (_req, res) => {
     service: "FuzzTheHuzz",
     version: FUZZ_RELEASE.version,
     uptime: process.uptime(),
+    configured: {
+      supabase: Boolean(supabaseUrl && supabaseAnonKey),
+      openai: Boolean(openai),
+    },
     timestamp: new Date().toISOString(),
   });
 });
@@ -345,10 +366,13 @@ async function getAuthenticatedUser(req, res) {
    * Refresh an expired access token.
    */
   if ((!user || userError) && refreshToken) {
+    const refreshClient =
+      createSupabasePublicClient();
+
     const {
       data: refreshedData,
       error: refreshError,
-    } = await supabasePublic.auth.setSession({
+    } = await refreshClient.auth.setSession({
       access_token: accessToken,
       refresh_token: refreshToken,
     });
@@ -3775,10 +3799,37 @@ app.get("/api/setup-test", async (_req, res) => {
       throw error;
     }
 
+    const moduleChecks = await Promise.all(
+      [
+        ["personalization", "user_personalization", "user_id"],
+        ["chat", "chat_conversations", "id"],
+        ["feedback", "feedback", "id"],
+        ["notifications", "notifications", "id"],
+      ].map(async ([name, table, column]) => {
+        const result = await supabaseAdmin
+          .from(table)
+          .select(column)
+          .limit(1);
+        return {
+          name,
+          ready: !result.error,
+          error: result.error?.message || "",
+        };
+      }),
+    );
+
+    const modules = Object.fromEntries(
+      moduleChecks.map((item) => [item.name, { ready: item.ready, error: item.error }]),
+    );
+    const communityReady = moduleChecks.every((item) => item.ready);
+
     return res.json({
       connected: true,
-      message:
-        "FuzzTheHuzz is connected to Supabase.",
+      communityReady,
+      modules,
+      message: communityReady
+        ? "FuzzTheHuzz and Fuzz 6.0 community features are connected to Supabase."
+        : "FuzzTheHuzz is connected, but the Fuzz 6.0 community migration still needs to be run.",
     });
   } catch (error) {
     console.error(
@@ -3788,9 +3839,224 @@ app.get("/api/setup-test", async (_req, res) => {
 
     return res.status(500).json({
       connected: false,
+      communityReady: false,
       error:
         error.message ||
         "Supabase connection failed.",
+    });
+  }
+});
+
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_MAX_ATTEMPTS = 10;
+const loginAttemptBuckets = new Map();
+
+function loginAttemptKey(req, email = "") {
+  return `${getClientIp(req) || "unknown"}|${String(email).toLowerCase()}`;
+}
+
+function consumeLoginAttempt(req, email) {
+  const key = loginAttemptKey(req, email);
+  const now = Date.now();
+  const current = loginAttemptBuckets.get(key);
+
+  if (!current || now - current.startedAt >= LOGIN_WINDOW_MS) {
+    loginAttemptBuckets.set(key, {
+      startedAt: now,
+      count: 1,
+    });
+    return true;
+  }
+
+  current.count += 1;
+  loginAttemptBuckets.set(key, current);
+  return current.count <= LOGIN_MAX_ATTEMPTS;
+}
+
+function clearLoginAttempts(req, email) {
+  loginAttemptBuckets.delete(loginAttemptKey(req, email));
+}
+
+app.get("/api/auth/status", async (req, res) => {
+  try {
+    const auth = await getAuthenticatedUser(req, res);
+
+    if (!auth) {
+      return res.status(401).json({
+        authenticated: false,
+      });
+    }
+
+    return res.json({
+      authenticated: true,
+      user: {
+        id: auth.user.id,
+        email: auth.user.email,
+        username: auth.profile.username,
+        role: auth.profile.role,
+      },
+    });
+  } catch (error) {
+    console.error("Authentication status check failed:", error);
+    return res.status(401).json({
+      authenticated: false,
+    });
+  }
+});
+
+app.post("/api/auth/login", async (req, res) => {
+  const email = String(req.body.email || "")
+    .trim()
+    .toLowerCase();
+  const password = String(req.body.password || "");
+
+  if (!email || !password) {
+    return res.status(400).json({
+      error: "Enter your email and password.",
+    });
+  }
+
+  if (!consumeLoginAttempt(req, email)) {
+    return res.status(429).json({
+      error:
+        "Too many sign-in attempts. Wait a few minutes and try again.",
+    });
+  }
+
+  try {
+    const loginClient =
+      createSupabasePublicClient();
+
+    const {
+      data: signInData,
+      error: signInError,
+    } = await loginClient.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (
+      signInError ||
+      !signInData.session ||
+      !signInData.user
+    ) {
+      void writeActivityLog({
+        req,
+        category: "auth",
+        action: "auth.login_failure",
+        status: "failure",
+        description: "A sign-in attempt failed.",
+        responseStatus: 401,
+        metadata: {
+          reason:
+            signInError?.message ||
+            "Supabase did not create a session.",
+          emailDomain:
+            email.includes("@")
+              ? email.split("@")[1]
+              : null,
+        },
+      });
+
+      return res.status(401).json({
+        error:
+          signInError?.message ||
+          "Incorrect email or password.",
+      });
+    }
+
+    const user = signInData.user;
+    const session = signInData.session;
+
+    const {
+      data: profile,
+      error: profileError,
+    } = await supabaseAdmin
+      .from("profiles")
+      .select(
+        "username, role, banned, suspended_until, suspension_reason, suspended_at, suspended_by, suspension_source",
+      )
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profileError || !profile) {
+      return res.status(403).json({
+        error:
+          "Your account profile is missing. Ask the site owner to run the stability database migration.",
+      });
+    }
+
+    if (profile.banned === true) {
+      return res.status(403).json({
+        error: "This account has been disabled.",
+      });
+    }
+
+    const suspension = await resolveProfileSuspension(
+      user.id,
+      profile,
+    );
+
+    if (suspension?.active) {
+      return sendSuspensionResponse(res, suspension);
+    }
+
+    const cookieOptions = getCookieOptions(req);
+
+    res.cookie(
+      ACCESS_COOKIE,
+      session.access_token,
+      cookieOptions,
+    );
+    res.cookie(
+      REFRESH_COOKIE,
+      session.refresh_token,
+      cookieOptions,
+    );
+
+    await registerSecuritySession(
+      req,
+      res,
+      user,
+      profile,
+    );
+
+    clearLoginAttempts(req, email);
+
+    void writeActivityLog({
+      req,
+      userId: user.id,
+      category: "auth",
+      action: "auth.login_success",
+      status: "success",
+      description:
+        `${profile.username} signed in successfully.`,
+      responseStatus: 200,
+      metadata: {
+        username: profile.username,
+        role: profile.role,
+        emailVerified: Boolean(user.email_confirmed_at),
+        authProvider:
+          user.app_metadata?.provider || null,
+      },
+    });
+
+    return res.json({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        username: profile.username,
+        role: profile.role,
+      },
+    });
+  } catch (error) {
+    console.error("Login failed:", error);
+    clearAuthCookies(req, res);
+
+    return res.status(500).json({
+      error:
+        "The secure login session could not be created.",
     });
   }
 });
@@ -4083,10 +4349,13 @@ app.post("/api/auth/signup", async (req, res) => {
       });
     }
 
+    const signupClient =
+      createSupabasePublicClient();
+
     const {
       data: signupData,
       error: signupError,
-    } = await supabasePublic.auth.signUp({
+    } = await signupClient.auth.signUp({
       email,
       password,
       options: {
@@ -10005,6 +10274,20 @@ app.delete(
       const deletedChatTitle =
         existingChat.title;
 
+      // Delete messages explicitly as well as relying on the database cascade.
+      // This keeps chat deletion working on legacy databases that predate the
+      // foreign-key migration.
+      const { error: messagesError } =
+        await supabaseAdmin
+          .from("ai_messages")
+          .delete()
+          .eq("chat_id", chatId)
+          .eq("user_id", userId);
+
+      if (messagesError) {
+        throw messagesError;
+      }
+
       const { error } = await supabaseAdmin
         .from("ai_chats")
         .delete()
@@ -10207,6 +10490,13 @@ app.post(
   async (req, res) => {
     const aiRequestStartedAt = Date.now();
 
+    if (!openai) {
+      return res.status(503).json({
+        error:
+          "Fuzz AI is not configured. Add OPENAI_API_KEY to the Cloud Run service and redeploy.",
+      });
+    }
+
     const messages = Array.isArray(
       req.body.messages,
     )
@@ -10376,7 +10666,7 @@ app.post(
 
       const stream =
         await openai.responses.create({
-          model: "gpt-5-mini",
+          model: openaiModel,
           instructions:
             `You are Fuzz AI, the helpful AI assistant built into FuzzTheHuzz. Give clear, accurate, natural answers. Analyze attached images when provided. Use markdown when helpful. ${accountCenterAiInstruction(accountAiBehavior)}`,
           input: cleanedMessages,
@@ -10393,7 +10683,7 @@ app.post(
         status: "informational",
         description:
           "Fuzz AI started generating a response.",
-        aiModel: "gpt-5-mini",
+        aiModel: openaiModel,
         messageRole: "user",
         messageLength:
           finalPromptPreview.length,
@@ -10436,7 +10726,7 @@ app.post(
         status: "success",
         description:
           "Fuzz AI completed a response.",
-        aiModel: "gpt-5-mini",
+        aiModel: openaiModel,
         messageRole: "user",
         messageLength:
           finalPromptPreview.length,
@@ -10461,7 +10751,7 @@ app.post(
         status: "failure",
         description:
           "Fuzz AI failed to complete a response.",
-        aiModel: "gpt-5-mini",
+        aiModel: openaiModel,
         messageLength:
           finalPromptPreview.length,
         promptPreview:
@@ -13288,26 +13578,1283 @@ app.get(
 );
 
 /* =======================================================
+   FUZZ 6.0 COMMUNITY, CHAT, FEEDBACK + PERSONALIZATION
+======================================================= */
+
+const V6_DEFAULT_PERSONALIZATION = Object.freeze({
+  accentColor: "#7c7cff",
+  wallpaperPath: "",
+  wallpaperUrl: "",
+  wallpaperExternalUrl: "",
+  wallpaperFit: "cover",
+  wallpaperPosition: "center",
+  wallpaperBlur: 0,
+  wallpaperOverlay: 0.42,
+  surfaceOpacity: 0.78,
+  borderRadius: 18,
+  fontScale: 1,
+  sidebarMode: "expanded",
+  density: "comfortable",
+  defaultPage: "/",
+  reducedMotion: false,
+  homeShowQuickLinks: true,
+  homeShowBookmarks: true,
+  homeShowRecents: true,
+});
+
+const V6_STORAGE_BUCKETS = Object.freeze({
+  wallpapers: "fuzz-wallpapers",
+  chat: "fuzz-chat",
+  feedback: "fuzz-feedback",
+});
+
+const v6ChatRateLimits = new Map();
+
+function v6ClampNumber(value, fallback, minimum, maximum) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(maximum, Math.max(minimum, parsed));
+}
+
+function v6CleanText(value, maximum = 1000) {
+  return String(value || "").trim().slice(0, maximum);
+}
+
+function v6ParseDataUrl(dataUrl, allowedTypes, maximumBytes) {
+  const match = /^data:([^;,]+);base64,([A-Za-z0-9+/=\s]+)$/.exec(String(dataUrl || ""));
+  if (!match) throw new Error("The uploaded file is invalid.");
+  const contentType = match[1].toLowerCase();
+  if (!allowedTypes.has(contentType)) throw new Error("That file type is not supported.");
+  const buffer = Buffer.from(match[2].replace(/\s/g, ""), "base64");
+  if (!buffer.length || buffer.length > maximumBytes) throw new Error(`The uploaded file must be ${Math.floor(maximumBytes / 1024 / 1024)} MB or smaller.`);
+  return { contentType, buffer };
+}
+
+function v6FileExtension(contentType) {
+  return ({ "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" })[contentType] || "bin";
+}
+
+async function v6SignedStorageUrl(bucket, storagePath, expiresIn = 86400) {
+  if (!storagePath) return "";
+  const { data, error } = await supabaseAdmin.storage.from(bucket).createSignedUrl(storagePath, expiresIn);
+  if (error) {
+    console.error(`Signed URL failed for ${bucket}:`, error);
+    return "";
+  }
+  return data?.signedUrl || "";
+}
+
+async function v6UploadImage({ bucket, userId, dataUrl, maximumBytes, prefix }) {
+  const parsed = v6ParseDataUrl(
+    dataUrl,
+    new Set(["image/png", "image/jpeg", "image/webp"]),
+    maximumBytes,
+  );
+  const extension = v6FileExtension(parsed.contentType);
+  const storagePath = `${userId}/${prefix}-${Date.now()}-${crypto.randomBytes(6).toString("hex")}.${extension}`;
+  const { error } = await supabaseAdmin.storage.from(bucket).upload(storagePath, parsed.buffer, {
+    contentType: parsed.contentType,
+    cacheControl: "3600",
+    upsert: false,
+  });
+  if (error) throw new Error(`Image upload failed: ${error.message}`);
+  return {
+    storagePath,
+    signedUrl: await v6SignedStorageUrl(bucket, storagePath),
+  };
+}
+
+function v6SerializePersonalization(row, wallpaperUrl = "") {
+  if (!row) return { ...V6_DEFAULT_PERSONALIZATION };
+  return {
+    accentColor: row.accent_color || V6_DEFAULT_PERSONALIZATION.accentColor,
+    wallpaperPath: row.wallpaper_path || "",
+    wallpaperUrl,
+    wallpaperExternalUrl: row.wallpaper_external_url || "",
+    wallpaperFit: row.wallpaper_fit || "cover",
+    wallpaperPosition: row.wallpaper_position || "center",
+    wallpaperBlur: Number(row.wallpaper_blur ?? 0),
+    wallpaperOverlay: Number(row.wallpaper_overlay ?? 0.42),
+    surfaceOpacity: Number(row.surface_opacity ?? 0.78),
+    borderRadius: Number(row.border_radius ?? 18),
+    fontScale: Number(row.font_scale ?? 1),
+    sidebarMode: row.sidebar_mode === "collapsed" ? "collapsed" : "expanded",
+    density: row.density === "compact" ? "compact" : "comfortable",
+    defaultPage: ["/", "/chat", "/ai", "/b", "/d"].includes(row.default_page) ? row.default_page : "/",
+    reducedMotion: row.reduced_motion === true,
+    homeShowQuickLinks: row.home_show_quick_links !== false,
+    homeShowBookmarks: row.home_show_bookmarks !== false,
+    homeShowRecents: row.home_show_recents !== false,
+  };
+}
+
+function v6ParsePersonalization(body = {}) {
+  const accentColor = /^#[0-9a-f]{6}$/i.test(String(body.accentColor || ""))
+    ? String(body.accentColor).toLowerCase()
+    : V6_DEFAULT_PERSONALIZATION.accentColor;
+  const externalUrl = v6CleanText(body.wallpaperExternalUrl, 2000);
+  if (externalUrl && !/^https:\/\//i.test(externalUrl)) {
+    throw new Error("Wallpaper URLs must start with https://.");
+  }
+  return {
+    accent_color: accentColor,
+    wallpaper_external_url: externalUrl || null,
+    wallpaper_fit: ["cover", "contain", "auto", "100% 100%"].includes(body.wallpaperFit) ? body.wallpaperFit : "cover",
+    wallpaper_position: ["center", "top", "bottom", "left", "right"].includes(body.wallpaperPosition) ? body.wallpaperPosition : "center",
+    wallpaper_blur: Math.round(v6ClampNumber(body.wallpaperBlur, 0, 0, 18)),
+    wallpaper_overlay: v6ClampNumber(body.wallpaperOverlay, 0.42, 0, 0.85),
+    surface_opacity: v6ClampNumber(body.surfaceOpacity, 0.78, 0.35, 0.96),
+    border_radius: Math.round(v6ClampNumber(body.borderRadius, 18, 8, 30)),
+    font_scale: v6ClampNumber(body.fontScale, 1, 0.85, 1.25),
+    sidebar_mode: body.sidebarMode === "collapsed" ? "collapsed" : "expanded",
+    density: body.density === "compact" ? "compact" : "comfortable",
+    default_page: ["/", "/chat", "/ai", "/b", "/d"].includes(body.defaultPage) ? body.defaultPage : "/",
+    reduced_motion: body.reducedMotion === true,
+    home_show_quick_links: body.homeShowQuickLinks !== false,
+    home_show_bookmarks: body.homeShowBookmarks !== false,
+    home_show_recents: body.homeShowRecents !== false,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+async function v6GetPersonalization(userId) {
+  const { data, error } = await supabaseAdmin
+    .from("user_personalization")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw error;
+  const wallpaperUrl = data?.wallpaper_path
+    ? await v6SignedStorageUrl(V6_STORAGE_BUCKETS.wallpapers, data.wallpaper_path)
+    : "";
+  return v6SerializePersonalization(data, wallpaperUrl);
+}
+
+app.get("/api/personalization", requireApiAuth, async (req, res) => {
+  try {
+    return res.json({ preferences: await v6GetPersonalization(req.auth.user.id) });
+  } catch (error) {
+    console.error("Personalization load failed:", error);
+    return res.status(500).json({ error: "Your customization settings could not be loaded. Run the Fuzz 6.0 database migration." });
+  }
+});
+
+app.put("/api/personalization", requireApiAuth, async (req, res) => {
+  try {
+    const values = v6ParsePersonalization(req.body);
+    const { data: existing, error: existingError } = await supabaseAdmin
+      .from("user_personalization")
+      .select("wallpaper_path")
+      .eq("user_id", req.auth.user.id)
+      .maybeSingle();
+    if (existingError) throw existingError;
+    if (values.wallpaper_external_url) {
+      values.wallpaper_path = null;
+    }
+    const { data, error } = await supabaseAdmin
+      .from("user_personalization")
+      .upsert({ user_id: req.auth.user.id, ...values }, { onConflict: "user_id" })
+      .select("*")
+      .single();
+    if (error) throw error;
+    if (values.wallpaper_external_url && existing?.wallpaper_path) {
+      await supabaseAdmin.storage.from(V6_STORAGE_BUCKETS.wallpapers).remove([existing.wallpaper_path]);
+    }
+    const wallpaperUrl = data.wallpaper_path
+      ? await v6SignedStorageUrl(V6_STORAGE_BUCKETS.wallpapers, data.wallpaper_path)
+      : "";
+    return res.json({ preferences: v6SerializePersonalization(data, wallpaperUrl) });
+  } catch (error) {
+    console.error("Personalization save failed:", error);
+    return res.status(400).json({ error: error.message || "Your customization settings could not be saved." });
+  }
+});
+
+app.post("/api/personalization/reset", requireApiAuth, async (req, res) => {
+  try {
+    const { data: existing } = await supabaseAdmin
+      .from("user_personalization")
+      .select("wallpaper_path")
+      .eq("user_id", req.auth.user.id)
+      .maybeSingle();
+    if (existing?.wallpaper_path) {
+      await supabaseAdmin.storage.from(V6_STORAGE_BUCKETS.wallpapers).remove([existing.wallpaper_path]);
+    }
+    const { error } = await supabaseAdmin
+      .from("user_personalization")
+      .delete()
+      .eq("user_id", req.auth.user.id);
+    if (error) throw error;
+    return res.json({ preferences: { ...V6_DEFAULT_PERSONALIZATION } });
+  } catch (error) {
+    console.error("Personalization reset failed:", error);
+    return res.status(500).json({ error: "Your customization settings could not be reset." });
+  }
+});
+
+app.post("/api/personalization/wallpaper", requireApiAuth, async (req, res) => {
+  try {
+    const upload = await v6UploadImage({
+      bucket: V6_STORAGE_BUCKETS.wallpapers,
+      userId: req.auth.user.id,
+      dataUrl: req.body.dataUrl,
+      maximumBytes: 5 * 1024 * 1024,
+      prefix: "wallpaper",
+    });
+    const { data: previous } = await supabaseAdmin
+      .from("user_personalization")
+      .select("wallpaper_path")
+      .eq("user_id", req.auth.user.id)
+      .maybeSingle();
+    const { error } = await supabaseAdmin
+      .from("user_personalization")
+      .upsert({ user_id: req.auth.user.id, wallpaper_path: upload.storagePath, wallpaper_external_url: null, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
+    if (error) throw error;
+    if (previous?.wallpaper_path && previous.wallpaper_path !== upload.storagePath) {
+      await supabaseAdmin.storage.from(V6_STORAGE_BUCKETS.wallpapers).remove([previous.wallpaper_path]);
+    }
+    return res.status(201).json({ wallpaperPath: upload.storagePath, wallpaperUrl: upload.signedUrl });
+  } catch (error) {
+    console.error("Wallpaper upload failed:", error);
+    return res.status(400).json({ error: error.message || "That wallpaper could not be uploaded." });
+  }
+});
+
+app.delete("/api/personalization/wallpaper", requireApiAuth, async (req, res) => {
+  try {
+    const { data: existing, error: loadError } = await supabaseAdmin
+      .from("user_personalization")
+      .select("wallpaper_path")
+      .eq("user_id", req.auth.user.id)
+      .maybeSingle();
+    if (loadError) throw loadError;
+    if (existing?.wallpaper_path) {
+      await supabaseAdmin.storage.from(V6_STORAGE_BUCKETS.wallpapers).remove([existing.wallpaper_path]);
+    }
+    const { error } = await supabaseAdmin
+      .from("user_personalization")
+      .upsert({ user_id: req.auth.user.id, wallpaper_path: null, wallpaper_external_url: null, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
+    if (error) throw error;
+    return res.json({ preferences: await v6GetPersonalization(req.auth.user.id) });
+  } catch (error) {
+    console.error("Wallpaper delete failed:", error);
+    return res.status(500).json({ error: "That wallpaper could not be removed." });
+  }
+});
+
+async function v6TouchPresence(userId) {
+  await supabaseAdmin
+    .from("chat_presence")
+    .upsert({ user_id: userId, last_seen_at: new Date().toISOString() }, { onConflict: "user_id" });
+}
+
+async function v6EnsureGlobalConversation(userId) {
+  let { data: globalConversation, error } = await supabaseAdmin
+    .from("chat_conversations")
+    .select("*")
+    .eq("type", "global")
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  if (!globalConversation) {
+    const result = await supabaseAdmin
+      .from("chat_conversations")
+      .insert({ type: "global", title: "Everyone", created_by: userId })
+      .select("*")
+      .single();
+    if (result.error) {
+      const retry = await supabaseAdmin.from("chat_conversations").select("*").eq("type", "global").limit(1).single();
+      if (retry.error) throw result.error;
+      globalConversation = retry.data;
+    } else {
+      globalConversation = result.data;
+    }
+  }
+  await supabaseAdmin
+    .from("chat_members")
+    .upsert({ conversation_id: globalConversation.id, user_id: userId, joined_at: new Date().toISOString() }, { onConflict: "conversation_id,user_id", ignoreDuplicates: true });
+  return globalConversation;
+}
+
+async function v6UsersBlocked(firstUserId, secondUserId) {
+  if (!firstUserId || !secondUserId) return false;
+  const [firstBlock, secondBlock] = await Promise.all([
+    supabaseAdmin
+      .from("chat_blocks")
+      .select("blocker_id")
+      .eq("blocker_id", firstUserId)
+      .eq("blocked_id", secondUserId)
+      .maybeSingle(),
+    supabaseAdmin
+      .from("chat_blocks")
+      .select("blocker_id")
+      .eq("blocker_id", secondUserId)
+      .eq("blocked_id", firstUserId)
+      .maybeSingle(),
+  ]);
+  if (firstBlock.error) throw firstBlock.error;
+  if (secondBlock.error) throw secondBlock.error;
+  return Boolean(firstBlock.data || secondBlock.data);
+}
+
+async function v6ConversationAccess(userId, conversationId) {
+  const { data: conversation, error } = await supabaseAdmin
+    .from("chat_conversations")
+    .select("*")
+    .eq("id", conversationId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!conversation) return null;
+  if (conversation.type === "global") return conversation;
+  const { data: member, error: memberError } = await supabaseAdmin
+    .from("chat_members")
+    .select("conversation_id")
+    .eq("conversation_id", conversationId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (memberError) throw memberError;
+  if (!member) return null;
+
+  const { data: otherMember, error: otherMemberError } = await supabaseAdmin
+    .from("chat_members")
+    .select("user_id")
+    .eq("conversation_id", conversationId)
+    .neq("user_id", userId)
+    .limit(1)
+    .maybeSingle();
+  if (otherMemberError) throw otherMemberError;
+  if (otherMember?.user_id && await v6UsersBlocked(userId, otherMember.user_id)) {
+    return null;
+  }
+
+  return conversation;
+}
+
+async function v6LoadMessages(userId, conversationId, limit = 100) {
+  const safeLimit = Math.min(150, Math.max(1, Number(limit) || 100));
+  const { data: messages, error } = await supabaseAdmin
+    .from("chat_messages")
+    .select("id, conversation_id, sender_id, body, reply_to, attachment_path, edited_at, deleted_at, created_at")
+    .eq("conversation_id", conversationId)
+    .order("created_at", { ascending: false })
+    .limit(safeLimit);
+  if (error) throw error;
+  const ordered = (messages || []).reverse();
+  const senderIds = [...new Set(ordered.map((item) => item.sender_id).filter(Boolean))];
+  const replyIds = [...new Set(ordered.map((item) => item.reply_to).filter(Boolean))];
+  const [profilesResult, repliesResult, reactionsResult] = await Promise.all([
+    senderIds.length
+      ? supabaseAdmin.from("profiles").select("id, username, role").in("id", senderIds)
+      : Promise.resolve({ data: [], error: null }),
+    replyIds.length
+      ? supabaseAdmin.from("chat_messages").select("id, sender_id, body, deleted_at").in("id", replyIds)
+      : Promise.resolve({ data: [], error: null }),
+    ordered.length
+      ? supabaseAdmin.from("chat_reactions").select("message_id, user_id, emoji").in("message_id", ordered.map((item) => item.id))
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+  if (profilesResult.error) throw profilesResult.error;
+  if (repliesResult.error) throw repliesResult.error;
+  if (reactionsResult.error) throw reactionsResult.error;
+  const profiles = new Map((profilesResult.data || []).map((item) => [item.id, item]));
+  const missingReplySenders = [...new Set((repliesResult.data || []).map((item) => item.sender_id).filter((id) => !profiles.has(id)))];
+  if (missingReplySenders.length) {
+    const { data } = await supabaseAdmin.from("profiles").select("id, username, role").in("id", missingReplySenders);
+    for (const profile of data || []) profiles.set(profile.id, profile);
+  }
+  const replies = new Map((repliesResult.data || []).map((item) => [item.id, item]));
+  const reactionGroups = new Map();
+  for (const reaction of reactionsResult.data || []) {
+    if (!reactionGroups.has(reaction.message_id)) reactionGroups.set(reaction.message_id, new Map());
+    const group = reactionGroups.get(reaction.message_id);
+    if (!group.has(reaction.emoji)) group.set(reaction.emoji, { emoji: reaction.emoji, count: 0, mine: false });
+    const entry = group.get(reaction.emoji);
+    entry.count += 1;
+    if (reaction.user_id === userId) entry.mine = true;
+  }
+  return Promise.all(ordered.map(async (message) => {
+    const reply = message.reply_to ? replies.get(message.reply_to) : null;
+    return {
+      id: message.id,
+      conversationId: message.conversation_id,
+      body: message.deleted_at ? "" : message.body,
+      attachmentUrl: message.deleted_at ? "" : await v6SignedStorageUrl(V6_STORAGE_BUCKETS.chat, message.attachment_path),
+      editedAt: message.edited_at,
+      deletedAt: message.deleted_at,
+      createdAt: message.created_at,
+      mine: message.sender_id === userId,
+      sender: profiles.get(message.sender_id) || { id: message.sender_id, username: "Unknown", role: "user" },
+      replyTo: reply
+        ? {
+            id: reply.id,
+            body: reply.deleted_at ? "Message deleted" : reply.body,
+            sender: profiles.get(reply.sender_id) || { id: reply.sender_id, username: "Unknown" },
+          }
+        : null,
+      reactions: [...(reactionGroups.get(message.id)?.values() || [])],
+    };
+  }));
+}
+
+async function v6UnreadCount(userId) {
+  const { data: memberships, error } = await supabaseAdmin
+    .from("chat_members")
+    .select("conversation_id, last_read_at")
+    .eq("user_id", userId)
+    .eq("archived", false);
+  if (error) throw error;
+  let total = 0;
+  for (const member of memberships || []) {
+    let query = supabaseAdmin
+      .from("chat_messages")
+      .select("id", { count: "exact", head: true })
+      .eq("conversation_id", member.conversation_id)
+      .neq("sender_id", userId)
+      .is("deleted_at", null);
+    if (member.last_read_at) query = query.gt("created_at", member.last_read_at);
+    const { count, error: countError } = await query;
+    if (countError) throw countError;
+    total += count || 0;
+  }
+  return total;
+}
+
+function v6ChatRateAllowed(userId) {
+  const now = Date.now();
+  const events = (v6ChatRateLimits.get(userId) || []).filter((time) => now - time < 10_000);
+  if (events.length >= 5) return false;
+  events.push(now);
+  v6ChatRateLimits.set(userId, events);
+  return true;
+}
+
+app.get("/api/chat/unread", requireApiAuth, async (req, res) => {
+  try {
+    await v6EnsureGlobalConversation(req.auth.user.id);
+    return res.json({ unread: await v6UnreadCount(req.auth.user.id) });
+  } catch (error) {
+    return res.json({ unread: 0, setupRequired: true });
+  }
+});
+
+app.get("/api/chat/bootstrap", requireApiAuth, async (req, res) => {
+  try {
+    const userId = req.auth.user.id;
+    await Promise.all([v6EnsureGlobalConversation(userId), v6TouchPresence(userId)]);
+    const { data: memberships, error } = await supabaseAdmin
+      .from("chat_members")
+      .select("conversation_id, last_read_at, muted, archived")
+      .eq("user_id", userId)
+      .eq("archived", false);
+    if (error) throw error;
+    const conversationIds = (memberships || []).map((item) => item.conversation_id);
+    const { data: conversations, error: conversationError } = conversationIds.length
+      ? await supabaseAdmin.from("chat_conversations").select("*").in("id", conversationIds).order("last_message_at", { ascending: false, nullsFirst: false })
+      : { data: [], error: null };
+    if (conversationError) throw conversationError;
+    const { data: allMembers, error: allMembersError } = conversationIds.length
+      ? await supabaseAdmin.from("chat_members").select("conversation_id, user_id").in("conversation_id", conversationIds)
+      : { data: [], error: null };
+    if (allMembersError) throw allMembersError;
+    const otherIds = [...new Set((allMembers || []).map((item) => item.user_id).filter((id) => id !== userId))];
+    const { data: otherProfiles, error: profileError } = otherIds.length
+      ? await supabaseAdmin.from("profiles").select("id, username, role").in("id", otherIds)
+      : { data: [], error: null };
+    if (profileError) throw profileError;
+    const { data: presence, error: presenceError } = await supabaseAdmin
+      .from("chat_presence")
+      .select("user_id, last_seen_at")
+      .gte("last_seen_at", new Date(Date.now() - 90_000).toISOString());
+    if (presenceError) throw presenceError;
+    const presenceMap = new Map((presence || []).map((item) => [item.user_id, item.last_seen_at]));
+    const profiles = new Map((otherProfiles || []).map((item) => [item.id, item]));
+    const memberMap = new Map((memberships || []).map((item) => [item.conversation_id, item]));
+    const serialized = [];
+    for (const conversation of conversations || []) {
+      const lastMessageResult = await supabaseAdmin
+        .from("chat_messages")
+        .select("body, sender_id, created_at, deleted_at")
+        .eq("conversation_id", conversation.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (lastMessageResult.error) throw lastMessageResult.error;
+      const member = memberMap.get(conversation.id);
+      let unreadQuery = supabaseAdmin
+        .from("chat_messages")
+        .select("id", { count: "exact", head: true })
+        .eq("conversation_id", conversation.id)
+        .neq("sender_id", userId)
+        .is("deleted_at", null);
+      if (member?.last_read_at) unreadQuery = unreadQuery.gt("created_at", member.last_read_at);
+      const unreadResult = await unreadQuery;
+      if (unreadResult.error) throw unreadResult.error;
+      const otherMember = (allMembers || []).find((item) => item.conversation_id === conversation.id && item.user_id !== userId);
+      const otherProfile = otherMember ? profiles.get(otherMember.user_id) : null;
+      serialized.push({
+        id: conversation.id,
+        type: conversation.type,
+        title: conversation.title,
+        createdAt: conversation.created_at,
+        lastMessageAt: conversation.last_message_at,
+        unreadCount: unreadResult.count || 0,
+        lastMessage: lastMessageResult.data
+          ? { body: lastMessageResult.data.deleted_at ? "Message deleted" : lastMessageResult.data.body, createdAt: lastMessageResult.data.created_at }
+          : null,
+        otherUser: otherProfile
+          ? { ...otherProfile, online: presenceMap.has(otherProfile.id), lastSeenAt: presenceMap.get(otherProfile.id) || null }
+          : null,
+      });
+    }
+    serialized.sort((a, b) => {
+      if (a.type === "global") return -1;
+      if (b.type === "global") return 1;
+      return new Date(b.lastMessageAt || b.createdAt) - new Date(a.lastMessageAt || a.createdAt);
+    });
+    const [blocksByCurrent, blocksByOthers] = await Promise.all([
+      supabaseAdmin.from("chat_blocks").select("blocked_id").eq("blocker_id", userId),
+      supabaseAdmin.from("chat_blocks").select("blocker_id").eq("blocked_id", userId),
+    ]);
+    if (blocksByCurrent.error) throw blocksByCurrent.error;
+    if (blocksByOthers.error) throw blocksByOthers.error;
+    const blockedIds = new Set([
+      ...(blocksByCurrent.data || []).map((item) => item.blocked_id),
+      ...(blocksByOthers.data || []).map((item) => item.blocker_id),
+    ]);
+
+    const { data: directory, error: directoryError } = await supabaseAdmin
+      .from("profiles")
+      .select("id, username, role")
+      .neq("id", userId)
+      .eq("banned", false)
+      .order("username", { ascending: true })
+      .limit(200);
+    if (directoryError) throw directoryError;
+    return res.json({
+      user: { id: userId, username: req.auth.profile.username, role: req.auth.profile.role },
+      conversations: serialized,
+      users: (directory || [])
+        .filter((profile) => !blockedIds.has(profile.id))
+        .map((profile) => ({ ...profile, online: presenceMap.has(profile.id), lastSeenAt: presenceMap.get(profile.id) || null })),
+      onlineCount: presenceMap.size,
+    });
+  } catch (error) {
+    console.error("Chat bootstrap failed:", error);
+    return res.status(500).json({ error: "Fuzz Chat could not be loaded. Run the Fuzz 6.0 database migration." });
+  }
+});
+
+app.post("/api/chat/dms", requireApiAuth, async (req, res) => {
+  const otherUserId = v6CleanText(req.body.userId, 100);
+  const userId = req.auth.user.id;
+  if (!otherUserId || otherUserId === userId) return res.status(400).json({ error: "Choose another Fuzz user." });
+  try {
+    const { data: target, error: targetError } = await supabaseAdmin
+      .from("profiles")
+      .select("id, username, role, banned")
+      .eq("id", otherUserId)
+      .maybeSingle();
+    if (targetError) throw targetError;
+    if (!target || target.banned) return res.status(404).json({ error: "That user is unavailable." });
+    if (await v6UsersBlocked(userId, otherUserId)) {
+      return res.status(403).json({ error: "A direct message cannot be started between these accounts." });
+    }
+    const dmKey = [userId, otherUserId].sort().join(":");
+    let { data: conversation, error } = await supabaseAdmin
+      .from("chat_conversations")
+      .select("*")
+      .eq("dm_key", dmKey)
+      .maybeSingle();
+    if (error) throw error;
+    if (!conversation) {
+      const created = await supabaseAdmin
+        .from("chat_conversations")
+        .insert({ type: "dm", title: null, dm_key: dmKey, created_by: userId })
+        .select("*")
+        .single();
+      if (created.error) {
+        const retry = await supabaseAdmin
+          .from("chat_conversations")
+          .select("*")
+          .eq("dm_key", dmKey)
+          .maybeSingle();
+        if (retry.error || !retry.data) throw created.error;
+        conversation = retry.data;
+      } else {
+        conversation = created.data;
+      }
+    }
+    const joinedAt = new Date().toISOString();
+    const membership = await supabaseAdmin.from("chat_members").upsert([
+      { conversation_id: conversation.id, user_id: userId, joined_at: joinedAt, archived: false },
+      { conversation_id: conversation.id, user_id: otherUserId, joined_at: joinedAt, archived: false },
+    ], { onConflict: "conversation_id,user_id" });
+    if (membership.error) throw membership.error;
+    return res.status(201).json({ conversation: { id: conversation.id, type: "dm", otherUser: target } });
+  } catch (error) {
+    console.error("DM creation failed:", error);
+    return res.status(500).json({ error: "That direct message could not be opened." });
+  }
+});
+
+app.get("/api/chat/conversations/:conversationId/messages", requireApiAuth, async (req, res) => {
+  try {
+    const conversation = await v6ConversationAccess(req.auth.user.id, req.params.conversationId);
+    if (!conversation) return res.status(404).json({ error: "Conversation not found." });
+    await v6TouchPresence(req.auth.user.id);
+    return res.json({ messages: await v6LoadMessages(req.auth.user.id, conversation.id, req.query.limit), serverTime: new Date().toISOString() });
+  } catch (error) {
+    console.error("Chat messages failed:", error);
+    return res.status(500).json({ error: "Messages could not be loaded." });
+  }
+});
+
+app.post("/api/chat/conversations/:conversationId/messages", requireApiAuth, async (req, res) => {
+  if (!v6ChatRateAllowed(req.auth.user.id)) return res.status(429).json({ error: "You are sending messages too quickly. Wait a few seconds." });
+  try {
+    const conversation = await v6ConversationAccess(req.auth.user.id, req.params.conversationId);
+    if (!conversation) return res.status(404).json({ error: "Conversation not found." });
+    const body = v6CleanText(req.body.body, 2000);
+    let attachmentPath = null;
+    if (req.body.attachment?.dataUrl) {
+      const upload = await v6UploadImage({
+        bucket: V6_STORAGE_BUCKETS.chat,
+        userId: req.auth.user.id,
+        dataUrl: req.body.attachment.dataUrl,
+        maximumBytes: 8 * 1024 * 1024,
+        prefix: "chat",
+      });
+      attachmentPath = upload.storagePath;
+    }
+    if (!body && !attachmentPath) return res.status(400).json({ error: "Enter a message or attach an image." });
+    let replyTo = v6CleanText(req.body.replyTo, 100) || null;
+    if (replyTo) {
+      const { data: reply } = await supabaseAdmin.from("chat_messages").select("id").eq("id", replyTo).eq("conversation_id", conversation.id).maybeSingle();
+      if (!reply) replyTo = null;
+    }
+    const { data: message, error } = await supabaseAdmin
+      .from("chat_messages")
+      .insert({ conversation_id: conversation.id, sender_id: req.auth.user.id, body, reply_to: replyTo, attachment_path: attachmentPath })
+      .select("id")
+      .single();
+    if (error) throw error;
+    await supabaseAdmin.from("chat_conversations").update({ last_message_at: new Date().toISOString() }).eq("id", conversation.id);
+    if (conversation.type === "dm") {
+      const { data: recipients } = await supabaseAdmin.from("chat_members").select("user_id").eq("conversation_id", conversation.id).eq("archived", false).neq("user_id", req.auth.user.id);
+      if (recipients?.length) {
+        await supabaseAdmin.from("notifications").insert(recipients.map((recipient) => ({
+          user_id: recipient.user_id,
+          type: "chat_message",
+          title: `New message from ${req.auth.profile.username}`,
+          body: body || "Sent an image",
+          link: `/chat?conversation=${conversation.id}`,
+        })));
+      }
+    }
+    const serialized = await v6LoadMessages(req.auth.user.id, conversation.id, 150);
+    return res.status(201).json({ message: serialized.find((item) => item.id === message.id) });
+  } catch (error) {
+    console.error("Message send failed:", error);
+    return res.status(400).json({ error: error.message || "Your message could not be sent." });
+  }
+});
+
+app.post("/api/chat/conversations/:conversationId/read", requireApiAuth, async (req, res) => {
+  try {
+    const conversation = await v6ConversationAccess(req.auth.user.id, req.params.conversationId);
+    if (!conversation) return res.status(404).json({ error: "Conversation not found." });
+    const { error } = await supabaseAdmin.from("chat_members").upsert({
+      conversation_id: conversation.id,
+      user_id: req.auth.user.id,
+      last_read_at: new Date().toISOString(),
+      archived: false,
+    }, { onConflict: "conversation_id,user_id" });
+    if (error) throw error;
+    return res.json({ success: true });
+  } catch (error) {
+    return res.status(500).json({ error: "Read status could not be updated." });
+  }
+});
+
+app.post("/api/chat/conversations/:conversationId/typing", requireApiAuth, async (req, res) => {
+  try {
+    const conversation = await v6ConversationAccess(req.auth.user.id, req.params.conversationId);
+    if (!conversation) return res.status(404).json({ error: "Conversation not found." });
+    const { error } = await supabaseAdmin.from("chat_typing").upsert({
+      conversation_id: conversation.id,
+      user_id: req.auth.user.id,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "conversation_id,user_id" });
+    if (error) throw error;
+    return res.json({ success: true });
+  } catch {
+    return res.status(500).json({ error: "Typing status failed." });
+  }
+});
+
+app.get("/api/chat/conversations/:conversationId/typing", requireApiAuth, async (req, res) => {
+  try {
+    const conversation = await v6ConversationAccess(req.auth.user.id, req.params.conversationId);
+    if (!conversation) return res.status(404).json({ error: "Conversation not found." });
+    const { data, error } = await supabaseAdmin
+      .from("chat_typing")
+      .select("user_id")
+      .eq("conversation_id", conversation.id)
+      .neq("user_id", req.auth.user.id)
+      .gte("updated_at", new Date(Date.now() - 5500).toISOString());
+    if (error) throw error;
+    const ids = (data || []).map((item) => item.user_id);
+    const { data: profiles } = ids.length
+      ? await supabaseAdmin.from("profiles").select("id, username").in("id", ids)
+      : { data: [] };
+    return res.json({ users: profiles || [] });
+  } catch {
+    return res.json({ users: [] });
+  }
+});
+
+app.patch("/api/chat/messages/:messageId", requireApiAuth, async (req, res) => {
+  try {
+    const body = v6CleanText(req.body.body, 2000);
+    if (!body) return res.status(400).json({ error: "A message cannot be empty." });
+    const { data: existing, error: loadError } = await supabaseAdmin
+      .from("chat_messages")
+      .select("id, conversation_id, sender_id, deleted_at")
+      .eq("id", req.params.messageId)
+      .maybeSingle();
+    if (loadError) throw loadError;
+    if (!existing || existing.sender_id !== req.auth.user.id || existing.deleted_at) return res.status(404).json({ error: "Message not found." });
+    const { error } = await supabaseAdmin.from("chat_messages").update({ body, edited_at: new Date().toISOString() }).eq("id", existing.id);
+    if (error) throw error;
+    const messages = await v6LoadMessages(req.auth.user.id, existing.conversation_id, 150);
+    return res.json({ message: messages.find((item) => item.id === existing.id) });
+  } catch (error) {
+    return res.status(500).json({ error: "That message could not be edited." });
+  }
+});
+
+app.delete("/api/chat/messages/:messageId", requireApiAuth, async (req, res) => {
+  try {
+    const { data: existing, error: loadError } = await supabaseAdmin
+      .from("chat_messages")
+      .select("id, sender_id, attachment_path")
+      .eq("id", req.params.messageId)
+      .maybeSingle();
+    if (loadError) throw loadError;
+    const canModerate = hasRole(req.auth.profile, "moderator");
+    if (!existing || (existing.sender_id !== req.auth.user.id && !canModerate)) return res.status(404).json({ error: "Message not found." });
+    const { error } = await supabaseAdmin.from("chat_messages").update({ body: "", attachment_path: null, deleted_at: new Date().toISOString(), edited_at: null }).eq("id", existing.id);
+    if (error) throw error;
+    if (existing.attachment_path) await supabaseAdmin.storage.from(V6_STORAGE_BUCKETS.chat).remove([existing.attachment_path]);
+    return res.json({ success: true });
+  } catch (error) {
+    return res.status(500).json({ error: "That message could not be deleted." });
+  }
+});
+
+app.post("/api/chat/messages/:messageId/reactions", requireApiAuth, async (req, res) => {
+  const emoji = v6CleanText(req.body.emoji, 8);
+  if (!emoji) return res.status(400).json({ error: "Choose a reaction." });
+  try {
+    const { data: message, error } = await supabaseAdmin.from("chat_messages").select("id, conversation_id").eq("id", req.params.messageId).maybeSingle();
+    if (error) throw error;
+    if (!message || !(await v6ConversationAccess(req.auth.user.id, message.conversation_id))) return res.status(404).json({ error: "Message not found." });
+    const { data: existing } = await supabaseAdmin.from("chat_reactions").select("message_id").eq("message_id", message.id).eq("user_id", req.auth.user.id).eq("emoji", emoji).maybeSingle();
+    if (existing) {
+      const result = await supabaseAdmin.from("chat_reactions").delete().eq("message_id", message.id).eq("user_id", req.auth.user.id).eq("emoji", emoji);
+      if (result.error) throw result.error;
+      return res.json({ active: false });
+    }
+    const result = await supabaseAdmin.from("chat_reactions").insert({ message_id: message.id, user_id: req.auth.user.id, emoji });
+    if (result.error) throw result.error;
+    return res.json({ active: true });
+  } catch (error) {
+    return res.status(500).json({ error: "That reaction could not be updated." });
+  }
+});
+
+app.post("/api/chat/messages/:messageId/report", requireApiAuth, async (req, res) => {
+  const reason = v6CleanText(req.body.reason, 1000);
+  if (!reason) return res.status(400).json({ error: "Describe the problem with this message." });
+  try {
+    const { data: message, error } = await supabaseAdmin.from("chat_messages").select("id, conversation_id").eq("id", req.params.messageId).maybeSingle();
+    if (error) throw error;
+    if (!message || !(await v6ConversationAccess(req.auth.user.id, message.conversation_id))) return res.status(404).json({ error: "Message not found." });
+    const result = await supabaseAdmin.from("chat_reports").insert({ message_id: message.id, reporter_id: req.auth.user.id, reason });
+    if (result.error) throw result.error;
+    return res.status(201).json({ success: true });
+  } catch (error) {
+    return res.status(500).json({ error: "That report could not be submitted." });
+  }
+});
+
+app.post("/api/chat/users/:userId/block", requireApiAuth, async (req, res) => {
+  const blockedId = v6CleanText(req.params.userId, 100);
+  const userId = req.auth.user.id;
+  if (!blockedId || blockedId === userId) {
+    return res.status(400).json({ error: "That user cannot be blocked." });
+  }
+  try {
+    const { data: target, error: targetError } = await supabaseAdmin
+      .from("profiles")
+      .select("id, username")
+      .eq("id", blockedId)
+      .maybeSingle();
+    if (targetError) throw targetError;
+    if (!target) return res.status(404).json({ error: "User not found." });
+    const { error } = await supabaseAdmin
+      .from("chat_blocks")
+      .upsert({ blocker_id: userId, blocked_id: blockedId }, { onConflict: "blocker_id,blocked_id" });
+    if (error) throw error;
+    const dmKey = [userId, blockedId].sort().join(":");
+    const { data: conversation } = await supabaseAdmin
+      .from("chat_conversations")
+      .select("id")
+      .eq("dm_key", dmKey)
+      .maybeSingle();
+    if (conversation) {
+      await supabaseAdmin
+        .from("chat_members")
+        .update({ archived: true })
+        .eq("conversation_id", conversation.id);
+    }
+    return res.json({ success: true, username: target.username });
+  } catch (error) {
+    console.error("Chat block failed:", error);
+    return res.status(500).json({ error: "That user could not be blocked." });
+  }
+});
+
+app.get("/api/chat/blocks", requireApiAuth, async (req, res) => {
+  try {
+    const { data: blocks, error } = await supabaseAdmin
+      .from("chat_blocks")
+      .select("blocked_id, created_at")
+      .eq("blocker_id", req.auth.user.id)
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    const ids = (blocks || []).map((item) => item.blocked_id);
+    const { data: profiles, error: profileError } = ids.length
+      ? await supabaseAdmin.from("profiles").select("id, username, role").in("id", ids)
+      : { data: [], error: null };
+    if (profileError) throw profileError;
+    const profileMap = new Map((profiles || []).map((item) => [item.id, item]));
+    return res.json({
+      users: (blocks || []).map((item) => ({
+        ...(profileMap.get(item.blocked_id) || { id: item.blocked_id, username: "Unknown user", role: "user" }),
+        blockedAt: item.created_at,
+      })),
+    });
+  } catch (error) {
+    console.error("Blocked-user list failed:", error);
+    return res.status(500).json({ error: "Blocked users could not be loaded." });
+  }
+});
+
+app.delete("/api/chat/users/:userId/block", requireApiAuth, async (req, res) => {
+  try {
+    const otherUserId = req.params.userId;
+    const { error } = await supabaseAdmin
+      .from("chat_blocks")
+      .delete()
+      .eq("blocker_id", req.auth.user.id)
+      .eq("blocked_id", otherUserId);
+    if (error) throw error;
+
+    const dmKey = [req.auth.user.id, otherUserId].sort().join(":");
+    const { data: conversation } = await supabaseAdmin
+      .from("chat_conversations")
+      .select("id")
+      .eq("dm_key", dmKey)
+      .maybeSingle();
+    if (conversation?.id && !(await v6UsersBlocked(req.auth.user.id, otherUserId))) {
+      await supabaseAdmin
+        .from("chat_members")
+        .update({ archived: false })
+        .eq("conversation_id", conversation.id);
+    }
+
+    return res.json({ success: true });
+  } catch (error) {
+    console.error("Chat unblock failed:", error);
+    return res.status(500).json({ error: "That user could not be unblocked." });
+  }
+});
+
+app.get("/api/admin/chat/reports", requireRole("moderator"), async (req, res) => {
+  try {
+    const status = ["open", "resolved", "dismissed"].includes(req.query.status)
+      ? req.query.status
+      : "open";
+    const { data: reports, error } = await supabaseAdmin
+      .from("chat_reports")
+      .select("id, message_id, reporter_id, reason, status, reviewed_by, reviewed_at, created_at")
+      .eq("status", status)
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (error) throw error;
+
+    const messageIds = [...new Set((reports || []).map((item) => item.message_id))];
+    const { data: messages, error: messageError } = messageIds.length
+      ? await supabaseAdmin
+          .from("chat_messages")
+          .select("id, conversation_id, sender_id, body, attachment_path, deleted_at, created_at")
+          .in("id", messageIds)
+      : { data: [], error: null };
+    if (messageError) throw messageError;
+
+    const profileIds = [...new Set([
+      ...(reports || []).map((item) => item.reporter_id),
+      ...(messages || []).map((item) => item.sender_id),
+    ].filter(Boolean))];
+    const { data: profiles, error: profileError } = profileIds.length
+      ? await supabaseAdmin.from("profiles").select("id, username, role").in("id", profileIds)
+      : { data: [], error: null };
+    if (profileError) throw profileError;
+
+    const messageMap = new Map((messages || []).map((item) => [item.id, item]));
+    const profileMap = new Map((profiles || []).map((item) => [item.id, item]));
+    return res.json({
+      reports: await Promise.all((reports || []).map(async (report) => {
+        const message = messageMap.get(report.message_id) || null;
+        return {
+          id: report.id,
+          reason: report.reason,
+          status: report.status,
+          createdAt: report.created_at,
+          reporter: profileMap.get(report.reporter_id) || { id: report.reporter_id, username: "Unknown" },
+          message: message
+            ? {
+                id: message.id,
+                conversationId: message.conversation_id,
+                body: message.deleted_at ? "Message deleted" : message.body,
+                attachmentUrl: message.deleted_at ? "" : await v6SignedStorageUrl(V6_STORAGE_BUCKETS.chat, message.attachment_path),
+                deletedAt: message.deleted_at,
+                createdAt: message.created_at,
+                sender: profileMap.get(message.sender_id) || { id: message.sender_id, username: "Unknown" },
+              }
+            : null,
+        };
+      })),
+    });
+  } catch (error) {
+    console.error("Chat reports failed:", error);
+    return res.status(500).json({ error: "Chat reports could not be loaded." });
+  }
+});
+
+app.patch("/api/admin/chat/reports/:reportId", requireRole("moderator"), async (req, res) => {
+  try {
+    const { data: report, error: reportError } = await supabaseAdmin
+      .from("chat_reports")
+      .select("id, message_id, status")
+      .eq("id", req.params.reportId)
+      .maybeSingle();
+    if (reportError) throw reportError;
+    if (!report) return res.status(404).json({ error: "Report not found." });
+
+    if (req.body.deleteMessage === true) {
+      const { data: message, error: messageError } = await supabaseAdmin
+        .from("chat_messages")
+        .select("id, attachment_path")
+        .eq("id", report.message_id)
+        .maybeSingle();
+      if (messageError) throw messageError;
+      if (message) {
+        const { error: deleteError } = await supabaseAdmin
+          .from("chat_messages")
+          .update({ body: "", attachment_path: null, deleted_at: new Date().toISOString(), edited_at: null })
+          .eq("id", message.id);
+        if (deleteError) throw deleteError;
+        if (message.attachment_path) {
+          await supabaseAdmin.storage.from(V6_STORAGE_BUCKETS.chat).remove([message.attachment_path]);
+        }
+      }
+    }
+
+    const status = ["open", "resolved", "dismissed"].includes(req.body.status)
+      ? req.body.status
+      : "resolved";
+    const { error } = await supabaseAdmin
+      .from("chat_reports")
+      .update({
+        status,
+        reviewed_by: req.auth.user.id,
+        reviewed_at: new Date().toISOString(),
+      })
+      .eq("id", report.id);
+    if (error) throw error;
+    return res.json({ success: true, status });
+  } catch (error) {
+    console.error("Chat report update failed:", error);
+    return res.status(500).json({ error: "That report could not be updated." });
+  }
+});
+
+app.get("/api/notifications", requireApiAuth, async (req, res) => {
+  try {
+    const [{ data, error }, unreadResult] = await Promise.all([
+      supabaseAdmin
+        .from("notifications")
+        .select("id, type, title, body, link, read_at, created_at")
+        .eq("user_id", req.auth.user.id)
+        .order("created_at", { ascending: false })
+        .limit(50),
+      supabaseAdmin
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", req.auth.user.id)
+        .is("read_at", null),
+    ]);
+    if (error) throw error;
+    if (unreadResult.error) throw unreadResult.error;
+    return res.json({
+      unread: unreadResult.count || 0,
+      notifications: (data || []).map((item) => ({
+        id: item.id,
+        type: item.type,
+        title: item.title,
+        body: item.body || "",
+        link: item.link || "",
+        readAt: item.read_at,
+        createdAt: item.created_at,
+      })),
+    });
+  } catch (error) {
+    console.error("Notification load failed:", error);
+    return res.status(500).json({ error: "Notifications could not be loaded." });
+  }
+});
+
+app.post("/api/notifications/read", requireApiAuth, async (req, res) => {
+  try {
+    let query = supabaseAdmin
+      .from("notifications")
+      .update({ read_at: new Date().toISOString() })
+      .eq("user_id", req.auth.user.id)
+      .is("read_at", null);
+    const notificationId = v6CleanText(req.body.id, 100);
+    if (notificationId) query = query.eq("id", notificationId);
+    const { error } = await query;
+    if (error) throw error;
+    return res.json({ success: true });
+  } catch (error) {
+    return res.status(500).json({ error: "Notifications could not be marked as read." });
+  }
+});
+
+function v6FeedbackSerialize(row, screenshotUrl = "", username = null) {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    username,
+    category: row.category,
+    title: row.title,
+    description: row.description,
+    priority: row.priority,
+    status: row.status,
+    screenshotUrl,
+    page: row.page_path,
+    browser: row.browser,
+    operatingSystem: row.operating_system,
+    internalNote: row.internal_note || "",
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+async function v6FeedbackWithSignedUrl(row, username = null) {
+  return v6FeedbackSerialize(
+    row,
+    await v6SignedStorageUrl(V6_STORAGE_BUCKETS.feedback, row.screenshot_path),
+    username,
+  );
+}
+
+app.get("/api/feedback", requireApiAuth, async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("feedback")
+      .select("*")
+      .eq("user_id", req.auth.user.id)
+      .order("updated_at", { ascending: false })
+      .limit(200);
+    if (error) throw error;
+    return res.json({
+      user: { id: req.auth.user.id, username: req.auth.profile.username, role: req.auth.profile.role },
+      feedback: await Promise.all((data || []).map((item) => v6FeedbackWithSignedUrl(item))),
+    });
+  } catch (error) {
+    console.error("Feedback list failed:", error);
+    return res.status(500).json({ error: "Feedback could not be loaded. Run the Fuzz 6.0 migration." });
+  }
+});
+
+app.post("/api/feedback", requireApiAuth, async (req, res) => {
+  const category = ["bug", "feature", "proxy", "account", "design", "other"].includes(req.body.category) ? req.body.category : "other";
+  const priority = ["low", "normal", "high"].includes(req.body.priority) ? req.body.priority : "normal";
+  const title = v6CleanText(req.body.title, 120);
+  const description = v6CleanText(req.body.description, 6000);
+  if (title.length < 4 || description.length < 10) return res.status(400).json({ error: "Add a clear title and a little more detail." });
+  try {
+    let screenshotPath = null;
+    if (req.body.screenshot?.dataUrl) {
+      const upload = await v6UploadImage({ bucket: V6_STORAGE_BUCKETS.feedback, userId: req.auth.user.id, dataUrl: req.body.screenshot.dataUrl, maximumBytes: 8 * 1024 * 1024, prefix: "feedback" });
+      screenshotPath = upload.storagePath;
+    }
+    const client = getClientInfo(req);
+    const { data, error } = await supabaseAdmin
+      .from("feedback")
+      .insert({
+        user_id: req.auth.user.id,
+        category,
+        title,
+        description,
+        priority,
+        status: "submitted",
+        screenshot_path: screenshotPath,
+        page_path: v6CleanText(req.body.page, 500),
+        browser: client.browser,
+        operating_system: client.operatingSystem,
+        user_agent: v6CleanText(req.body.userAgent || client.userAgent, 1000),
+      })
+      .select("*")
+      .single();
+    if (error) throw error;
+    return res.status(201).json({ feedback: await v6FeedbackWithSignedUrl(data) });
+  } catch (error) {
+    console.error("Feedback submit failed:", error);
+    return res.status(500).json({ error: error.message || "Your feedback could not be submitted." });
+  }
+});
+
+async function v6GetFeedbackForRequest(req, feedbackId, allowStaff = true) {
+  const { data, error } = await supabaseAdmin.from("feedback").select("*").eq("id", feedbackId).maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  if (data.user_id !== req.auth.user.id && !(allowStaff && hasRole(req.auth.profile, "moderator"))) return null;
+  const { data: profile } = await supabaseAdmin.from("profiles").select("username").eq("id", data.user_id).maybeSingle();
+  return { row: data, username: profile?.username || null };
+}
+
+app.get("/api/feedback/:feedbackId", requireApiAuth, async (req, res) => {
+  try {
+    const found = await v6GetFeedbackForRequest(req, req.params.feedbackId, true);
+    if (!found) return res.status(404).json({ error: "Feedback not found." });
+    const { data: comments, error } = await supabaseAdmin
+      .from("feedback_comments")
+      .select("id, user_id, body, is_staff, created_at")
+      .eq("feedback_id", found.row.id)
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+    const userIds = [...new Set((comments || []).map((item) => item.user_id).filter(Boolean))];
+    const { data: profiles } = userIds.length ? await supabaseAdmin.from("profiles").select("id, username").in("id", userIds) : { data: [] };
+    const profileMap = new Map((profiles || []).map((item) => [item.id, item.username]));
+    return res.json({
+      feedback: await v6FeedbackWithSignedUrl(found.row, found.username),
+      comments: (comments || []).map((item) => ({ id: item.id, body: item.body, isStaff: item.is_staff, username: profileMap.get(item.user_id) || (item.is_staff ? "Fuzz team" : "User"), createdAt: item.created_at })),
+    });
+  } catch (error) {
+    return res.status(500).json({ error: "That feedback could not be loaded." });
+  }
+});
+
+app.post("/api/feedback/:feedbackId/comments", requireApiAuth, async (req, res) => {
+  const body = v6CleanText(req.body.body, 3000);
+  if (!body) return res.status(400).json({ error: "Enter a reply." });
+  try {
+    const found = await v6GetFeedbackForRequest(req, req.params.feedbackId, true);
+    if (!found) return res.status(404).json({ error: "Feedback not found." });
+    const isStaff = hasRole(req.auth.profile, "moderator");
+    const { data, error } = await supabaseAdmin.from("feedback_comments").insert({ feedback_id: found.row.id, user_id: req.auth.user.id, body, is_staff: isStaff }).select("*").single();
+    if (error) throw error;
+    await supabaseAdmin.from("feedback").update({ updated_at: new Date().toISOString() }).eq("id", found.row.id);
+    if (isStaff && found.row.user_id !== req.auth.user.id) {
+      await supabaseAdmin.from("notifications").insert({ user_id: found.row.user_id, type: "feedback_reply", title: "New reply to your feedback", body, link: `/feedback?id=${found.row.id}` });
+    }
+    return res.status(201).json({ comment: { id: data.id, body: data.body, isStaff, username: req.auth.profile.username, createdAt: data.created_at } });
+  } catch (error) {
+    return res.status(500).json({ error: "Your reply could not be added." });
+  }
+});
+
+app.get("/api/admin/feedback", requireRole("moderator"), async (_req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin.from("feedback").select("*").order("updated_at", { ascending: false }).limit(500);
+    if (error) throw error;
+    const userIds = [...new Set((data || []).map((item) => item.user_id))];
+    const { data: profiles } = userIds.length ? await supabaseAdmin.from("profiles").select("id, username").in("id", userIds) : { data: [] };
+    const profileMap = new Map((profiles || []).map((item) => [item.id, item.username]));
+    return res.json({ feedback: await Promise.all((data || []).map((item) => v6FeedbackWithSignedUrl(item, profileMap.get(item.user_id) || null))) });
+  } catch (error) {
+    return res.status(500).json({ error: "User feedback could not be loaded." });
+  }
+});
+
+app.get("/api/admin/feedback/:feedbackId", requireRole("moderator"), async (req, res) => {
+  try {
+    const found = await v6GetFeedbackForRequest(req, req.params.feedbackId, true);
+    if (!found) return res.status(404).json({ error: "Feedback not found." });
+    const { data: comments, error } = await supabaseAdmin.from("feedback_comments").select("id, user_id, body, is_staff, created_at").eq("feedback_id", found.row.id).order("created_at", { ascending: true });
+    if (error) throw error;
+    const userIds = [...new Set((comments || []).map((item) => item.user_id).filter(Boolean))];
+    const { data: profiles } = userIds.length ? await supabaseAdmin.from("profiles").select("id, username").in("id", userIds) : { data: [] };
+    const profileMap = new Map((profiles || []).map((item) => [item.id, item.username]));
+    return res.json({ feedback: await v6FeedbackWithSignedUrl(found.row, found.username), comments: (comments || []).map((item) => ({ id: item.id, body: item.body, isStaff: item.is_staff, username: profileMap.get(item.user_id) || "Fuzz team", createdAt: item.created_at })) });
+  } catch {
+    return res.status(500).json({ error: "That feedback could not be loaded." });
+  }
+});
+
+app.patch("/api/admin/feedback/:feedbackId", requireRole("moderator"), async (req, res) => {
+  try {
+    const found = await v6GetFeedbackForRequest(req, req.params.feedbackId, true);
+    if (!found) return res.status(404).json({ error: "Feedback not found." });
+    const updates = { updated_at: new Date().toISOString(), assigned_to: req.auth.user.id };
+    if (["submitted", "under_review", "planned", "in_progress", "fixed", "declined", "closed"].includes(req.body.status)) updates.status = req.body.status;
+    if (["low", "normal", "high", "urgent"].includes(req.body.priority)) updates.priority = req.body.priority;
+    if (Object.hasOwn(req.body, "internalNote")) updates.internal_note = v6CleanText(req.body.internalNote, 5000) || null;
+    const { data, error } = await supabaseAdmin.from("feedback").update(updates).eq("id", found.row.id).select("*").single();
+    if (error) throw error;
+    if (updates.status && updates.status !== found.row.status) {
+      await supabaseAdmin.from("notifications").insert({
+        user_id: found.row.user_id,
+        type: "feedback_status",
+        title: "Feedback status updated",
+        body: `${found.row.title} is now ${updates.status.replaceAll("_", " ")}.`,
+        link: `/feedback?id=${found.row.id}`,
+      });
+    }
+    return res.json({ feedback: await v6FeedbackWithSignedUrl(data, found.username) });
+  } catch (error) {
+    return res.status(500).json({ error: "That feedback could not be updated." });
+  }
+});
+
+
+/* =======================================================
    STATIC FILES
 
    Protect private HTML before static serving, but keep
    sw.js, bundles, CSS, JavaScript and proxy resources public.
 ======================================================= */
 
-const protectedHtmlFiles = new Set([
-  "/index.html",
-  "/apps.html",
-  "/games.html",
-  "/settings.html",
-  "/tabs.html",
-  "/proxy.html",
-  "/ai.html",
-  "/admin.html",
-  "/status.html",
+const publicHtmlFiles = new Set([
+  "/404.html",
+  "/login.html",
+  "/signup.html",
+  "/verified.html",
+  "/suspended.html",
+  "/maintenance.html",
+  "/feature-unavailable.html",
 ]);
 
 app.use((req, res, next) => {
-  if (!protectedHtmlFiles.has(req.path)) {
+  if (
+    !["GET", "HEAD"].includes(req.method) ||
+    !req.path.toLowerCase().endsWith(".html") ||
+    publicHtmlFiles.has(req.path)
+  ) {
     return next();
   }
 
@@ -13376,8 +14923,11 @@ app.use(
       index: false,
       fallthrough: true,
       setHeaders(res, filePath) {
+        const lowerPath = filePath.toLowerCase();
+
         if (
-          filePath.endsWith("sw.js") ||
+          lowerPath.endsWith(".html") ||
+          lowerPath.endsWith("sw.js") ||
           filePath.includes(
             `${path.sep}mathematics${path.sep}`,
           )
@@ -13386,7 +14936,24 @@ app.use(
             "Cache-Control",
             "no-store, no-cache, must-revalidate",
           );
+          return;
         }
+
+        if (
+          lowerPath.endsWith(".js") ||
+          lowerPath.endsWith(".css")
+        ) {
+          res.setHeader(
+            "Cache-Control",
+            "no-cache, max-age=0, must-revalidate",
+          );
+          return;
+        }
+
+        res.setHeader(
+          "Cache-Control",
+          "public, max-age=86400",
+        );
       },
     },
   ),
@@ -13445,6 +15012,10 @@ const protectedRoutes = [
     file: "settings.html",
   },
   {
+    route: "/settings",
+    file: "settings.html",
+  },
+  {
     route: "/d",
     file: "tabs.html",
   },
@@ -13455,6 +15026,14 @@ const protectedRoutes = [
   {
     route: "/ai",
     file: "ai.html",
+  },
+  {
+    route: "/chat",
+    file: "chat.html",
+  },
+  {
+    route: "/feedback",
+    file: "feedback.html",
   },
   {
     route: "/account",

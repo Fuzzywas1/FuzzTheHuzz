@@ -170,11 +170,7 @@
   }
 
   function onboardingComplete() {
-    try {
-      return localStorage.getItem(ONBOARDING_KEY) === "true";
-    } catch {
-      return true;
-    }
+    return true;
   }
 
   function markOnboardingComplete() {
@@ -184,13 +180,12 @@
   }
 
   function resetOnboarding() {
-    try {
-      localStorage.removeItem(ONBOARDING_KEY);
-    } catch {}
+    markOnboardingComplete();
   }
 
-  function showOnboarding({ force = false } = {}) {
-    if (!force && onboardingComplete()) return;
+  function showOnboarding() {
+    markOnboardingComplete();
+    return;
     document.getElementById("fuzz-onboarding-modal")?.remove();
 
     const backdrop = document.createElement("div");
@@ -311,9 +306,7 @@
 
   const initialize = () => {
     bindGlobalActions();
-    if (location.pathname === "/") {
-      window.setTimeout(() => showOnboarding(), 250);
-    }
+    markOnboardingComplete();
     window.setTimeout(maybeShowReleaseBanner, 550);
   };
 

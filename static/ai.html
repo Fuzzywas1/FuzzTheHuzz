@@ -1,91 +1,178 @@
 <!doctype html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8" />
-    <meta name="referrer" content="no-referrer" />
-    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8" />
+  <meta name="referrer" content="no-referrer" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#070914" />
 
-    <link rel="shortcut icon" href="/favicon.png" />
-    <title>Home</title>
+  <link rel="shortcut icon" href="/favicon.png" />
+  <title>Fuzz AI</title>
 
-    <link rel="stylesheet" href="/assets/css/global.css" />
-    <link rel="stylesheet" href="/assets/css/nav.css" />
-    <link rel="stylesheet" href="/assets/css/ai.css" />
-
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
-
-    <script src="/assets/js/m1.js" defer></script>
-    <script src="/assets/js/ai.js?v=2" defer></script>
+  <link rel="stylesheet" href="/assets/css/global.css" />
+  <link rel="stylesheet" href="/assets/css/nav.css?v=11" />
+  <link rel="stylesheet" href="/assets/css/ai.css?v=11" />
   <link rel="stylesheet" href="/assets/css/fuzz-ui.css?v=1" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js" defer></script>
   <script src="/assets/js/fuzz-ui.js?v=1"></script>
   <script src="/assets/js/fuzz-diagnostics.js?v=1"></script>
+  <script src="/assets/js/m1.js?v=11" defer></script>
+  <script src="/assets/js/ai.js?v=11" defer></script>
 </head>
 
-<body>
-    <div class="f-nav"></div>
+<body class="fuzz-ai-page">
+  <div class="f-nav"></div>
 
-    <main id="ai-page" class="ai-layout">
-        <aside class="chat-sidebar">
-            <button id="new-chat-button" class="new-chat-button" type="button">
-                <i class="fa-solid fa-plus"></i>
-                <span>New Chat</span>
-            </button>
+  <main id="ai-page" class="ai-app">
+    <aside id="ai-history" class="ai-history" aria-label="Fuzz AI chat history">
+      <header class="ai-history-header">
+        <div class="ai-history-brand">
+          <span class="ai-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="m12 3 1.25 3.55L16.8 8l-3.55 1.3L12 12.8l-1.25-3.5L7.2 8l3.55-1.45L12 3Z"/><path d="m18.3 14 .75 2.05 2.05.75-2.05.75-.75 2.05-.75-2.05-2.05-.75 2.05-.75.75-2.05Z"/></svg>
+          </span>
+          <span>
+            <strong>Fuzz AI</strong>
+            <small>Powered by your private workspace</small>
+          </span>
+        </div>
+        <button class="ai-history-close" type="button" data-ai-history-close aria-label="Close chat history">
+          <svg viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg>
+        </button>
+      </header>
 
-            <div id="chat-list" class="chat-list" aria-label="Saved chats"></div>
-        </aside>
+      <button id="new-chat-button" class="new-chat-button" type="button" data-new-chat>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        <span>New conversation</span>
+        <kbd>Ctrl N</kbd>
+      </button>
 
-        <section class="chat-main">
-            <section id="welcome-screen" class="ai-welcome">
-                <div class="welcome-icon">
-                    <i class="fa-solid fa-robot"></i>
-                </div>
+      <label class="ai-history-search" for="chat-search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.4"/><path d="m16 16 4.4 4.4"/></svg>
+        <input id="chat-search" type="search" placeholder="Search conversations" autocomplete="off" />
+      </label>
 
-                <h1>Fuzz AI</h1>
-                <p>What can I help you with?</p>
-            </section>
+      <div class="ai-history-label">
+        <span>Recent chats</span>
+        <span id="chat-count">0</span>
+      </div>
 
-            <section id="chat-messages" class="chat-messages" aria-live="polite"></section>
+      <div id="chat-list" class="chat-list" aria-label="Saved chats">
+        <div class="ai-list-loading"><span></span><small>Loading chats…</small></div>
+      </div>
 
-            <form id="chat-form" class="chat-composer">
-                <div id="image-preview-area" class="image-preview-area"></div>
+      <footer class="ai-history-footer">
+        <span class="ai-history-footer-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 3.2 19 6v5.4c0 4.2-2.8 8-7 9.4-4.2-1.4-7-5.2-7-9.4V6l7-2.8Z"/><path d="m8.9 12 2 2 4.2-4.4"/></svg>
+        </span>
+        <span><strong>Saved to your account</strong><small>Your chat history follows your Fuzz login.</small></span>
+      </footer>
+    </aside>
 
-                <div class="composer-row">
-                    <input id="image-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden />
+    <button class="ai-history-scrim" type="button" data-ai-history-close aria-label="Close chat history"></button>
 
-                    <button id="attach-button" class="composer-button attach-button" type="button"
-                        aria-label="Attach image" title="Attach image">
-                        <i class="fa-solid fa-paperclip"></i>
-                    </button>
+    <section class="ai-workspace">
+      <header class="ai-topbar">
+        <div class="ai-topbar-left">
+          <button class="ai-history-toggle" type="button" data-ai-history-toggle aria-label="Open chat history" aria-expanded="false">
+            <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <div class="ai-active-chat">
+            <strong id="active-chat-title">New conversation</strong>
+            <small>Fuzz AI</small>
+          </div>
+        </div>
 
-                    <textarea id="chat-input" rows="1" maxlength="12000" placeholder="Message Fuzz AI"></textarea>
+        <div class="ai-topbar-actions">
+          <span id="ai-connection-status" class="ai-connection-status" data-state="ready">
+            <span></span>
+            <strong>Ready</strong>
+          </span>
+          <button class="ai-top-new-chat" type="button" data-new-chat>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            <span>New chat</span>
+          </button>
+        </div>
+      </header>
 
-                    <button id="send-button" class="composer-button send-button" type="submit" aria-label="Send message"
-                        title="Send message">
-                        <i class="fa-solid fa-arrow-up"></i>
-                    </button>
-                </div>
+      <div class="ai-conversation">
+        <section id="welcome-screen" class="ai-welcome">
+          <div class="ai-welcome-inner">
+            <div class="ai-welcome-kicker"><span></span> Fuzz AI workspace</div>
+            <h1>What are we working on?</h1>
+            <p>Ask a question, plan a project, debug code, or attach an image. Your conversations can be saved and reopened from the history panel.</p>
 
-                <p class="composer-hint">
-                    Fuzz AI can make mistakes. Check important information.
-                </p>
-            </form>
+            <div class="ai-prompt-grid" aria-label="Suggested prompts">
+              <button type="button" data-ai-prompt="Help me debug a coding problem. Ask me for the code and the exact error first.">
+                <span class="prompt-icon code"><i class="fa-solid fa-code"></i></span>
+                <span><strong>Debug code</strong><small>Track down an error step by step</small></span>
+                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+              </button>
+              <button type="button" data-ai-prompt="Help me turn an idea into a clear step-by-step project plan.">
+                <span class="prompt-icon plan"><i class="fa-solid fa-list-check"></i></span>
+                <span><strong>Plan a project</strong><small>Turn an idea into concrete steps</small></span>
+                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+              </button>
+              <button type="button" data-ai-prompt="Help me improve the design and user experience of a website. Start by asking what the website currently looks like.">
+                <span class="prompt-icon design"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+                <span><strong>Improve a design</strong><small>Polish a page or feature</small></span>
+                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+              </button>
+              <button type="button" data-ai-prompt="Explain a difficult topic to me in a clear way, using a simple example first.">
+                <span class="prompt-icon learn"><i class="fa-solid fa-lightbulb"></i></span>
+                <span><strong>Learn something</strong><small>Get a clear explanation</small></span>
+                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+              </button>
+            </div>
+          </div>
         </section>
 
-        <div id="drop-overlay" class="drop-overlay" aria-hidden="true">
-            <div class="drop-card">
-                <i class="fa-solid fa-image"></i>
-                <strong>Drop your image here</strong>
-                <span>PNG, JPEG, WebP, or GIF</span>
+        <section id="chat-messages" class="chat-messages" aria-live="polite" aria-label="Conversation"></section>
+
+        <div class="ai-composer-dock">
+          <form id="chat-form" class="chat-composer">
+            <div id="image-preview-area" class="image-preview-area"></div>
+
+            <div class="composer-row">
+              <input id="image-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden />
+
+              <button id="attach-button" class="composer-button attach-button" type="button" aria-label="Attach image" title="Attach image">
+                <i class="fa-solid fa-paperclip"></i>
+              </button>
+
+              <textarea id="chat-input" rows="1" maxlength="12000" placeholder="Message Fuzz AI" aria-label="Message Fuzz AI"></textarea>
+
+              <button id="stop-button" class="composer-button stop-button" type="button" aria-label="Stop generating" title="Stop generating" hidden>
+                <i class="fa-solid fa-stop"></i>
+              </button>
+
+              <button id="send-button" class="composer-button send-button" type="submit" aria-label="Send message" title="Send message">
+                <i class="fa-solid fa-arrow-up"></i>
+              </button>
             </div>
+
+            <footer class="composer-footer">
+              <span><kbd>Enter</kbd> send · <kbd>Shift Enter</kbd> new line</span>
+              <span>Fuzz AI can make mistakes. Check important information.</span>
+            </footer>
+          </form>
         </div>
-    </main>
-    <script src="/assets/js/account-shell.js?v=1" defer></script>
+      </div>
+    </section>
+
+    <div id="drop-overlay" class="drop-overlay" aria-hidden="true">
+      <div class="drop-card">
+        <i class="fa-solid fa-image"></i>
+        <strong>Drop your image here</strong>
+        <span>PNG, JPEG, WebP, or GIF · up to 8 MB</span>
+      </div>
+    </div>
+  </main>
+
+  <script src="/assets/js/account-shell.js?v=1" defer></script>
   <script src="/assets/js/site-control.js" defer></script>
 </body>
-
 </html>

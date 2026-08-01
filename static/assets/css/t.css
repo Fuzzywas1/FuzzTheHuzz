@@ -1120,3 +1120,21 @@ html[data-fuzz-density="compact"] { --tab-strip-height:40px; --toolbar-height:50
 html[data-fuzz-density="compact"] .browser-toolbar { padding-top:6px; padding-bottom:6px; }
 html[data-fuzz-density="compact"] .browser-tab { height:31px; }
 @media(max-width:620px){.start-proxy-grid{grid-template-columns:1fr}.browser-library{width:100vw}}
+
+/* Fuzz 6.1 universal sidebar integration */
+body.has-fuzz-sidebar .browser-shell,
+body.has-fuzz-sidebar .browser-viewport {
+  left: var(--fuzz-sidebar-width);
+  transition:
+    left var(--fuzz-sidebar-ease, 210ms ease),
+    height var(--ease),
+    transform var(--ease),
+    inset var(--ease);
+}
+
+@media (max-width: 820px) {
+  body.has-fuzz-sidebar .browser-shell,
+  body.has-fuzz-sidebar .browser-viewport {
+    left: 0;
+  }
+}

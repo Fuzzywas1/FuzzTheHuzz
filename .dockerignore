@@ -1,0 +1,14 @@
+.git
+.github
+.vscode
+node_modules
+npm-debug.log*
+*.log
+*.zip
+.env
+.env.*
+!.env.example
+.DS_Store
+coverage
+dist
+build

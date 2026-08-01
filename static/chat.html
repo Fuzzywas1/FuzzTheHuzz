@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="referrer" content="no-referrer" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#050713" />
+  <title>Chat</title>
+  <link rel="shortcut icon" href="/favicon.png" />
+  <link rel="stylesheet" href="/assets/css/global.css?v=8" />
+  <link rel="stylesheet" href="/assets/css/nav.css?v=11" />
+  <link rel="stylesheet" href="/assets/css/chat.css?v=2" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <script src="/assets/js/fuzz-ui.js?v=1"></script>
+  <script src="/assets/js/fuzz-diagnostics.js?v=1"></script>
+</head>
+<body class="fuzz-chat-page">
+  <div class="f-nav"></div>
+
+  <main class="fuzz-chat-shell">
+    <aside class="conversation-sidebar">
+      <header class="conversation-sidebar-header">
+        <div><p>Fuzz community</p><h1>Chat</h1></div>
+        <button id="new-dm-button" type="button" title="New direct message"><i class="fa-solid fa-pen-to-square"></i></button>
+      </header>
+      <label class="conversation-search"><i class="fa-solid fa-magnifying-glass"></i><input id="conversation-search" type="search" placeholder="Search conversations" autocomplete="off" /></label>
+      <div class="conversation-filter-row">
+        <button class="is-active" data-chat-filter="all" type="button">All</button>
+        <button data-chat-filter="unread" type="button">Unread</button>
+        <button data-chat-filter="dm" type="button">DMs</button>
+      </div>
+      <div id="conversation-list" class="conversation-list"><div class="chat-loading"><span></span>Loading conversations…</div></div>
+      <footer class="conversation-sidebar-footer"><span id="online-count"><i class="fa-solid fa-circle"></i> Connecting…</span><small>DMs are participant-private, not end-to-end encrypted.</small></footer>
+    </aside>
+
+    <section class="conversation-main">
+      <header id="conversation-header" class="conversation-header">
+        <div class="conversation-avatar"><i class="fa-solid fa-comments"></i></div>
+        <div class="conversation-header-copy"><strong>Select a conversation</strong><span>Everyone and your direct messages appear here.</span></div>
+        <div class="conversation-header-actions">
+          <button id="chat-reports-button" type="button" title="Chat reports" hidden><i class="fa-solid fa-shield-halved"></i></button>
+          <button id="refresh-chat" type="button" title="Refresh"><i class="fa-solid fa-rotate"></i></button>
+          <button id="conversation-menu-button" type="button" title="Conversation options" disabled><i class="fa-solid fa-ellipsis"></i></button>
+        </div>
+      </header>
+
+      <section id="message-list" class="message-list" aria-live="polite">
+        <div class="chat-empty-state"><span><i class="fa-regular fa-message"></i></span><h2>Your Fuzz conversations</h2><p>Open <strong>Everyone</strong> or start a direct message.</p></div>
+      </section>
+
+      <div id="reply-banner" class="reply-banner" hidden><span><small>Replying to</small><strong id="reply-label"></strong></span><button id="cancel-reply" type="button"><i class="fa-solid fa-xmark"></i></button></div>
+      <div id="typing-indicator" class="typing-indicator" hidden><span></span><span></span><span></span><em>Someone is typing</em></div>
+      <form id="message-form" class="message-composer">
+        <input id="chat-attachment-input" type="file" accept="image/png,image/jpeg,image/webp" hidden />
+        <button id="chat-attachment-button" type="button" title="Attach an image" disabled><i class="fa-solid fa-paperclip"></i></button>
+        <div class="message-input-wrap">
+          <div id="attachment-preview" class="attachment-preview" hidden></div>
+          <textarea id="message-input" rows="1" maxlength="2000" placeholder="Choose a conversation" disabled></textarea>
+        </div>
+        <button id="message-send-button" class="send" type="submit" disabled><i class="fa-solid fa-arrow-up"></i></button>
+      </form>
+    </section>
+  </main>
+
+  <div id="chat-modal-root"></div>
+  <div id="chat-toast" class="chat-toast" hidden></div>
+  <script src="/assets/js/m1.js?v=11" defer></script>
+  <script src="/assets/js/chat.js?v=1" defer></script>
+  <script src="/assets/js/account-shell.js?v=2" defer></script>
+  <script src="/assets/js/site-control.js?v=2" defer></script>
+</body>
+</html>

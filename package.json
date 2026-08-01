@@ -1,16 +1,17 @@
 {
-  "name": "interstellar",
-  "version": "5.2.5",
+  "name": "fuzzthehuzz",
+  "version": "6.1.0",
   "type": "module",
   "engines": {
-    "npm": ">=7.0.0",
-    "node": ">=16.0.0"
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
   },
   "scripts": {
     "start": "node index.js",
-    "format": "pnpm biome format --write .",
-    "precommit": "pnpm run format && pnpm biome check --write .",
-    "lint": "biome lint --write ."
+    "check": "node scripts/audit-project.mjs",
+    "format": "biome format --write .",
+    "lint": "biome lint .",
+    "precommit": "npm run check && biome check ."
   },
   "author": "InterstellarNetwork",
   "license": "GPL-3.0-or-later",
@@ -26,7 +27,6 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.0",
     "express": "^4.21.2",
-    "express-basic-auth": "^1.2.1",
     "mime": "^4.1.0",
     "node-fetch": "^3.3.2",
     "openai": "^6.48.0",
@@ -34,6 +34,5 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.2"
-  },
-  "packageManager": "pnpm@9.10.0"
+  }
 }

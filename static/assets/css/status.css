@@ -1,6 +1,6 @@
 :root { color-scheme: dark; }
 body { min-height: 100vh; margin: 0; color: #f6f7ff; background: radial-gradient(circle at 50% -10%, rgba(var(--fuzz-accent-rgb),.14), transparent 38%), #03050d; font-family: Inter,system-ui,sans-serif; }
-.status-main { width: min(1180px, calc(100% - 36px)); margin: 0 auto; padding: 105px 0 70px; }
+.status-main { width: min(1180px, calc(100% - 36px)); margin: 0 auto; padding: 42px 0 70px; }
 .status-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
 .status-hero p { margin: 0 0 8px; color: var(--fuzz-accent); font-size: 10px; font-weight: 850; letter-spacing: .13em; text-transform: uppercase; }
 .status-hero h1 { margin: 0; font-size: clamp(32px,5vw,54px); letter-spacing: -.05em; }
@@ -35,5 +35,5 @@ body { min-height: 100vh; margin: 0; color: #f6f7ff; background: radial-gradient
 .status-loading span { width: 22px; height: 22px; border: 3px solid rgba(255,255,255,.08); border-top-color: var(--fuzz-accent); border-radius: 50%; animation: statusSpin .7s linear infinite; }
 .status-toast { position: fixed; right: 16px; bottom: 16px; z-index: 2000; padding: 12px 14px; border: 1px solid rgba(var(--fuzz-accent-rgb),.3); border-radius: 12px; color: white; background: #0b1022; font-size: 10px; }
 @keyframes statusSpin { to { transform: rotate(360deg); } }
-@media(max-width:850px){.status-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.status-browser-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.status-hero{align-items:flex-start;flex-direction:column}}
+@media(max-width:850px){.status-main{padding-top:76px}.status-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.status-browser-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.status-hero{align-items:flex-start;flex-direction:column}}
 @media(max-width:560px){.status-grid,.status-browser-grid{grid-template-columns:1fr}.status-actions{width:100%}.status-actions button{flex:1}}

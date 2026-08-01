@@ -7,7 +7,8 @@
   <meta name="theme-color" content="#050713" />
   <link rel="shortcut icon" href="/assets/media/favicon/classroom.png" />
   <title>Home</title>
-  <link rel="stylesheet" href="/assets/css/proxy.css?v=1" />
+  <link rel="stylesheet" href="/assets/css/nav.css?v=11" />
+  <link rel="stylesheet" href="/assets/css/proxy.css?v=3" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <script src="/baremux/index.js"></script>
   <script src="/scram/scramjet.all.js"></script>
@@ -16,6 +17,7 @@
   <script src="/assets/js/proxy-engine.js?v=4"></script>
 </head>
 <body>
+  <div class="f-nav"></div>
   <header class="proxy-toolbar">
     <button id="proxy-back-home" type="button" title="Back to Fuzz"><i class="fa-solid fa-house"></i></button>
     <form id="proxy-address-form">
@@ -32,5 +34,6 @@
     <div id="proxy-loading" class="proxy-loading"><span></span><strong>Starting <span data-proxy-engine-label>Scramjet</span>…</strong></div>
   </main>
   <script src="/assets/js/standalone-proxy.js?v=1"></script>
+  <script src="/assets/js/m1.js?v=11" defer></script>
 </body>
 </html>

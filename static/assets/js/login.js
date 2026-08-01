@@ -1,5 +1,3 @@
-import { supabase } from "/assets/js/supabase.js";
-
 document.addEventListener("DOMContentLoaded", async () => {
   const form = document.getElementById("login-form");
   const emailInput = document.getElementById("email");
@@ -7,40 +5,25 @@ document.addEventListener("DOMContentLoaded", async () => {
   const submitButton = document.getElementById("login-button");
   const messageElement = document.getElementById("auth-message");
 
-  if (!form) {
+  if (!form || !emailInput || !passwordInput || !submitButton || !messageElement) {
+    console.error("The sign-in page is missing required controls.");
     return;
   }
 
-  const nextPage = getSafeNextPage();
+  const requestedNextPage = getSafeNextPage();
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  try {
+    const statusResponse = await fetch("/api/auth/status", {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
 
-  if (session) {
-    const recoveryAttempted =
-      sessionStorage.getItem("fuzz-session-recovery") === "true";
-
-    if (!recoveryAttempted) {
-      sessionStorage.setItem("fuzz-session-recovery", "true");
-
-      const serverSessionCreated = await createServerSession(session);
-
-      if (serverSessionCreated) {
-        sessionStorage.removeItem("fuzz-session-recovery");
-        window.location.replace(nextPage);
-        return;
-      }
+    if (statusResponse.ok) {
+      window.location.replace(await getPreferredNextPage(requestedNextPage));
+      return;
     }
-
-    sessionStorage.removeItem("fuzz-session-recovery");
-    await supabase.auth.signOut();
-
-    showMessage(
-      messageElement,
-      "Your previous session expired. Please sign in again.",
-      "error",
-    );
+  } catch {
+    // The form remains available if the status check is temporarily unavailable.
   }
 
   form.addEventListener("submit", async (event) => {
@@ -63,27 +46,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     setLoading(submitButton, true);
 
     try {
-      const { data, error } =
-        await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-      if (error) {
-        throw error;
-      }
+      const result = await response.json().catch(() => ({}));
 
-      if (!data.session || !data.user) {
-        throw new Error("The login session could not be created.");
-      }
-
-      const serverSessionCreated = await createServerSession(
-        data.session,
-      );
-
-      if (!serverSessionCreated) {
+      if (!response.ok) {
         throw new Error(
-          "The secure login session could not be created.",
+          result.error ||
+            `Sign-in failed (${response.status}).`,
         );
       }
 
@@ -95,21 +73,18 @@ document.addEventListener("DOMContentLoaded", async () => {
         "success",
       );
 
+      const destination = await getPreferredNextPage(requestedNextPage);
       window.setTimeout(() => {
-        window.location.replace(nextPage);
-      }, 400);
+        window.location.replace(destination);
+      }, 250);
     } catch (error) {
       console.error("Login failed:", error);
 
-      let message = "Incorrect email or password.";
+      let message =
+        error?.message || "Incorrect email or password.";
 
-      if (
-        error.message &&
-        error.message.toLowerCase().includes("email not confirmed")
-      ) {
+      if (message.toLowerCase().includes("email not confirmed")) {
         message = "Verify your email before signing in.";
-      } else if (error.message) {
-        message = error.message;
       }
 
       showMessage(messageElement, message, "error");
@@ -119,36 +94,34 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 });
 
-async function createServerSession(session) {
-  try {
-    const response = await fetch("/api/auth/session", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "same-origin",
-      body: JSON.stringify({
-        accessToken: session.access_token,
-        refreshToken: session.refresh_token,
-      }),
-    });
-
-    return response.ok;
-  } catch (error) {
-    console.error("Server session request failed:", error);
-    return false;
-  }
-}
-
 function getSafeNextPage() {
   const params = new URLSearchParams(window.location.search);
   const next = params.get("next");
 
   if (!next || !next.startsWith("/") || next.startsWith("//")) {
-    return "/";
+    return null;
   }
 
   return next;
+}
+
+async function getPreferredNextPage(requestedNextPage) {
+  if (requestedNextPage) return requestedNextPage;
+
+  try {
+    const response = await fetch("/api/personalization", {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) return "/";
+    const data = await response.json();
+    const destination = data?.preferences?.defaultPage;
+    return ["/", "/chat", "/ai", "/b", "/d"].includes(destination)
+      ? destination
+      : "/";
+  } catch {
+    return "/";
+  }
 }
 
 function setLoading(button, loading) {

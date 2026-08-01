@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="referrer" content="no-referrer" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#050713" />
+  <title>Feedback</title>
+  <link rel="shortcut icon" href="/favicon.png" />
+  <link rel="stylesheet" href="/assets/css/global.css?v=8" />
+  <link rel="stylesheet" href="/assets/css/nav.css?v=11" />
+  <link rel="stylesheet" href="/assets/css/feedback.css?v=1" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <script src="/assets/js/fuzz-ui.js?v=1"></script>
+  <script src="/assets/js/fuzz-diagnostics.js?v=1"></script>
+</head>
+<body class="feedback-page">
+  <div class="f-nav"></div>
+  <main class="feedback-main">
+    <header class="feedback-hero">
+      <div><p>Help shape Fuzz</p><h1>Feedback</h1><span>Report a problem, suggest a feature, or tell us what should be improved.</span></div>
+      <button id="open-feedback-form" type="button"><i class="fa-solid fa-plus"></i> New feedback</button>
+    </header>
+
+    <section class="feedback-summary" id="feedback-summary">
+      <article><i class="fa-regular fa-message"></i><span><strong id="feedback-total">0</strong><small>Your submissions</small></span></article>
+      <article><i class="fa-solid fa-spinner"></i><span><strong id="feedback-active">0</strong><small>Being reviewed</small></span></article>
+      <article><i class="fa-solid fa-check"></i><span><strong id="feedback-fixed">0</strong><small>Fixed or completed</small></span></article>
+    </section>
+
+    <section class="feedback-workspace">
+      <aside class="feedback-filters">
+        <strong>Filter</strong>
+        <button class="is-active" type="button" data-feedback-filter="all"><i class="fa-solid fa-inbox"></i> All feedback</button>
+        <button type="button" data-feedback-filter="bug"><i class="fa-solid fa-bug"></i> Bugs</button>
+        <button type="button" data-feedback-filter="feature"><i class="fa-regular fa-lightbulb"></i> Suggestions</button>
+        <button type="button" data-feedback-filter="proxy"><i class="fa-solid fa-globe"></i> Proxy issues</button>
+        <button type="button" data-feedback-filter="open"><i class="fa-solid fa-list-check"></i> Open</button>
+        <button type="button" data-feedback-filter="closed"><i class="fa-solid fa-circle-check"></i> Closed</button>
+      </aside>
+
+      <section class="feedback-panel">
+        <header><div><h2 id="feedback-list-title">Your feedback</h2><p>Open a submission to see updates and replies.</p></div><label><i class="fa-solid fa-magnifying-glass"></i><input id="feedback-search" type="search" placeholder="Search feedback" /></label></header>
+        <div id="feedback-list" class="feedback-list"><div class="feedback-loading"><span></span>Loading feedback…</div></div>
+      </section>
+    </section>
+
+    <section id="feedback-admin-section" class="feedback-admin-section" hidden>
+      <header><div><p>Management</p><h2>All user feedback</h2></div><span id="admin-feedback-count">0 reports</span></header>
+      <div id="admin-feedback-list" class="admin-feedback-list"></div>
+    </section>
+  </main>
+
+  <div id="feedback-modal-root"></div>
+  <div id="feedback-toast" class="feedback-toast" hidden></div>
+  <script src="/assets/js/m1.js?v=11" defer></script>
+  <script src="/assets/js/feedback.js?v=1" defer></script>
+  <script src="/assets/js/account-shell.js?v=2" defer></script>
+  <script src="/assets/js/site-control.js?v=2" defer></script>
+</body>
+</html>

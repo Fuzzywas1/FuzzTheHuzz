@@ -1,12 +1,16 @@
-FROM node:bookworm-slim
-ENV NODE_ENV=production
+FROM node:22-bookworm-slim
+
+ENV NODE_ENV=production \
+    PORT=8080
 
 WORKDIR /app
 
-COPY ["package.json", "./"]
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev && npm cache clean --force
 
-RUN npm install
+COPY --chown=node:node . .
 
-COPY . .
+USER node
+EXPOSE 8080
 
-CMD [ "node", "index.js" ]
+CMD ["node", "index.js"]
