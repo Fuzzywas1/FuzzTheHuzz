@@ -673,6 +673,93 @@ function importBrowserSettings(file) {
   });
 }
 
+
+function customizationSettingsMarkup() {
+  return `
+    <section class="account-section account-customization-settings" data-fuzz-customization>
+      <div class="account-settings-heading">
+        <div>
+          <span class="account-settings-kicker">Synced customization</span>
+          <h2>Personalization</h2>
+          <p>Wallpaper, sidebar, colors, spacing, and Home-page layout now live inside Settings.</p>
+        </div>
+        <div class="account-customization-actions">
+          <button id="reset-settings" class="account-button" type="button"><i class="fa-solid fa-arrow-rotate-left"></i>Reset customization</button>
+          <button id="save-settings" class="account-button primary" type="button"><i class="fa-solid fa-check"></i>Save customization</button>
+        </div>
+      </div>
+
+      <div id="settings-message" class="settings-message" hidden></div>
+
+      <div class="settings-layout">
+        <div class="settings-column">
+          <article class="settings-card wallpaper-card">
+            <header><div><i class="fa-regular fa-image"></i><span><strong>Wallpaper</strong><small>Upload a PNG, JPEG, or WebP, or paste an image URL.</small></span></div></header>
+            <div id="wallpaper-preview" class="wallpaper-preview"><span><i class="fa-regular fa-image"></i>No wallpaper selected</span></div>
+            <div class="wallpaper-actions">
+              <input id="wallpaper-file" type="file" accept="image/png,image/jpeg,image/webp" hidden />
+              <button id="choose-wallpaper" type="button"><i class="fa-solid fa-upload"></i> Upload image</button>
+              <button id="remove-wallpaper" type="button" class="danger"><i class="fa-regular fa-trash-can"></i> Remove</button>
+            </div>
+            <label class="settings-field full">
+              <span>External image URL</span>
+              <input id="wallpaper-url" type="url" placeholder="https://example.com/wallpaper.png" />
+            </label>
+            <div class="settings-grid three">
+              <label class="settings-field"><span>Fit</span><select id="wallpaper-fit"><option value="cover">Cover</option><option value="contain">Contain</option><option value="auto">Original size</option><option value="100% 100%">Stretch</option></select></label>
+              <label class="settings-field"><span>Position</span><select id="wallpaper-position"><option value="center">Center</option><option value="top">Top</option><option value="bottom">Bottom</option><option value="left">Left</option><option value="right">Right</option></select></label>
+              <label class="settings-field"><span>Blur <output id="wallpaper-blur-output">0px</output></span><input id="wallpaper-blur" type="range" min="0" max="18" step="1" value="0" /></label>
+            </div>
+            <label class="settings-field full"><span>Dark overlay <output id="wallpaper-overlay-output">42%</output></span><input id="wallpaper-overlay" type="range" min="0" max="85" step="1" value="42" /></label>
+          </article>
+
+          <article class="settings-card">
+            <header><div><i class="fa-solid fa-palette"></i><span><strong>Colors and surfaces</strong><small>Control the accent and glass appearance.</small></span></div></header>
+            <div class="settings-grid two">
+              <label class="settings-field color-field"><span>Accent color</span><input id="accent-color" type="color" value="#7c7cff" /></label>
+              <label class="settings-field"><span>Glass opacity <output id="surface-opacity-output">78%</output></span><input id="surface-opacity" type="range" min="35" max="96" step="1" value="78" /></label>
+              <label class="settings-field"><span>Corner radius <output id="border-radius-output">18px</output></span><input id="border-radius" type="range" min="8" max="30" step="1" value="18" /></label>
+              <label class="settings-field"><span>Font size <output id="font-scale-output">100%</output></span><input id="font-scale" type="range" min="85" max="125" step="5" value="100" /></label>
+            </div>
+          </article>
+        </div>
+
+        <div class="settings-column">
+          <article class="settings-card">
+            <header><div><i class="fa-solid fa-bars-staggered"></i><span><strong>Sidebar and layout</strong><small>Choose how the main Fuzz menu behaves.</small></span></div></header>
+            <div class="settings-choice-grid">
+              <label class="choice-card"><input type="radio" name="sidebar-mode" value="expanded" checked /><span><i class="fa-solid fa-rectangle-list"></i><strong>Expanded</strong><small>Icons and names</small></span></label>
+              <label class="choice-card"><input type="radio" name="sidebar-mode" value="collapsed" /><span><i class="fa-solid fa-grip-lines-vertical"></i><strong>Compact</strong><small>Icons only</small></span></label>
+            </div>
+            <div class="settings-grid two">
+              <label class="settings-field"><span>Page spacing</span><select id="density"><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select></label>
+              <label class="settings-field"><span>Default page</span><select id="default-page"><option value="/">Home</option><option value="/chat">Chat</option><option value="/ai">Fuzz AI</option><option value="/b">Apps</option><option value="/d">Tabs</option></select></label>
+            </div>
+            <label class="settings-toggle"><span><strong>Reduce motion</strong><small>Minimize animations and transitions.</small></span><input id="reduced-motion" type="checkbox" /><span class="toggle-track"></span></label>
+          </article>
+
+          <article class="settings-card">
+            <header><div><i class="fa-solid fa-house-chimney-window"></i><span><strong>Home page</strong><small>Choose what appears on your dashboard.</small></span></div></header>
+            <label class="settings-toggle"><span><strong>Show quick links</strong><small>AI, Apps, Tabs, and Settings cards.</small></span><input id="show-quick-links" type="checkbox" checked /><span class="toggle-track"></span></label>
+            <label class="settings-toggle"><span><strong>Show bookmarks</strong><small>Your synced and local bookmarks.</small></span><input id="show-bookmarks" type="checkbox" checked /><span class="toggle-track"></span></label>
+            <label class="settings-toggle"><span><strong>Show recent sites</strong><small>Recently opened proxy pages.</small></span><input id="show-recents" type="checkbox" checked /><span class="toggle-track"></span></label>
+          </article>
+
+          <article class="settings-card">
+            <header><div><i class="fa-solid fa-user-shield"></i><span><strong>Blocked users</strong><small>Manage people you blocked from direct messages.</small></span></div></header>
+            <div id="blocked-users-list" class="blocked-users-list"><div class="blocked-users-empty"><span></span>Loading blocked users…</div></div>
+          </article>
+
+          <article class="settings-card settings-info-card">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+            <div><strong>Synced to your Fuzz account</strong><p>These customization choices follow your account to another signed-in device. Your original account and browser settings remain above.</p></div>
+          </article>
+        </div>
+      </div>
+      <div id="settings-toast" class="settings-toast" hidden></div>
+    </section>`;
+}
+
 async function renderPreferences() {
   loading("Loading settings…");
   const payload = await request("/api/account/preferences");
@@ -776,6 +863,18 @@ async function renderPreferences() {
         <div class="account-toolbar account-settings-save-row"><span class="account-help">Some browser changes require a page reload before every part of the site updates.</span><button class="account-button primary" type="submit"><i class="fa-solid fa-floppy-disk"></i>Save browser settings</button></div>
       </form>
     </div>`;
+
+  content.insertAdjacentHTML("beforeend", customizationSettingsMarkup());
+  const customizationRoot = content.querySelector("[data-fuzz-customization]");
+  if (window.FuzzCustomization?.init) {
+    window.FuzzCustomization.init(customizationRoot);
+  } else {
+    window.addEventListener(
+      "fuzz:customization-ready",
+      () => window.FuzzCustomization?.init(customizationRoot),
+      { once: true },
+    );
+  }
 
   content.querySelector("#preferences-form")?.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -891,6 +990,7 @@ async function renderRoute() {
 
 document.querySelectorAll("[data-account-route]").forEach((button) => button.addEventListener("click", () => setRoute(button.dataset.accountRoute)));
 window.addEventListener("popstate", () => setRoute(window.location.hash.slice(1), false));
+window.addEventListener("hashchange", () => setRoute(window.location.hash.slice(1), false));
 request("/api/account/me")
   .then((account) => {
     statusChip.textContent = `${account.role || "user"} · Active`;

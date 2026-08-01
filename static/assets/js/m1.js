@@ -21,12 +21,14 @@
     {
       label: "Control",
       items: [
-        { href: "/c", match: ["/c", "/settings", "/settings.html"], label: "Settings", icon: "settings" },
+        { href: "/account#preferences", match: ["/c", "/settings", "/settings.html"], hashPath: "/account", hash: "#preferences", label: "Settings", icon: "settings" },
         { href: "/feedback", match: ["/feedback", "/feedback.html"], label: "Feedback", icon: "feedback" },
         { href: "/status", match: ["/status", "/status.html"], label: "Status", icon: "status" },
       ],
     },
   ];
+
+  let canAccessAdmin = false;
 
   const ICONS = Object.freeze({
     home: '<path d="M3.5 10.8 12 3.7l8.5 7.1"/><path d="M5.6 9.8v10.1h12.8V9.8"/><path d="M9.4 19.9v-6.2h5.2v6.2"/>',
@@ -170,7 +172,13 @@
 
   function isActive(item) {
     const path = normalizedPath();
-    return item.match.some((candidate) => normalizedPath(candidate) === path);
+    const pathMatch = item.match.some((candidate) => normalizedPath(candidate) === path);
+    const hashMatch = Boolean(
+      item.hashPath &&
+      normalizedPath(item.hashPath) === path &&
+      window.location.hash === item.hash,
+    );
+    return pathMatch || hashMatch;
   }
 
   async function fetchJson(url, options) {
@@ -304,8 +312,8 @@
       </section>`).join("");
 
     const path = normalizedPath();
-    const isAdmin = account.role === "owner" || account.role === "admin";
-    const adminLink = isAdmin
+    canAccessAdmin = account.role === "owner";
+    const adminLink = canAccessAdmin
       ? `<section class="fuzz-sidebar-group" aria-label="Management">
           <div class="fuzz-sidebar-section-label">Management</div>
           <a class="fuzz-sidebar-link${path.startsWith("/admin") ? " is-active" : ""}" href="/admin" data-tooltip="Admin" title="Admin" ${path.startsWith("/admin") ? 'aria-current="page"' : ""}>
@@ -536,7 +544,12 @@
   });
 
   document.addEventListener("keydown", (event) => {
-    if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === "o") {
+    if (
+      canAccessAdmin &&
+      event.ctrlKey &&
+      event.shiftKey &&
+      event.key.toLowerCase() === "o"
+    ) {
       event.preventDefault();
       window.location.href = "/admin";
     }

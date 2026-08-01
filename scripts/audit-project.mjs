@@ -263,7 +263,7 @@ const htmlHookChecks = [
   ["static/index.html", ["fv", "input", "home-bookmarks", "home-recents"]],
   ["static/chat.html", ["conversation-list", "message-list", "message-form", "message-input", "chat-reports-button"]],
   ["static/feedback.html", ["feedback-list", "open-feedback-form", "feedback-modal-root"]],
-  ["static/settings.html", ["wallpaper-file", "accent-color", "save-settings", "blocked-users-list"]],
+  ["static/assets/js/account.js", ["wallpaper-file", "accent-color", "save-settings", "blocked-users-list"]],
 ];
 
 for (const [file, ids] of htmlHookChecks) {

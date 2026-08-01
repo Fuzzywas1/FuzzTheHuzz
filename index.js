@@ -43,18 +43,18 @@ const CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
 const cache = new Map();
 
 const FUZZ_RELEASE = Object.freeze({
-  version: "6.1.0",
-  releasedAt: "2026-08-01T03:00:00.000Z",
+  version: "6.2.0",
+  releasedAt: "2026-08-01T03:45:00.000Z",
   summary:
-    "A complete sidebar repair, page-layout refresh, and rebuilt Fuzz AI workspace.",
+    "The original Settings experience is restored with advanced customization built into it.",
   items: [
-    "Rebuilt the universal sidebar with consistent inline SVG icons and reliable collapsed navigation.",
-    "Fixed sidebar spacing across Home, Apps, Account, Status, Tabs, Proxy, Chat, and Fuzz AI.",
-    "Added a cleaner grouped navigation structure, mobile drawer, notifications, account controls, and unread badges.",
-    "Reworked Fuzz AI with searchable saved conversations, prompt starters, status feedback, and stop generation.",
-    "Improved Fuzz AI saved-chat loading, image attachment history, rename, delete, and error handling.",
-    "Updated fixed browser and proxy views so they resize correctly when the sidebar expands or collapses.",
-    "Preserved Fuzz Chat, customization, feedback, Apps, Tabs, proxy engines, account, and admin features.",
+    "Moved the main Settings link back to My Account > Preferences.",
+    "Preserved the original synced account preferences, browser controls, privacy window, panic keys, tab cloak, effects, and import/export tools.",
+    "Added wallpaper uploads, custom colors, glass opacity, sidebar layout, font sizing, and Home-page controls inside the same Settings view.",
+    "Changed /c and /settings to open the unified Settings view instead of a separate customization-only page.",
+    "Made the Admin sidebar button owner-only so it matches the protected admin route.",
+    "Disabled the admin keyboard shortcut for non-owner accounts.",
+    "Fixed same-page Settings navigation so switching to the Preferences hash immediately updates the account view.",
   ],
 });
 

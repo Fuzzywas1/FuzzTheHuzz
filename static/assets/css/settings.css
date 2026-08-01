@@ -118,3 +118,51 @@ body.settings-page { min-height: 100vh; margin: 0; color: #f4f6ff; background: r
 .blocked-users-empty strong { color: #dce1f2; }
 .blocked-users-empty small { max-width: 280px; line-height: 1.45; }
 @keyframes blocked-users-spin { to { transform: rotate(360deg); } }
+
+
+/* Fuzz 6.2: customization integrated into My Account > Preferences */
+.account-customization-settings {
+  position: relative;
+  display: grid;
+  gap: 18px;
+  margin-top: 28px;
+  padding-top: 28px;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+.account-customization-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 9px;
+}
+.account-customization-settings .settings-layout {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.account-customization-settings .settings-card {
+  min-width: 0;
+  background: rgba(12, 17, 35, .72);
+}
+.account-customization-settings .settings-card:hover {
+  transform: none;
+}
+.account-customization-settings .settings-field input[type="url"],
+.account-customization-settings .settings-field select {
+  font: inherit;
+}
+.account-customization-settings .wallpaper-actions button {
+  width: auto;
+  margin: 0;
+}
+.account-customization-settings .settings-message {
+  margin: 0;
+}
+.account-customization-settings .settings-toast {
+  z-index: 13000;
+}
+@media (max-width: 1080px) {
+  .account-customization-settings .settings-layout { grid-template-columns: 1fr; }
+}
+@media (max-width: 720px) {
+  .account-customization-actions { width: 100%; justify-content: stretch; }
+  .account-customization-actions .account-button { flex: 1; justify-content: center; }
+}

@@ -4,105 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="referrer" content="no-referrer" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#050713" />
   <title>Settings</title>
   <link rel="shortcut icon" href="/favicon.png" />
-  <link rel="stylesheet" href="/assets/css/global.css?v=8" />
-  <link rel="stylesheet" href="/assets/css/nav.css?v=11" />
-  <link rel="stylesheet" href="/assets/css/settings.css?v=7" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-  <script src="/assets/js/fuzz-ui.js?v=1"></script>
-  <script src="/assets/js/fuzz-diagnostics.js?v=1"></script>
+  <meta http-equiv="refresh" content="0;url=/account#preferences" />
+  <script>window.location.replace("/account#preferences");</script>
 </head>
-<body class="settings-page">
-  <div class="f-nav"></div>
-
-  <main class="settings-main">
-    <header class="settings-hero">
-      <div>
-        <p class="settings-eyebrow">Make Fuzz yours</p>
-        <h1>Customization</h1>
-        <span>Change your wallpaper, colors, layout, spacing, and motion.</span>
-      </div>
-      <div class="settings-hero-actions">
-        <button id="reset-settings" type="button" class="secondary"><i class="fa-solid fa-arrow-rotate-left"></i> Reset</button>
-        <button id="save-settings" type="button" class="primary"><i class="fa-solid fa-check"></i> Save changes</button>
-      </div>
-    </header>
-
-    <div id="settings-message" class="settings-message" hidden></div>
-
-    <section class="settings-layout">
-      <div class="settings-column">
-        <article class="settings-card wallpaper-card">
-          <header><div><i class="fa-regular fa-image"></i><span><strong>Wallpaper</strong><small>Upload a PNG, JPEG, or WebP, or paste an image URL.</small></span></div></header>
-          <div id="wallpaper-preview" class="wallpaper-preview"><span><i class="fa-regular fa-image"></i>No wallpaper selected</span></div>
-          <div class="wallpaper-actions">
-            <input id="wallpaper-file" type="file" accept="image/png,image/jpeg,image/webp" hidden />
-            <button id="choose-wallpaper" type="button"><i class="fa-solid fa-upload"></i> Upload image</button>
-            <button id="remove-wallpaper" type="button" class="danger"><i class="fa-regular fa-trash-can"></i> Remove</button>
-          </div>
-          <label class="settings-field full">
-            <span>External image URL</span>
-            <input id="wallpaper-url" type="url" placeholder="https://example.com/wallpaper.png" />
-          </label>
-          <div class="settings-grid three">
-            <label class="settings-field"><span>Fit</span><select id="wallpaper-fit"><option value="cover">Cover</option><option value="contain">Contain</option><option value="auto">Original size</option><option value="100% 100%">Stretch</option></select></label>
-            <label class="settings-field"><span>Position</span><select id="wallpaper-position"><option value="center">Center</option><option value="top">Top</option><option value="bottom">Bottom</option><option value="left">Left</option><option value="right">Right</option></select></label>
-            <label class="settings-field"><span>Blur <output id="wallpaper-blur-output">0px</output></span><input id="wallpaper-blur" type="range" min="0" max="18" step="1" value="0" /></label>
-          </div>
-          <label class="settings-field full"><span>Dark overlay <output id="wallpaper-overlay-output">42%</output></span><input id="wallpaper-overlay" type="range" min="0" max="85" step="1" value="42" /></label>
-        </article>
-
-        <article class="settings-card">
-          <header><div><i class="fa-solid fa-palette"></i><span><strong>Colors and surfaces</strong><small>Control the accent and glass appearance.</small></span></div></header>
-          <div class="settings-grid two">
-            <label class="settings-field color-field"><span>Accent color</span><input id="accent-color" type="color" value="#7c7cff" /></label>
-            <label class="settings-field"><span>Glass opacity <output id="surface-opacity-output">78%</output></span><input id="surface-opacity" type="range" min="35" max="96" step="1" value="78" /></label>
-            <label class="settings-field"><span>Corner radius <output id="border-radius-output">18px</output></span><input id="border-radius" type="range" min="8" max="30" step="1" value="18" /></label>
-            <label class="settings-field"><span>Font size <output id="font-scale-output">100%</output></span><input id="font-scale" type="range" min="85" max="125" step="5" value="100" /></label>
-          </div>
-        </article>
-      </div>
-
-      <div class="settings-column">
-        <article class="settings-card">
-          <header><div><i class="fa-solid fa-bars-staggered"></i><span><strong>Sidebar and layout</strong><small>Choose how the main Fuzz menu behaves.</small></span></div></header>
-          <div class="settings-choice-grid">
-            <label class="choice-card"><input type="radio" name="sidebar-mode" value="expanded" checked /><span><i class="fa-solid fa-rectangle-list"></i><strong>Expanded</strong><small>Icons and names</small></span></label>
-            <label class="choice-card"><input type="radio" name="sidebar-mode" value="collapsed" /><span><i class="fa-solid fa-grip-lines-vertical"></i><strong>Compact</strong><small>Icons only</small></span></label>
-          </div>
-          <div class="settings-grid two">
-            <label class="settings-field"><span>Page spacing</span><select id="density"><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select></label>
-            <label class="settings-field"><span>Default page</span><select id="default-page"><option value="/">Home</option><option value="/chat">Chat</option><option value="/ai">Fuzz AI</option><option value="/b">Apps</option><option value="/d">Tabs</option></select></label>
-          </div>
-          <label class="settings-toggle"><span><strong>Reduce motion</strong><small>Minimize animations and transitions.</small></span><input id="reduced-motion" type="checkbox" /><span class="toggle-track"></span></label>
-        </article>
-
-        <article class="settings-card">
-          <header><div><i class="fa-solid fa-house-chimney-window"></i><span><strong>Home page</strong><small>Choose what appears on your dashboard.</small></span></div></header>
-          <label class="settings-toggle"><span><strong>Show quick links</strong><small>AI, Apps, Tabs, and Settings cards.</small></span><input id="show-quick-links" type="checkbox" checked /><span class="toggle-track"></span></label>
-          <label class="settings-toggle"><span><strong>Show bookmarks</strong><small>Your synced and local bookmarks.</small></span><input id="show-bookmarks" type="checkbox" checked /><span class="toggle-track"></span></label>
-          <label class="settings-toggle"><span><strong>Show recent sites</strong><small>Recently opened proxy pages.</small></span><input id="show-recents" type="checkbox" checked /><span class="toggle-track"></span></label>
-        </article>
-
-        <article class="settings-card">
-          <header><div><i class="fa-solid fa-user-shield"></i><span><strong>Blocked users</strong><small>Manage people you have blocked from direct messages.</small></span></div></header>
-          <div id="blocked-users-list" class="blocked-users-list"><div class="blocked-users-empty"><span></span>Loading blocked users…</div></div>
-        </article>
-
-        <article class="settings-card settings-info-card">
-          <i class="fa-solid fa-cloud-arrow-up"></i>
-          <div><strong>Synced to your Fuzz account</strong><p>Your appearance settings follow you to another device. The most recent wallpaper upload replaces your previous one.</p></div>
-        </article>
-      </div>
-    </section>
-  </main>
-
-  <div id="settings-toast" class="settings-toast" hidden></div>
-  <script src="/assets/js/m1.js?v=11" defer></script>
-  <script src="/assets/js/settings.js?v=6" defer></script>
-  <script src="/assets/js/account-shell.js?v=2" defer></script>
-  <script src="/assets/js/site-control.js?v=2" defer></script>
+<body>
+  <p>Opening Settings… <a href="/account#preferences">Continue</a></p>
 </body>
 </html>
