@@ -5,7 +5,7 @@ import {
   initRouter,
   navigate,
   renderCurrentRoute,
-} from "./router.js";
+} from "./router.js?v=2";
 import { showToast } from "./toast.js";
 import { initials, setButtonBusy } from "./utils.js";
 

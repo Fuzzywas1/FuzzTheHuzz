@@ -126,7 +126,7 @@ function resolveRoute() {
 function updateChrome(route) {
   const definition = routes[route.key];
 
-  document.title = `${definition.title} · Fuzz Control`;
+  document.title = "Home";
   document.getElementById("page-title").textContent = definition.title;
   document.getElementById("page-subtitle").textContent = definition.subtitle;
 
