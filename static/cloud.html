@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="referrer" content="no-referrer" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#050713" />
+
+  <link id="tab-favicon" rel="shortcut icon" href="/assets/media/favicon/classroom.png" />
+  <title>Home</title>
+
+  <link rel="stylesheet" href="/assets/css/global.css?v=7" />
+  <link rel="stylesheet" href="/assets/css/nav.css?v=13" />
+  <link rel="stylesheet" href="/assets/css/cloud.css?v=1" />
+  <link rel="stylesheet" href="/assets/css/fuzz-ui.css?v=1" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <script src="/assets/js/fuzz-ui.js?v=1"></script>
+  <script src="/assets/js/fuzz-diagnostics.js?v=1"></script>
+  <script src="/assets/js/m1.js?v=14" defer></script>
+  <script src="/assets/js/proxy-engine.js?v=4"></script>
+  <script src="/assets/js/cloud.js?v=1" defer></script>
+</head>
+
+<body class="fuzz-cloud-page">
+  <div class="cloud-backdrop" aria-hidden="true">
+    <span class="cloud-orb cloud-orb-one"></span>
+    <span class="cloud-orb cloud-orb-two"></span>
+    <span class="cloud-grid"></span>
+  </div>
+
+  <div class="f-nav"></div>
+
+  <main class="cloud-shell">
+    <header class="cloud-hero">
+      <div>
+        <p class="cloud-eyebrow"><span></span> Personal workspace</p>
+        <h1>Fuzz Cloud</h1>
+        <p>Open your Windows PC securely from any supported browser.</p>
+      </div>
+      <span class="cloud-security-pill">
+        <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+        Private connection
+      </span>
+    </header>
+
+    <section class="cloud-device-card" aria-labelledby="cloud-device-name">
+      <div class="cloud-device-visual" aria-hidden="true">
+        <div class="cloud-monitor">
+          <div class="cloud-monitor-top">
+            <span></span><span></span><span></span>
+          </div>
+          <div class="cloud-monitor-screen">
+            <div class="cloud-screen-glow"></div>
+            <span class="cloud-screen-logo">F</span>
+            <small>Cloud Desktop</small>
+          </div>
+        </div>
+        <div class="cloud-monitor-stand"></div>
+      </div>
+
+      <div class="cloud-device-content">
+        <div class="cloud-device-heading">
+          <span class="cloud-device-icon">
+            <i class="fa-solid fa-desktop" aria-hidden="true"></i>
+          </span>
+          <span>
+            <small>Your computer</small>
+            <strong id="cloud-device-name">Loading…</strong>
+          </span>
+        </div>
+
+        <div class="cloud-status-row" id="cloud-status" data-state="loading" aria-live="polite">
+          <span class="cloud-status-dot"></span>
+          <span>Checking Fuzz Cloud…</span>
+        </div>
+
+        <p class="cloud-device-description" id="cloud-description">
+          Your desktop launches in a focused MeshCentral view with the management panels hidden.
+        </p>
+
+        <button class="cloud-launch-button" id="cloud-launch" type="button" disabled>
+          <span class="cloud-launch-icon">
+            <i class="fa-solid fa-play" aria-hidden="true"></i>
+          </span>
+          <span class="cloud-launch-copy">
+            <strong>Launch Desktop</strong>
+            <small>Open your Windows session</small>
+          </span>
+          <i class="fa-solid fa-arrow-right cloud-launch-arrow" aria-hidden="true"></i>
+        </button>
+
+        <div class="cloud-launch-message" id="cloud-message" role="status"></div>
+
+        <footer class="cloud-device-footer">
+          <span><i class="fa-solid fa-lock" aria-hidden="true"></i> MeshCentral authentication is still required.</span>
+          <span><i class="fa-solid fa-up-right-from-square" aria-hidden="true"></i> Opens in this tab.</span>
+        </footer>
+      </div>
+    </section>
+
+    <section class="cloud-info-grid" aria-label="Fuzz Cloud details">
+      <article>
+        <span><i class="fa-solid fa-window-maximize" aria-hidden="true"></i></span>
+        <div><strong>Browser access</strong><small>No remote desktop app is required.</small></div>
+      </article>
+      <article>
+        <span><i class="fa-solid fa-display" aria-hidden="true"></i></span>
+        <div><strong>Desktop-first</strong><small>Launches directly into the computer view.</small></div>
+      </article>
+      <article>
+        <span><i class="fa-solid fa-user-lock" aria-hidden="true"></i></span>
+        <div><strong>Owner controlled</strong><small>Availability is managed from Fuzz Control.</small></div>
+      </article>
+    </section>
+  </main>
+
+  <script src="/assets/js/account-shell.js?v=1" defer></script>
+  <script src="/assets/js/site-control.js?v=3" defer></script>
+</body>
+</html>

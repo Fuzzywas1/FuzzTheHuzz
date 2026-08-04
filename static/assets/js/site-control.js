@@ -233,6 +233,7 @@
 
   function featureForPath(pathname) {
     if (["/ai", "/ai.html"].includes(pathname)) return "ai";
+    if (["/cloud", "/cloud.html"].includes(pathname)) return "cloud";
     if (["/b", "/apps.html"].includes(pathname)) return "apps";
     if (["/a", "/games.html", "/play.html"].includes(pathname)) return "games";
     if (["/signup", "/signup.html"].includes(pathname)) return "registrations";

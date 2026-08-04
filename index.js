@@ -197,6 +197,7 @@ const APPLICATION_PAGE_PATHS = new Set([
   "/c",
   "/settings",
   "/ai",
+  "/cloud",
   "/chat",
   "/feedback",
   "/account",
@@ -213,6 +214,7 @@ const APPLICATION_PAGE_PATHS = new Set([
   "/games.html",
   "/settings.html",
   "/ai.html",
+  "/cloud.html",
   "/chat.html",
   "/feedback.html",
   "/account.html",
@@ -976,6 +978,18 @@ const DEFAULT_PLATFORM_SETTINGS = Object.freeze({
   games_enabled: true,
   registrations_enabled: true,
   image_uploads_enabled: true,
+  cloud_enabled: true,
+  cloud_owner_only: true,
+  cloud_name: String(process.env.FUZZ_CLOUD_NAME || "Gaming PC").trim() || "Gaming PC",
+  cloud_base_url: String(
+    process.env.FUZZ_CLOUD_BASE_URL ||
+      "https://cloud.fuzzthehuzz-ebsfiygfhsvfbfesg.com",
+  ).trim(),
+  cloud_node_id: String(
+    process.env.FUZZ_CLOUD_NODE_ID ||
+      "xYI8iExEHKURSJLbwLqMCfIqrVVO4mIFWvJ82@K$w2jpCUac92kJtgFgoxFsHBo1",
+  ).trim(),
+  cloud_hide_ui: true,
   updated_by: null,
   updated_at: null,
 });
@@ -1004,7 +1018,92 @@ function normalizePlatformSettings(row = {}) {
       row.registrations_enabled !== false,
     image_uploads_enabled:
       row.image_uploads_enabled !== false,
+    cloud_enabled:
+      row.cloud_enabled !== false,
+    cloud_owner_only:
+      row.cloud_owner_only !== false,
+    cloud_name:
+      String(
+        row.cloud_name ||
+          DEFAULT_PLATFORM_SETTINGS.cloud_name,
+      )
+        .trim()
+        .slice(0, 80) ||
+      DEFAULT_PLATFORM_SETTINGS.cloud_name,
+    cloud_base_url:
+      normalizeCloudBaseUrl(
+        row.cloud_base_url ||
+          DEFAULT_PLATFORM_SETTINGS.cloud_base_url,
+      ) ||
+      DEFAULT_PLATFORM_SETTINGS.cloud_base_url,
+    cloud_node_id:
+      String(
+        row.cloud_node_id ||
+          DEFAULT_PLATFORM_SETTINGS.cloud_node_id,
+      )
+        .trim()
+        .slice(0, 512),
+    cloud_hide_ui:
+      row.cloud_hide_ui !== false,
   };
+}
+
+function normalizeCloudBaseUrl(value) {
+  const candidate = String(value || "").trim();
+
+  if (!candidate) {
+    return "";
+  }
+
+  try {
+    const url = new URL(candidate);
+
+    if (url.protocol !== "https:") {
+      return "";
+    }
+
+    url.search = "";
+    url.hash = "";
+    url.pathname = url.pathname.replace(/\/+$/, "") || "/";
+
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    return "";
+  }
+}
+
+function canAccessCloud(settings, profile) {
+  if (!settings?.cloud_enabled) {
+    return false;
+  }
+
+  return (
+    settings.cloud_owner_only !== true ||
+    profile?.role === "owner"
+  );
+}
+
+function buildCloudLaunchUrl(settings) {
+  const baseUrl = normalizeCloudBaseUrl(
+    settings?.cloud_base_url,
+  );
+  const nodeId = String(
+    settings?.cloud_node_id || "",
+  ).trim();
+
+  if (!baseUrl || !nodeId) {
+    return "";
+  }
+
+  const url = new URL(baseUrl);
+  url.searchParams.set("viewmode", "11");
+  url.searchParams.set("gotonode", nodeId);
+
+  if (settings.cloud_hide_ui !== false) {
+    url.searchParams.set("hide", "63");
+  }
+
+  return url.toString();
 }
 
 function setPlatformSettingsCache(value) {
@@ -1103,6 +1202,20 @@ function serializePlatformSettings(
       settings.registrations_enabled,
     imageUploadsEnabled:
       settings.image_uploads_enabled,
+    cloudEnabled:
+      settings.cloud_enabled,
+    cloudOwnerOnly:
+      settings.cloud_owner_only,
+    cloudName:
+      settings.cloud_name,
+    cloudBaseUrl:
+      settings.cloud_base_url,
+    cloudNodeId:
+      settings.cloud_node_id,
+    cloudHideUi:
+      settings.cloud_hide_ui,
+    cloudConfigured:
+      Boolean(buildCloudLaunchUrl(settings)),
     updatedBy: settings.updated_by,
     updatedByUsername:
       options.updatedByUsername || null,
@@ -1304,10 +1417,80 @@ app.get(
           settings.registrations_enabled,
         imageUploads:
           settings.image_uploads_enabled,
+        cloud:
+          settings.cloud_enabled,
+      },
+      cloud: {
+        name: settings.cloud_name,
+        ownerOnly:
+          settings.cloud_owner_only,
+        allowed:
+          canAccessCloud(
+            settings,
+            auth?.profile,
+          ),
+        configured:
+          Boolean(
+            buildCloudLaunchUrl(settings),
+          ),
       },
       role: auth?.profile?.role || null,
       serverTime:
         new Date().toISOString(),
+    });
+  },
+);
+
+app.get(
+  "/api/cloud/config",
+  requireApiAuth,
+  async (req, res) => {
+    const settings =
+      await getPlatformSettings();
+
+    res.setHeader(
+      "Cache-Control",
+      "no-store, max-age=0",
+    );
+
+    if (!settings.cloud_enabled) {
+      return featureUnavailableResponse(
+        res,
+        "Fuzz Cloud",
+      );
+    }
+
+    if (
+      !canAccessCloud(
+        settings,
+        req.auth.profile,
+      )
+    ) {
+      return res.status(403).json({
+        error:
+          "Fuzz Cloud is currently limited to the site owner.",
+      });
+    }
+
+    const launchUrl =
+      buildCloudLaunchUrl(settings);
+
+    if (!launchUrl) {
+      return res.status(503).json({
+        error:
+          "Fuzz Cloud has not been fully configured yet.",
+        configurationRequired: true,
+      });
+    }
+
+    return res.json({
+      enabled: true,
+      name: settings.cloud_name,
+      launchUrl,
+      baseUrl: settings.cloud_base_url,
+      directDesktop: true,
+      interfaceHidden:
+        settings.cloud_hide_ui !== false,
     });
   },
 );
@@ -1467,6 +1650,12 @@ app.use(async (req, res, next) => {
           "/play.html",
         ].includes(req.path) &&
         "games") ||
+      (!settings.cloud_enabled &&
+        [
+          "/cloud",
+          "/cloud.html",
+        ].includes(req.path) &&
+        "cloud") ||
       (!settings.registrations_enabled &&
         [
           "/signup",
@@ -1646,6 +1835,46 @@ app.patch(
         parsed.toISOString();
     }
 
+    const cloudName = String(
+      req.body.cloudName ??
+        current.cloud_name,
+    )
+      .trim()
+      .slice(0, 80) ||
+      DEFAULT_PLATFORM_SETTINGS.cloud_name;
+
+    const cloudBaseUrl =
+      normalizeCloudBaseUrl(
+        req.body.cloudBaseUrl ??
+          current.cloud_base_url,
+      );
+
+    if (!cloudBaseUrl) {
+      return res.status(400).json({
+        error:
+          "Enter a valid HTTPS URL for the MeshCentral server.",
+      });
+    }
+
+    const cloudNodeId = String(
+      req.body.cloudNodeId ??
+        current.cloud_node_id,
+    )
+      .trim()
+      .slice(0, 512);
+
+    const cloudEnabled =
+      req.body.cloudEnabled === undefined
+        ? current.cloud_enabled
+        : req.body.cloudEnabled === true;
+
+    if (cloudEnabled && !cloudNodeId) {
+      return res.status(400).json({
+        error:
+          "Enter the MeshCentral node ID before enabling Fuzz Cloud.",
+      });
+    }
+
     const nextSettings = {
       id: 1,
       maintenance_enabled:
@@ -1696,6 +1925,25 @@ app.patch(
           ? current.image_uploads_enabled
           : req.body.imageUploadsEnabled ===
             true,
+      cloud_enabled:
+        cloudEnabled,
+      cloud_owner_only:
+        req.body.cloudOwnerOnly ===
+        undefined
+          ? current.cloud_owner_only
+          : req.body.cloudOwnerOnly !==
+            false,
+      cloud_name:
+        cloudName,
+      cloud_base_url:
+        cloudBaseUrl,
+      cloud_node_id:
+        cloudNodeId,
+      cloud_hide_ui:
+        req.body.cloudHideUi ===
+        undefined
+          ? current.cloud_hide_ui
+          : req.body.cloudHideUi !== false,
       updated_by: req.auth.user.id,
       updated_at:
         new Date().toISOString(),
@@ -14848,6 +15096,40 @@ app.patch("/api/admin/feedback/:feedbackId", requireRole("moderator"), async (re
 });
 
 
+async function requireCloudAccess(
+  req,
+  res,
+  next,
+) {
+  try {
+    const settings =
+      await getPlatformSettings();
+
+    if (
+      !canAccessCloud(
+        settings,
+        req.auth?.profile,
+      ) ||
+      !buildCloudLaunchUrl(settings)
+    ) {
+      return res.redirect(
+        "/feature-unavailable?feature=cloud",
+      );
+    }
+
+    return next();
+  } catch (error) {
+    console.error(
+      "Fuzz Cloud access check failed:",
+      error,
+    );
+
+    return res.redirect(
+      "/feature-unavailable?feature=cloud",
+    );
+  }
+}
+
 /* =======================================================
    STATIC FILES
 
@@ -14879,6 +15161,19 @@ app.use((req, res, next) => {
       req,
       res,
       next,
+    );
+  }
+
+  if (req.path === "/cloud.html") {
+    return requirePageAuth(
+      req,
+      res,
+      () =>
+        requireCloudAccess(
+          req,
+          res,
+          next,
+        ),
     );
   }
 
@@ -15060,6 +15355,21 @@ const protectedRoutes = [
     file: "status.html",
   },
 ];
+
+app.get(
+  "/cloud",
+  requirePageAuth,
+  requireCloudAccess,
+  (_req, res) => {
+    return res.sendFile(
+      path.join(
+        __dirname,
+        "static",
+        "cloud.html",
+      ),
+    );
+  },
+);
 
 app.get(
   "/admin",

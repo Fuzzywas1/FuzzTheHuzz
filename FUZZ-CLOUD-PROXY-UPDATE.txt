@@ -1,0 +1,6 @@
+FUZZ CLOUD PROXY UPDATE
+
+- Fuzz Cloud Launch Desktop now opens through the existing Fuzz proxy page.
+- Uses the currently selected proxy engine, defaulting to Scramjet.
+- Admin > Settings > Test current launch now also opens through Fuzz Proxy.
+- No unrelated pages, features, styles, routes, or settings were changed.

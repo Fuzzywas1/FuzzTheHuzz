@@ -8,6 +8,7 @@
         { href: "/", match: ["/", "/index.html"], label: "Home", icon: "home" },
         { href: "/chat", match: ["/chat", "/chat.html"], label: "Chat", icon: "chat", badge: "chat" },
         { href: "/ai", match: ["/ai", "/ai.html"], label: "Fuzz AI", icon: "sparkles" },
+        { href: "/cloud", match: ["/cloud", "/cloud.html"], label: "Fuzz Cloud", icon: "desktop", feature: "cloud" },
       ],
     },
     {
@@ -29,6 +30,7 @@
   ];
 
   let canAccessAdmin = false;
+  let platformConfig = {};
 
   const ICONS = Object.freeze({
     home: '<path d="M3.5 10.8 12 3.7l8.5 7.1"/><path d="M5.6 9.8v10.1h12.8V9.8"/><path d="M9.4 19.9v-6.2h5.2v6.2"/>',
@@ -37,6 +39,7 @@
     apps: '<rect x="3.5" y="3.5" width="6.5" height="6.5" rx="1.5"/><rect x="14" y="3.5" width="6.5" height="6.5" rx="1.5"/><rect x="3.5" y="14" width="6.5" height="6.5" rx="1.5"/><rect x="14" y="14" width="6.5" height="6.5" rx="1.5"/>',
     tabs: '<rect x="3.5" y="5.2" width="17" height="13.6" rx="2.3"/><path d="M3.7 9.2h16.6"/><path d="M7 7.2h.1M10 7.2h.1"/>',
     globe: '<circle cx="12" cy="12" r="8.8"/><path d="M3.5 12h17M12 3.2c2.2 2.4 3.3 5.3 3.3 8.8S14.2 18.4 12 20.8M12 3.2C9.8 5.6 8.7 8.5 8.7 12s1.1 6.4 3.3 8.8"/>',
+    desktop: '<rect x="3.2" y="4.2" width="17.6" height="12.2" rx="2.2"/><path d="M8.5 20h7M12 16.4V20"/>',
     settings: '<circle cx="12" cy="12" r="3.1"/><path d="M19.1 13.7a7.8 7.8 0 0 0 .1-3.4l2-1.5-2-3.4-2.5 1a8 8 0 0 0-2.9-1.7L13.5 2h-4l-.4 2.7a8 8 0 0 0-2.9 1.7l-2.5-1-2 3.4 2 1.5a7.8 7.8 0 0 0 .1 3.4l-2.1 1.5 2 3.4 2.5-1a8 8 0 0 0 2.9 1.7l.4 2.7h4l.4-2.7a8 8 0 0 0 2.9-1.7l2.5 1 2-3.4-2.2-1.5Z"/>',
     feedback: '<path d="M4 4.8h16v11.1H9l-5 4V4.8Z"/><path d="M8 9h8M8 12.5h5"/>',
     status: '<path d="M4 18.5h2.7V14H4v4.5ZM10.7 18.5h2.7V9.4h-2.7v9.1ZM17.3 18.5H20V4.8h-2.7v13.7Z"/>',
@@ -414,6 +417,21 @@
     }, { once: true });
   }
 
+  function isRouteVisible(item, account = {}) {
+    if (item.feature !== "cloud") {
+      return true;
+    }
+
+    if (platformConfig.features?.cloud === false) {
+      return false;
+    }
+
+    return (
+      platformConfig.cloud?.configured === true &&
+      platformConfig.cloud?.allowed === true
+    );
+  }
+
   function renderShell(container, account = {}) {
     let savedMode = "expanded";
     try {
@@ -427,11 +445,21 @@
     document.body.classList.remove("fuzz-shell-overlay");
     document.body.classList.toggle("fuzz-sidebar-collapsed", collapsed);
 
-    const groupedLinks = ROUTE_GROUPS.map((group) => `
-      <section class="fuzz-sidebar-group" aria-label="${escapeHtml(group.label)}">
-        <div class="fuzz-sidebar-section-label">${escapeHtml(group.label)}</div>
-        ${group.items.map(renderRoute).join("")}
-      </section>`).join("");
+    const groupedLinks = ROUTE_GROUPS.map((group) => {
+      const visibleItems = group.items.filter((item) =>
+        isRouteVisible(item, account),
+      );
+
+      if (visibleItems.length === 0) {
+        return "";
+      }
+
+      return `
+        <section class="fuzz-sidebar-group" aria-label="${escapeHtml(group.label)}">
+          <div class="fuzz-sidebar-section-label">${escapeHtml(group.label)}</div>
+          ${visibleItems.map(renderRoute).join("")}
+        </section>`;
+    }).join("");
 
     const path = normalizedPath();
     canAccessAdmin = account.role === "owner";
@@ -667,9 +695,16 @@
     }
 
     let account = {};
-    try {
-      account = await fetchJson("/api/account/me");
-    } catch {}
+
+    await Promise.all([
+      fetchJson("/api/account/me")
+        .then((value) => { account = value || {}; })
+        .catch(() => {}),
+      fetchJson("/api/platform/config")
+        .then((value) => { platformConfig = value || {}; })
+        .catch(() => {}),
+    ]);
+
     renderShell(nav, account);
 
     try {

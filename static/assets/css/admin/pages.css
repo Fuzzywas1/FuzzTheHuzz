@@ -1454,3 +1454,63 @@
   }
 }
 
+
+
+/* Fuzz Cloud settings ------------------------------------------------------ */
+.cloud-admin-summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 13px;
+  margin-bottom: 18px;
+  padding: 14px;
+  border: 1px solid rgba(133, 145, 255, 0.18);
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(104, 95, 255, 0.1), rgba(52, 211, 255, 0.045));
+}
+
+.cloud-admin-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgba(130, 141, 255, 0.25);
+  border-radius: 13px;
+  color: #d7dcff;
+  background: rgba(112, 103, 255, 0.13);
+  font-size: 18px;
+}
+
+.cloud-admin-summary > span:nth-child(2) {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cloud-admin-summary strong { color: #f6f7ff; }
+.cloud-admin-summary small { color: #8f9ab6; line-height: 1.45; }
+.cloud-node-field { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+
+.cloud-admin-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 16px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.cloud-admin-actions span {
+  color: #818ca9;
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: right;
+}
+
+@media (max-width: 760px) {
+  .cloud-admin-summary { grid-template-columns: auto minmax(0, 1fr); }
+  .cloud-admin-summary > .badge { grid-column: 1 / -1; justify-self: start; }
+  .cloud-admin-actions { align-items: stretch; flex-direction: column; }
+  .cloud-admin-actions span { text-align: left; }
+}

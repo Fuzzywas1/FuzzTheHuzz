@@ -239,9 +239,113 @@ function paint(container, systemPayload, platformPayload) {
                 "▧",
                 settings.imageUploadsEnabled !== false,
               )}
+              ${featureToggle(
+                "cloud-enabled",
+                "Fuzz Cloud",
+                "Your private browser-based Windows desktop launcher.",
+                "▣",
+                settings.cloudEnabled !== false,
+              )}
             </div>
           `,
         })}
+
+        <div style="height:14px"></div>
+
+        ${panel({
+          title: "Fuzz Cloud",
+          subtitle: "Configure the private MeshCentral desktop opened by the Cloud page",
+          body: `
+            <div class="cloud-admin-summary">
+              <span class="cloud-admin-icon">▣</span>
+              <span>
+                <strong>${escapeHtml(settings.cloudName || "Gaming PC")}</strong>
+                <small>
+                  ${
+                    settings.cloudConfigured
+                      ? "Direct desktop launch is configured."
+                      : "Add a valid server URL and node ID to finish setup."
+                  }
+                </small>
+              </span>
+              <span class="badge ${settings.cloudConfigured ? "badge-success" : "badge-warning"}">
+                ${settings.cloudConfigured ? "Ready" : "Needs setup"}
+              </span>
+            </div>
+
+            <div class="form-grid settings-form-grid cloud-settings-grid">
+              <label class="field-group">
+                <span>Computer name</span>
+                <input
+                  class="field"
+                  id="cloud-name"
+                  type="text"
+                  maxlength="80"
+                  value="${escapeHtml(settings.cloudName || "Gaming PC")}"
+                  placeholder="Gaming PC"
+                />
+              </label>
+
+              <label class="field-group field-span-two">
+                <span>MeshCentral server URL</span>
+                <input
+                  class="field"
+                  id="cloud-base-url"
+                  type="url"
+                  maxlength="500"
+                  value="${escapeHtml(settings.cloudBaseUrl || "")}"
+                  placeholder="https://cloud.example.com"
+                  spellcheck="false"
+                />
+                <small>Use the permanent Cloudflare Tunnel hostname without a query string.</small>
+              </label>
+
+              <label class="field-group field-span-two">
+                <span>MeshCentral node ID</span>
+                <input
+                  class="field cloud-node-field"
+                  id="cloud-node-id"
+                  type="password"
+                  maxlength="512"
+                  value="${escapeHtml(settings.cloudNodeId || "")}"
+                  placeholder="Paste the value after gotonode="
+                  autocomplete="off"
+                  spellcheck="false"
+                />
+                <small>The node ID targets your computer. It is kept on the server and is not placed in the static Cloud page.</small>
+              </label>
+
+              <div class="field-group">
+                <span>Access</span>
+                ${toggleSetting(
+                  "cloud-owner-only",
+                  "Owner only",
+                  "Hide and block Fuzz Cloud for every non-owner account.",
+                  settings.cloudOwnerOnly !== false,
+                )}
+              </div>
+
+              <div class="field-group">
+                <span>Launch view</span>
+                ${toggleSetting(
+                  "cloud-hide-ui",
+                  "Desktop-only view",
+                  "Hide MeshCentral navigation and open the remote desktop page directly.",
+                  settings.cloudHideUi !== false,
+                )}
+              </div>
+            </div>
+
+            <div class="cloud-admin-actions">
+              <button class="button button-secondary" id="test-cloud-button" type="button">
+                Test current launch
+              </button>
+              <span>Saving these settings updates the Fuzz Cloud page and sidebar access.</span>
+            </div>
+          `,
+        })}
+
+        <div style="height:14px"></div>
 
         <div class="settings-save-bar">
           <div>
@@ -297,6 +401,7 @@ function paint(container, systemPayload, platformPayload) {
   `;
 
   bindPlatformForm(container);
+  bindCloudTestButton(container);
   bindCacheButton(container);
 }
 
@@ -324,10 +429,29 @@ function bindPlatformForm(container) {
       gamesEnabled: container.querySelector("#games-enabled").checked,
       registrationsEnabled: container.querySelector("#registrations-enabled").checked,
       imageUploadsEnabled: container.querySelector("#image-uploads-enabled").checked,
+      cloudEnabled: container.querySelector("#cloud-enabled").checked,
+      cloudOwnerOnly: container.querySelector("#cloud-owner-only").checked,
+      cloudName: container.querySelector("#cloud-name").value.trim(),
+      cloudBaseUrl: container.querySelector("#cloud-base-url").value.trim(),
+      cloudNodeId: container.querySelector("#cloud-node-id").value.trim(),
+      cloudHideUi: container.querySelector("#cloud-hide-ui").checked,
     };
 
     if (payload.maintenanceEnabled && !payload.maintenanceMessage) {
       showToast("Add a maintenance message before enabling maintenance mode.", "error");
+      return;
+    }
+
+    if (payload.cloudEnabled && (!payload.cloudBaseUrl || !payload.cloudNodeId)) {
+      showToast("Add the MeshCentral server URL and node ID before enabling Fuzz Cloud.", "error");
+      return;
+    }
+
+    try {
+      const cloudUrl = new URL(payload.cloudBaseUrl);
+      if (cloudUrl.protocol !== "https:") throw new Error();
+    } catch {
+      showToast("Fuzz Cloud requires a valid HTTPS MeshCentral URL.", "error");
       return;
     }
 
@@ -340,6 +464,37 @@ function bindPlatformForm(container) {
     } catch (error) {
       showToast(error.message, "error");
       setButtonBusy(button, false);
+    }
+  });
+}
+
+function bindCloudTestButton(container) {
+  const button = container.querySelector("#test-cloud-button");
+
+  button?.addEventListener("click", () => {
+    const baseUrl = container.querySelector("#cloud-base-url")?.value.trim();
+    const nodeId = container.querySelector("#cloud-node-id")?.value.trim();
+    const hideUi = container.querySelector("#cloud-hide-ui")?.checked !== false;
+
+    if (!baseUrl || !nodeId) {
+      showToast("Add the MeshCentral server URL and node ID first.", "error");
+      return;
+    }
+
+    try {
+      const url = new URL(baseUrl);
+      if (url.protocol !== "https:") throw new Error();
+      url.searchParams.set("viewmode", "11");
+      url.searchParams.set("gotonode", nodeId);
+      if (hideUi) url.searchParams.set("hide", "63");
+      sessionStorage.setItem("GoUrlRaw", url.toString());
+      sessionStorage.setItem(
+        "GoProxyEngine",
+        window.FuzzProxy?.getEngine?.() || "scramjet",
+      );
+      window.location.assign("/proxy");
+    } catch {
+      showToast("Enter a valid HTTPS MeshCentral URL.", "error");
     }
   });
 }

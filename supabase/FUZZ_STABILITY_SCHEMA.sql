@@ -235,6 +235,12 @@ create table if not exists public.platform_settings (
   games_enabled boolean not null default true,
   registrations_enabled boolean not null default true,
   image_uploads_enabled boolean not null default true,
+  cloud_enabled boolean not null default true,
+  cloud_owner_only boolean not null default true,
+  cloud_name text not null default 'Gaming PC',
+  cloud_base_url text not null default 'https://cloud.fuzzthehuzz-ebsfiygfhsvfbfesg.com',
+  cloud_node_id text not null default 'xYI8iExEHKURSJLbwLqMCfIqrVVO4mIFWvJ82@K$w2jpCUac92kJtgFgoxFsHBo1',
+  cloud_hide_ui boolean not null default true,
   updated_by uuid,
   updated_at timestamptz not null default now()
 );
@@ -251,6 +257,12 @@ alter table public.platform_settings add column if not exists apps_enabled boole
 alter table public.platform_settings add column if not exists games_enabled boolean not null default true;
 alter table public.platform_settings add column if not exists registrations_enabled boolean not null default true;
 alter table public.platform_settings add column if not exists image_uploads_enabled boolean not null default true;
+alter table public.platform_settings add column if not exists cloud_enabled boolean not null default true;
+alter table public.platform_settings add column if not exists cloud_owner_only boolean not null default true;
+alter table public.platform_settings add column if not exists cloud_name text not null default 'Gaming PC';
+alter table public.platform_settings add column if not exists cloud_base_url text not null default 'https://cloud.fuzzthehuzz-ebsfiygfhsvfbfesg.com';
+alter table public.platform_settings add column if not exists cloud_node_id text not null default 'xYI8iExEHKURSJLbwLqMCfIqrVVO4mIFWvJ82@K$w2jpCUac92kJtgFgoxFsHBo1';
+alter table public.platform_settings add column if not exists cloud_hide_ui boolean not null default true;
 alter table public.platform_settings add column if not exists updated_by uuid;
 alter table public.platform_settings add column if not exists updated_at timestamptz not null default now();
 

@@ -61,6 +61,7 @@ const requiredFiles = [
   "static/apps.html",
   "static/tabs.html",
   "static/ai.html",
+  "static/cloud.html",
   "static/chat.html",
   "static/feedback.html",
   "static/settings.html",
@@ -70,6 +71,7 @@ const requiredFiles = [
   "static/scramjet-sw.js",
   "static/assets/js/login.js",
   "static/assets/js/ai.js",
+  "static/assets/js/cloud.js",
   "static/assets/js/chat.js",
   "static/assets/js/feedback.js",
   "static/assets/js/settings.js",
@@ -77,6 +79,7 @@ const requiredFiles = [
   "static/assets/js/c1.js",
   "static/assets/js/t3.js",
   "supabase/FUZZ_STABILITY_SCHEMA.sql",
+  "supabase/FUZZ_CLOUD_SCHEMA.sql",
   "supabase/FUZZ_6_COMMUNITY_SCHEMA.sql",
 ];
 
@@ -122,6 +125,7 @@ const routeOnlyPaths = new Set([
   "/d",
   "/p",
   "/ai",
+  "/cloud",
   "/chat",
   "/feedback",
   "/account",
@@ -237,6 +241,7 @@ const requiredServerMarkers = [
   'app.post("/api/auth/signup"',
   '"/api/ai/chats"',
   '"/api/ai/chat"',
+  '"/api/cloud/config"',
   '"/api/apps/state"',
   '"/api/bookmarks"',
   '"fuzz_consume_usage"',
@@ -259,6 +264,7 @@ for (const marker of requiredServerMarkers) {
 const htmlHookChecks = [
   ["static/login.html", ["login-form", "email", "password", "login-button", "auth-message"]],
   ["static/ai.html", ["chat-form", "chat-input", "new-chat-button", "chat-list", "chat-messages"]],
+  ["static/cloud.html", ["cloud-device-name", "cloud-status", "cloud-launch", "cloud-message"]],
   ["static/apps.html", ["app-search", "app-sort", "all-apps", "app-modal-root"]],
   ["static/index.html", ["fv", "input", "home-bookmarks", "home-recents"]],
   ["static/chat.html", ["conversation-list", "message-list", "message-form", "message-input", "chat-reports-button"]],
