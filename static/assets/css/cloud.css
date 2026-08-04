@@ -262,3 +262,6 @@ body.fuzz-cloud-page {
   .cloud-launch-button { transition:none; }
   .cloud-launch-button.is-launching .cloud-launch-icon i { animation:none; }
 }
+
+
+.cloud-secondary-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px}.cloud-secondary-actions>span{display:inline-flex;align-items:center;gap:6px;color:#78839f;font-size:10px;line-height:1.4;text-align:right}.cloud-secondary-button{display:inline-flex;min-height:38px;align-items:center;justify-content:center;gap:8px;padding:0 13px;border:1px solid rgba(148,161,229,.18);border-radius:11px;color:#cbd2e9;background:rgba(255,255,255,.035);font-size:11px;font-weight:800;cursor:pointer;transition:background .18s ease,border-color .18s ease}.cloud-secondary-button:hover:not(:disabled){border-color:rgba(var(--fuzz-accent-rgb,124,124,255),.42);background:rgba(var(--fuzz-accent-rgb,124,124,255),.1)}.cloud-secondary-button:disabled{opacity:.45;cursor:not-allowed}@media(max-width:680px){.cloud-secondary-actions{align-items:stretch;flex-direction:column}.cloud-secondary-actions>span{text-align:left}}

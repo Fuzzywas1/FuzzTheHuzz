@@ -254,7 +254,7 @@ function paint(container, systemPayload, platformPayload) {
 
         ${panel({
           title: "Fuzz Cloud",
-          subtitle: "Configure the private MeshCentral desktop opened by the Cloud page",
+          subtitle: "Configure the private Apache Guacamole gateway opened by the Cloud page",
           body: `
             <div class="cloud-admin-summary">
               <span class="cloud-admin-icon">▣</span>
@@ -263,8 +263,8 @@ function paint(container, systemPayload, platformPayload) {
                 <small>
                   ${
                     settings.cloudConfigured
-                      ? "Direct desktop launch is configured."
-                      : "Add a valid server URL and node ID to finish setup."
+                      ? "Guacamole launch is configured."
+                      : "Add a valid Guacamole URL to finish setup."
                   }
                 </small>
               </span>
@@ -287,32 +287,17 @@ function paint(container, systemPayload, platformPayload) {
               </label>
 
               <label class="field-group field-span-two">
-                <span>MeshCentral server URL</span>
+                <span>Guacamole gateway URL</span>
                 <input
                   class="field"
                   id="cloud-base-url"
                   type="url"
                   maxlength="500"
                   value="${escapeHtml(settings.cloudBaseUrl || "")}"
-                  placeholder="https://cloud.example.com"
+                  placeholder="https://guac.example.com"
                   spellcheck="false"
                 />
-                <small>Use the permanent Cloudflare Tunnel hostname without a query string.</small>
-              </label>
-
-              <label class="field-group field-span-two">
-                <span>MeshCentral node ID</span>
-                <input
-                  class="field cloud-node-field"
-                  id="cloud-node-id"
-                  type="password"
-                  maxlength="512"
-                  value="${escapeHtml(settings.cloudNodeId || "")}"
-                  placeholder="Paste the value after gotonode="
-                  autocomplete="off"
-                  spellcheck="false"
-                />
-                <small>The node ID targets your computer. It is kept on the server and is not placed in the static Cloud page.</small>
+                <small>Use the permanent Cloudflare Tunnel hostname for Apache Guacamole.</small>
               </label>
 
               <div class="field-group">
@@ -329,8 +314,8 @@ function paint(container, systemPayload, platformPayload) {
                 <span>Launch view</span>
                 ${toggleSetting(
                   "cloud-hide-ui",
-                  "Desktop-only view",
-                  "Hide MeshCentral navigation and open the remote desktop page directly.",
+                  "Focused launch",
+                  "Hide Fuzz navigation and proxy controls while the Guacamole desktop is open.",
                   settings.cloudHideUi !== false,
                 )}
               </div>
@@ -433,7 +418,6 @@ function bindPlatformForm(container) {
       cloudOwnerOnly: container.querySelector("#cloud-owner-only").checked,
       cloudName: container.querySelector("#cloud-name").value.trim(),
       cloudBaseUrl: container.querySelector("#cloud-base-url").value.trim(),
-      cloudNodeId: container.querySelector("#cloud-node-id").value.trim(),
       cloudHideUi: container.querySelector("#cloud-hide-ui").checked,
     };
 
@@ -442,8 +426,8 @@ function bindPlatformForm(container) {
       return;
     }
 
-    if (payload.cloudEnabled && (!payload.cloudBaseUrl || !payload.cloudNodeId)) {
-      showToast("Add the MeshCentral server URL and node ID before enabling Fuzz Cloud.", "error");
+    if (payload.cloudEnabled && !payload.cloudBaseUrl) {
+      showToast("Add the Guacamole gateway URL before enabling Fuzz Cloud.", "error");
       return;
     }
 
@@ -451,7 +435,7 @@ function bindPlatformForm(container) {
       const cloudUrl = new URL(payload.cloudBaseUrl);
       if (cloudUrl.protocol !== "https:") throw new Error();
     } catch {
-      showToast("Fuzz Cloud requires a valid HTTPS MeshCentral URL.", "error");
+      showToast("Fuzz Cloud requires a valid HTTPS Guacamole URL.", "error");
       return;
     }
 
@@ -473,28 +457,26 @@ function bindCloudTestButton(container) {
 
   button?.addEventListener("click", () => {
     const baseUrl = container.querySelector("#cloud-base-url")?.value.trim();
-    const nodeId = container.querySelector("#cloud-node-id")?.value.trim();
     const hideUi = container.querySelector("#cloud-hide-ui")?.checked !== false;
 
-    if (!baseUrl || !nodeId) {
-      showToast("Add the MeshCentral server URL and node ID first.", "error");
+    if (!baseUrl) {
+      showToast("Add the Guacamole gateway URL first.", "error");
       return;
     }
 
     try {
       const url = new URL(baseUrl);
       if (url.protocol !== "https:") throw new Error();
-      url.searchParams.set("viewmode", "11");
-      url.searchParams.set("gotonode", nodeId);
-      if (hideUi) url.searchParams.set("hide", "63");
+      url.pathname = `${url.pathname.replace(/\/+$/, "")}/`;
+      sessionStorage.setItem("GoProxyFocus", hideUi ? "1" : "0");
       sessionStorage.setItem("GoUrlRaw", url.toString());
       sessionStorage.setItem(
         "GoProxyEngine",
         window.FuzzProxy?.getEngine?.() || "scramjet",
       );
-      window.location.assign("/proxy");
+      window.location.assign("/p");
     } catch {
-      showToast("Enter a valid HTTPS MeshCentral URL.", "error");
+      showToast("Enter a valid HTTPS Guacamole URL.", "error");
     }
   });
 }

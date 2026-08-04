@@ -1,14 +1,7 @@
 (() => {
   "use strict";
 
-  const CLOUD_URL =
-    "https://cloud.fuzzthehuzz-ebsfiygfhsvfbfesg.com/";
-
-  const state = {
-    config: null,
-    launching: false,
-  };
-
+  const state = { config: null, launching: false };
   const elements = {};
 
   async function request(path) {
@@ -17,27 +10,22 @@
       headers: { Accept: "application/json" },
     });
     const payload = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      const error = new Error(payload.error || "Fuzz Cloud could not be loaded.");
-      error.status = response.status;
-      throw error;
-    }
-
+    if (!response.ok) throw new Error(payload.error || "Fuzz Cloud could not be loaded.");
     return payload;
   }
 
-  function setStatus(stateName, message) {
-    elements.status.dataset.state = stateName;
+  function setStatus(name, message) {
+    elements.status.dataset.state = name;
     elements.status.querySelector("span:last-child").textContent = message;
   }
 
   function showError(message) {
     state.config = null;
     elements.launch.disabled = true;
+    elements.direct.disabled = true;
     elements.message.textContent = message;
     elements.description.textContent =
-      "Open Fuzz Control and verify that Fuzz Cloud is enabled.";
+      "Open Fuzz Control and verify that Fuzz Cloud is enabled and the Guacamole URL is saved.";
     setStatus("error", "Unavailable");
   }
 
@@ -45,66 +33,43 @@
     state.config = config;
     elements.name.textContent = config.name || "Gaming PC";
     elements.launch.disabled = false;
+    elements.direct.disabled = false;
     elements.message.textContent = "";
     elements.description.textContent =
-      "Opens the secure Fuzz Cloud portal through your selected Fuzz proxy engine.";
-    setStatus("ready", "Ready to connect");
+      "Launches Apache Guacamole through Fuzz Proxy. Focus mode removes extra Fuzz panels while your desktop is open.";
+    setStatus("ready", "Gateway ready");
   }
 
   async function load() {
-    try {
-      const config = await request("/api/cloud/config");
-      renderReady(config);
-    } catch (error) {
-      showError(error.message);
-    }
+    try { renderReady(await request("/api/cloud/config")); }
+    catch (error) { showError(error.message); }
   }
 
   function openThroughProxy(url) {
-    const engine = window.FuzzProxy?.getEngine?.() || "scramjet";
-
+    sessionStorage.setItem("GoProxyFocus", state.config?.interfaceHidden === false ? "0" : "1");
     if (typeof window.FuzzProxy?.openStandalone === "function") {
-      window.FuzzProxy.openStandalone(url, engine);
+      window.FuzzProxy.openStandalone(url, window.FuzzProxy.getEngine());
       return;
     }
-
-    // Compatibility fallback. The actual standalone proxy route is /p.
     sessionStorage.setItem("GoUrlRaw", url);
-    sessionStorage.setItem("GoProxyEngine", engine);
+    sessionStorage.setItem("GoProxyEngine", "scramjet");
     window.location.assign("/p");
   }
 
   function launch() {
-    if (state.launching || !state.config) return;
-
+    if (state.launching || !state.config?.launchUrl) return;
     state.launching = true;
     elements.launch.disabled = true;
     elements.launch.classList.add("is-launching");
-    elements.launch.querySelector(".cloud-launch-icon i").className =
-      "fa-solid fa-circle-notch";
-    elements.launch.querySelector(".cloud-launch-copy strong").textContent =
-      "Opening in Fuzz…";
-    elements.launch.querySelector(".cloud-launch-copy small").textContent =
-      "Loading Fuzz Cloud through the proxy";
-    elements.message.textContent = "";
+    elements.launch.querySelector(".cloud-launch-icon i").className = "fa-solid fa-circle-notch";
+    elements.launch.querySelector(".cloud-launch-copy strong").textContent = "Opening desktop…";
+    elements.launch.querySelector(".cloud-launch-copy small").textContent = "Preparing the focused Fuzz workspace";
+    window.setTimeout(() => openThroughProxy(state.config.launchUrl), 350);
+  }
 
-    window.setTimeout(() => {
-      try {
-        openThroughProxy(CLOUD_URL);
-      } catch (error) {
-        state.launching = false;
-        elements.launch.disabled = false;
-        elements.launch.classList.remove("is-launching");
-        elements.launch.querySelector(".cloud-launch-icon i").className =
-          "fa-solid fa-play";
-        elements.launch.querySelector(".cloud-launch-copy strong").textContent =
-          "Launch Desktop";
-        elements.launch.querySelector(".cloud-launch-copy small").textContent =
-          "Open your Windows session";
-        elements.message.textContent =
-          error?.message || "Fuzz Proxy could not open the Cloud URL.";
-      }
-    }, 350);
+  function openDirect() {
+    if (!state.config?.launchUrl) return;
+    window.open(state.config.launchUrl, "_blank", "noopener,noreferrer");
   }
 
   document.addEventListener("DOMContentLoaded", () => {
@@ -112,9 +77,10 @@
     elements.status = document.getElementById("cloud-status");
     elements.description = document.getElementById("cloud-description");
     elements.launch = document.getElementById("cloud-launch");
+    elements.direct = document.getElementById("cloud-direct");
     elements.message = document.getElementById("cloud-message");
-
     elements.launch.addEventListener("click", launch);
+    elements.direct.addEventListener("click", openDirect);
     load();
   });
 })();

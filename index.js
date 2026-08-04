@@ -983,12 +983,9 @@ const DEFAULT_PLATFORM_SETTINGS = Object.freeze({
   cloud_name: String(process.env.FUZZ_CLOUD_NAME || "Gaming PC").trim() || "Gaming PC",
   cloud_base_url: String(
     process.env.FUZZ_CLOUD_BASE_URL ||
-      "https://cloud.fuzzthehuzz-ebsfiygfhsvfbfesg.com",
+      "https://guac.fuzzthehuzz-ebsfiygfhsvfbfesg.com",
   ).trim(),
-  cloud_node_id: String(
-    process.env.FUZZ_CLOUD_NODE_ID ||
-      "xYI8iExEHKURSJLbwLqMCfIqrVVO4mIFWvJ82@K$w2jpCUac92kJtgFgoxFsHBo1",
-  ).trim(),
+  cloud_node_id: String(process.env.FUZZ_CLOUD_NODE_ID || "").trim(),
   cloud_hide_ui: true,
   updated_by: null,
   updated_at: null,
@@ -1087,23 +1084,14 @@ function buildCloudLaunchUrl(settings) {
   const baseUrl = normalizeCloudBaseUrl(
     settings?.cloud_base_url,
   );
-  const nodeId = String(
-    settings?.cloud_node_id || "",
-  ).trim();
 
-  if (!baseUrl || !nodeId) {
+  if (!baseUrl) {
     return "";
   }
 
-  const url = new URL(baseUrl);
-  url.searchParams.set("viewmode", "11");
-  url.searchParams.set("gotonode", nodeId);
-
-  if (settings.cloud_hide_ui !== false) {
-    url.searchParams.set("hide", "63");
-  }
-
-  return url.toString();
+  // Guacamole is launched at its configured root. Authentication and the
+  // selected desktop connection are handled by Guacamole itself.
+  return `${baseUrl}/`;
 }
 
 function setPlatformSettingsCache(value) {
@@ -1488,7 +1476,8 @@ app.get(
       name: settings.cloud_name,
       launchUrl,
       baseUrl: settings.cloud_base_url,
-      directDesktop: true,
+      provider: "guacamole",
+      directDesktop: false,
       interfaceHidden:
         settings.cloud_hide_ui !== false,
     });
@@ -1852,7 +1841,7 @@ app.patch(
     if (!cloudBaseUrl) {
       return res.status(400).json({
         error:
-          "Enter a valid HTTPS URL for the MeshCentral server.",
+          "Enter a valid HTTPS URL for the Guacamole gateway.",
       });
     }
 
@@ -1867,13 +1856,6 @@ app.patch(
       req.body.cloudEnabled === undefined
         ? current.cloud_enabled
         : req.body.cloudEnabled === true;
-
-    if (cloudEnabled && !cloudNodeId) {
-      return res.status(400).json({
-        error:
-          "Enter the MeshCentral node ID before enabling Fuzz Cloud.",
-      });
-    }
 
     const nextSettings = {
       id: 1,

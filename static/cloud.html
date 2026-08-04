@@ -12,7 +12,7 @@
 
   <link rel="stylesheet" href="/assets/css/global.css?v=7" />
   <link rel="stylesheet" href="/assets/css/nav.css?v=13" />
-  <link rel="stylesheet" href="/assets/css/cloud.css?v=1" />
+  <link rel="stylesheet" href="/assets/css/cloud.css?v=2" />
   <link rel="stylesheet" href="/assets/css/fuzz-ui.css?v=1" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 
@@ -20,7 +20,7 @@
   <script src="/assets/js/fuzz-diagnostics.js?v=1"></script>
   <script src="/assets/js/m1.js?v=14" defer></script>
   <script src="/assets/js/proxy-engine.js?v=4"></script>
-  <script src="/assets/js/cloud.js?v=4" defer></script>
+  <script src="/assets/js/cloud.js?v=2" defer></script>
 </head>
 
 <body class="fuzz-cloud-page">
@@ -37,7 +37,7 @@
       <div>
         <p class="cloud-eyebrow"><span></span> Personal workspace</p>
         <h1>Fuzz Cloud</h1>
-        <p>Open your Windows PC securely from any supported browser.</p>
+        <p>Open your Windows PC through the secure Fuzz proxy, with a focused full-screen workspace.</p>
       </div>
       <span class="cloud-security-pill">
         <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
@@ -77,7 +77,7 @@
         </div>
 
         <p class="cloud-device-description" id="cloud-description">
-          Open the secure Fuzz Cloud portal through your selected Fuzz proxy engine.
+          Your Guacamole desktop opens through Fuzz Proxy in a focused workspace.
         </p>
 
         <button class="cloud-launch-button" id="cloud-launch" type="button" disabled>
@@ -91,11 +91,19 @@
           <i class="fa-solid fa-arrow-right cloud-launch-arrow" aria-hidden="true"></i>
         </button>
 
+        <div class="cloud-secondary-actions">
+          <button class="cloud-secondary-button" id="cloud-direct" type="button" disabled>
+            <i class="fa-solid fa-up-right-from-square" aria-hidden="true"></i>
+            Open gateway directly
+          </button>
+          <span><i class="fa-solid fa-expand" aria-hidden="true"></i> Focus mode is enabled when launching through Fuzz.</span>
+        </div>
+
         <div class="cloud-launch-message" id="cloud-message" role="status"></div>
 
         <footer class="cloud-device-footer">
-          <span><i class="fa-solid fa-lock" aria-hidden="true"></i> MeshCentral authentication is still required.</span>
-          <span><i class="fa-solid fa-up-right-from-square" aria-hidden="true"></i> Opens in this tab.</span>
+          <span><i class="fa-solid fa-lock" aria-hidden="true"></i> Guacamole authentication is still required.</span>
+          <span><i class="fa-solid fa-up-right-from-square" aria-hidden="true"></i> Opens through Fuzz Proxy.</span>
         </footer>
       </div>
     </section>
@@ -107,7 +115,7 @@
       </article>
       <article>
         <span><i class="fa-solid fa-display" aria-hidden="true"></i></span>
-        <div><strong>Fuzz Proxy</strong><small>Launches through the proxy engine selected in Fuzz.</small></div>
+        <div><strong>Desktop-first</strong><small>Focused workspace with browser full-screen controls.</small></div>
       </article>
       <article>
         <span><i class="fa-solid fa-user-lock" aria-hidden="true"></i></span>

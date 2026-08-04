@@ -8,7 +8,7 @@
   <link rel="shortcut icon" href="/assets/media/favicon/classroom.png" />
   <title>Home</title>
   <link rel="stylesheet" href="/assets/css/nav.css?v=13" />
-  <link rel="stylesheet" href="/assets/css/proxy.css?v=3" />
+  <link rel="stylesheet" href="/assets/css/proxy.css?v=4" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <script src="/baremux/index.js"></script>
   <script src="/scram/scramjet.all.js"></script>
@@ -29,11 +29,18 @@
       <option value="ultraviolet">Ultraviolet · Legacy</option>
     </select>
     <button id="proxy-reload" type="button" title="Reload"><i class="fa-solid fa-rotate-right"></i></button>
+    <button id="proxy-fullscreen" type="button" title="Enter full screen"><i class="fa-solid fa-expand"></i></button>
   </header>
+  <div class="proxy-focus-controls" id="proxy-focus-controls" aria-label="Fuzz Cloud controls">
+    <button id="proxy-focus-home" type="button" title="Back to Fuzz Cloud"><i class="fa-solid fa-cloud"></i></button>
+    <button id="proxy-focus-reload" type="button" title="Reload desktop"><i class="fa-solid fa-rotate-right"></i></button>
+    <button id="proxy-focus-fullscreen" type="button" title="Enter full screen"><i class="fa-solid fa-expand"></i></button>
+    <button id="proxy-exit-focus" type="button" title="Show browser controls"><i class="fa-solid fa-compress"></i></button>
+  </div>
   <main id="proxy-frame-host" class="proxy-frame-host">
     <div id="proxy-loading" class="proxy-loading"><span></span><strong>Starting <span data-proxy-engine-label>Scramjet</span>…</strong></div>
   </main>
-  <script src="/assets/js/standalone-proxy.js?v=1"></script>
+  <script src="/assets/js/standalone-proxy.js?v=2"></script>
   <script src="/assets/js/m1.js?v=14" defer></script>
 </body>
 </html>
