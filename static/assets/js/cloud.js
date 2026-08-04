@@ -1,6 +1,9 @@
 (() => {
   "use strict";
 
+  const CLOUD_URL =
+    "https://cloud.fuzzthehuzz-ebsfiygfhsvfbfesg.com/";
+
   const state = {
     config: null,
     launching: false,
@@ -34,7 +37,7 @@
     elements.launch.disabled = true;
     elements.message.textContent = message;
     elements.description.textContent =
-      "Open Fuzz Control to verify that Cloud is enabled and the MeshCentral server URL and node ID are saved.";
+      "Open Fuzz Control and verify that Fuzz Cloud is enabled.";
     setStatus("error", "Unavailable");
   }
 
@@ -43,9 +46,8 @@
     elements.name.textContent = config.name || "Gaming PC";
     elements.launch.disabled = false;
     elements.message.textContent = "";
-    elements.description.textContent = config.interfaceHidden
-      ? "Launches directly into the remote desktop page with MeshCentral navigation hidden."
-      : "Launches directly into your computer's remote desktop page.";
+    elements.description.textContent =
+      "Opens the secure Fuzz Cloud portal through your selected Fuzz proxy engine.";
     setStatus("ready", "Ready to connect");
   }
 
@@ -58,8 +60,22 @@
     }
   }
 
+  function openThroughProxy(url) {
+    const engine = window.FuzzProxy?.getEngine?.() || "scramjet";
+
+    if (typeof window.FuzzProxy?.openStandalone === "function") {
+      window.FuzzProxy.openStandalone(url, engine);
+      return;
+    }
+
+    // Compatibility fallback. The actual standalone proxy route is /p.
+    sessionStorage.setItem("GoUrlRaw", url);
+    sessionStorage.setItem("GoProxyEngine", engine);
+    window.location.assign("/p");
+  }
+
   function launch() {
-    if (state.launching || !state.config?.launchUrl) return;
+    if (state.launching || !state.config) return;
 
     state.launching = true;
     elements.launch.disabled = true;
@@ -69,21 +85,26 @@
     elements.launch.querySelector(".cloud-launch-copy strong").textContent =
       "Opening in Fuzz…";
     elements.launch.querySelector(".cloud-launch-copy small").textContent =
-      "Loading the desktop through Fuzz Proxy";
+      "Loading Fuzz Cloud through the proxy";
     elements.message.textContent = "";
 
     window.setTimeout(() => {
       try {
-        sessionStorage.setItem("GoUrlRaw", state.config.launchUrl);
-        sessionStorage.setItem(
-          "GoProxyEngine",
-          window.FuzzProxy?.getEngine?.() || "scramjet",
-        );
-        window.location.assign("/proxy");
-      } catch {
-        window.location.assign(state.config.launchUrl);
+        openThroughProxy(CLOUD_URL);
+      } catch (error) {
+        state.launching = false;
+        elements.launch.disabled = false;
+        elements.launch.classList.remove("is-launching");
+        elements.launch.querySelector(".cloud-launch-icon i").className =
+          "fa-solid fa-play";
+        elements.launch.querySelector(".cloud-launch-copy strong").textContent =
+          "Launch Desktop";
+        elements.launch.querySelector(".cloud-launch-copy small").textContent =
+          "Open your Windows session";
+        elements.message.textContent =
+          error?.message || "Fuzz Proxy could not open the Cloud URL.";
       }
-    }, 520);
+    }, 350);
   }
 
   document.addEventListener("DOMContentLoaded", () => {
