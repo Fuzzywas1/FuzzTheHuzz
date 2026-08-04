@@ -1,0 +1,10 @@
+Fuzz Cloud Guacamole-only correction
+
+- Removes remaining MeshCentral node-ID logic/settings.
+- Guacamole is the only Fuzz Cloud gateway.
+- Fullscreen now uses Fuzz's existing fullscreen-browser CSS mode.
+- Removes the separate focus-mode controls and browser Fullscreen API.
+- F11 toggles fullscreen and Escape exits it.
+- Unrelated website features are unchanged.
+
+Run supabase/FUZZ_CLOUD_GUAC_ONLY_MIGRATION.sql once after deployment.

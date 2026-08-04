@@ -1,33 +1,54 @@
 (() => {
   "use strict";
+
   const host = document.getElementById("proxy-frame-host");
   const form = document.getElementById("proxy-address-form");
   const input = document.getElementById("proxy-address");
   const select = document.getElementById("proxy-engine-select");
+  const fullscreenButton = document.getElementById("proxy-fullscreen");
+
   let view = null;
   let currentUrl = sessionStorage.getItem("GoUrlRaw") || "";
-  let currentEngine = sessionStorage.getItem("GoProxyEngine") || window.FuzzProxy.getEngine();
-  const startFocused = sessionStorage.getItem("GoProxyFocus") === "1";
+  let currentEngine =
+    sessionStorage.getItem("GoProxyEngine") ||
+    window.FuzzProxy.getEngine();
+
+  const startFullscreen =
+    sessionStorage.getItem("GoProxyFullscreen") === "1";
+
   sessionStorage.removeItem("GoUrlRaw");
   sessionStorage.removeItem("GoProxyEngine");
-  sessionStorage.removeItem("GoProxyFocus");
+  sessionStorage.removeItem("GoProxyFullscreen");
 
-  function setFocusMode(enabled) {
-    document.body.classList.toggle("proxy-focus", enabled);
-  }
+  function setFullscreen(enabled) {
+    document.body.classList.toggle("fullscreen-browser", enabled);
 
-  async function toggleFullscreen() {
-    try {
-      if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
-      else await document.exitFullscreen();
-    } catch {
-      // Browser or device policy may block full-screen mode.
+    const icon = fullscreenButton?.querySelector("i");
+    if (icon) {
+      icon.className = enabled
+        ? "fa-solid fa-compress"
+        : "fa-solid fa-expand";
+    }
+
+    if (fullscreenButton) {
+      fullscreenButton.title = enabled
+        ? "Exit fullscreen browser"
+        : "Fullscreen browser";
     }
   }
 
+  function toggleFullscreen() {
+    setFullscreen(
+      !document.body.classList.contains("fullscreen-browser"),
+    );
+  }
+
   function reload() {
-    try { view?.element?.contentWindow?.location.reload(); }
-    catch { if (currentUrl) void open(currentUrl, currentEngine); }
+    try {
+      view?.element?.contentWindow?.location.reload();
+    } catch {
+      if (currentUrl) void open(currentUrl, currentEngine);
+    }
   }
 
   async function open(url, engine = currentEngine) {
@@ -36,17 +57,32 @@
     input.value = currentUrl;
     select.value = engine;
     view?.destroy?.();
-    host.innerHTML = '<div class="proxy-loading"><span></span><strong>Opening Fuzz Cloud…</strong></div>';
+
+    host.innerHTML =
+      '<div class="proxy-loading"><span></span><strong>Opening page…</strong></div>';
+
     try {
       host.innerHTML = "";
-      view = await window.FuzzProxy.createView(host, currentUrl, currentEngine);
-      window.FuzzProxy.logNavigation(currentUrl, currentEngine, "", "standalone-proxy");
+      view = await window.FuzzProxy.createView(
+        host,
+        currentUrl,
+        currentEngine,
+      );
+      window.FuzzProxy.logNavigation(
+        currentUrl,
+        currentEngine,
+        "",
+        "standalone-proxy",
+      );
     } catch (error) {
       host.innerHTML = `<section class="proxy-error"><i class="fa-solid fa-triangle-exclamation"></i><h1>Page could not open</h1><p>${String(error.message || error)}</p>${currentEngine === "scramjet" ? '<button id="retry-uv" type="button">Retry with Ultraviolet</button>' : ""}</section>`;
-      document.getElementById("retry-uv")?.addEventListener("click", () => {
-        window.FuzzProxy.setEngine("ultraviolet");
-        void open(currentUrl, "ultraviolet");
-      });
+
+      document
+        .getElementById("retry-uv")
+        ?.addEventListener("click", () => {
+          window.FuzzProxy.setEngine("ultraviolet");
+          void open(currentUrl, "ultraviolet");
+        });
     }
   }
 
@@ -54,24 +90,38 @@
     event.preventDefault();
     void open(input.value, window.FuzzProxy.getEngine());
   });
+
   select.addEventListener("change", () => {
     const engine = window.FuzzProxy.setEngine(select.value);
     if (currentUrl) void open(currentUrl, engine);
   });
-  document.getElementById("proxy-back-home").addEventListener("click", () => { location.href = "/"; });
-  document.getElementById("proxy-reload").addEventListener("click", reload);
-  document.getElementById("proxy-fullscreen").addEventListener("click", toggleFullscreen);
-  document.getElementById("proxy-focus-home").addEventListener("click", () => { location.href = "/cloud"; });
-  document.getElementById("proxy-focus-reload").addEventListener("click", reload);
-  document.getElementById("proxy-focus-fullscreen").addEventListener("click", toggleFullscreen);
-  document.getElementById("proxy-exit-focus").addEventListener("click", () => setFocusMode(false));
 
-  document.addEventListener("fullscreenchange", () => {
-    const icon = document.fullscreenElement ? "fa-solid fa-compress" : "fa-solid fa-expand";
-    document.querySelectorAll("#proxy-fullscreen i,#proxy-focus-fullscreen i").forEach((node) => { node.className = icon; });
+  document
+    .getElementById("proxy-back-home")
+    .addEventListener("click", () => {
+      location.href = "/";
+    });
+
+  document
+    .getElementById("proxy-reload")
+    .addEventListener("click", reload);
+
+  fullscreenButton?.addEventListener("click", toggleFullscreen);
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "F11") {
+      event.preventDefault();
+      toggleFullscreen();
+    } else if (
+      event.key === "Escape" &&
+      document.body.classList.contains("fullscreen-browser")
+    ) {
+      setFullscreen(false);
+    }
   });
 
-  setFocusMode(startFocused);
+  setFullscreen(startFullscreen);
+
   if (currentUrl) void open(currentUrl, currentEngine);
   else location.replace("/");
 })();

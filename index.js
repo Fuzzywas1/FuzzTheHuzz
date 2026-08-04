@@ -985,7 +985,6 @@ const DEFAULT_PLATFORM_SETTINGS = Object.freeze({
     process.env.FUZZ_CLOUD_BASE_URL ||
       "https://guac.fuzzthehuzz-ebsfiygfhsvfbfesg.com",
   ).trim(),
-  cloud_node_id: String(process.env.FUZZ_CLOUD_NODE_ID || "").trim(),
   cloud_hide_ui: true,
   updated_by: null,
   updated_at: null,
@@ -1033,13 +1032,6 @@ function normalizePlatformSettings(row = {}) {
           DEFAULT_PLATFORM_SETTINGS.cloud_base_url,
       ) ||
       DEFAULT_PLATFORM_SETTINGS.cloud_base_url,
-    cloud_node_id:
-      String(
-        row.cloud_node_id ||
-          DEFAULT_PLATFORM_SETTINGS.cloud_node_id,
-      )
-        .trim()
-        .slice(0, 512),
     cloud_hide_ui:
       row.cloud_hide_ui !== false,
   };
@@ -1198,9 +1190,7 @@ function serializePlatformSettings(
       settings.cloud_name,
     cloudBaseUrl:
       settings.cloud_base_url,
-    cloudNodeId:
-      settings.cloud_node_id,
-    cloudHideUi:
+    cloudFullscreen:
       settings.cloud_hide_ui,
     cloudConfigured:
       Boolean(buildCloudLaunchUrl(settings)),
@@ -1477,8 +1467,7 @@ app.get(
       launchUrl,
       baseUrl: settings.cloud_base_url,
       provider: "guacamole",
-      directDesktop: false,
-      interfaceHidden:
+      fullscreen:
         settings.cloud_hide_ui !== false,
     });
   },
@@ -1845,13 +1834,6 @@ app.patch(
       });
     }
 
-    const cloudNodeId = String(
-      req.body.cloudNodeId ??
-        current.cloud_node_id,
-    )
-      .trim()
-      .slice(0, 512);
-
     const cloudEnabled =
       req.body.cloudEnabled === undefined
         ? current.cloud_enabled
@@ -1919,13 +1901,11 @@ app.patch(
         cloudName,
       cloud_base_url:
         cloudBaseUrl,
-      cloud_node_id:
-        cloudNodeId,
       cloud_hide_ui:
-        req.body.cloudHideUi ===
+        req.body.cloudFullscreen ===
         undefined
           ? current.cloud_hide_ui
-          : req.body.cloudHideUi !== false,
+          : req.body.cloudFullscreen !== false,
       updated_by: req.auth.user.id,
       updated_at:
         new Date().toISOString(),

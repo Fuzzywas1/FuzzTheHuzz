@@ -5,4 +5,17 @@ body.has-fuzz-sidebar .proxy-frame-host{left:var(--fuzz-sidebar-width);transitio
 @media(max-width:820px){body.has-fuzz-sidebar .proxy-frame-host{left:0}.proxy-toolbar{padding-left:66px}}
 
 
-.proxy-focus-controls{position:fixed;z-index:60;top:10px;right:10px;display:none;gap:7px;padding:6px;border:1px solid rgba(145,155,255,.16);border-radius:14px;background:rgba(7,10,23,.76);box-shadow:0 12px 36px rgba(0,0,0,.3);backdrop-filter:blur(18px);opacity:.18;transition:opacity .18s ease}.proxy-focus-controls:hover,.proxy-focus-controls:focus-within{opacity:1}.proxy-focus-controls button{display:grid;width:37px;height:37px;place-items:center;border:1px solid rgba(145,155,255,.15);border-radius:10px;color:#eef1ff;background:rgba(16,21,42,.9);cursor:pointer}.proxy-focus-controls button:hover{background:#1a2240}body.proxy-focus .proxy-toolbar,body.proxy-focus .f-nav{display:none!important}body.proxy-focus .proxy-frame-host{inset:0!important;left:0!important}body.proxy-focus .proxy-focus-controls{display:flex}body.proxy-focus .fuzz-proxy-frame{height:100vh}@media(max-width:720px){.proxy-focus-controls{top:7px;right:7px}.proxy-focus-controls button{width:34px;height:34px}}
+/* Uses the same CSS fullscreen behavior as the existing Fuzz tab browser. */
+body.fullscreen-browser .proxy-toolbar,
+body.fullscreen-browser .f-nav {
+  display: none !important;
+}
+
+body.fullscreen-browser .proxy-frame-host {
+  inset: 0 !important;
+  left: 0 !important;
+}
+
+body.fullscreen-browser .fuzz-proxy-frame {
+  height: 100vh;
+}

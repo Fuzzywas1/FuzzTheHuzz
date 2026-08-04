@@ -36,7 +36,7 @@
     elements.direct.disabled = false;
     elements.message.textContent = "";
     elements.description.textContent =
-      "Launches Apache Guacamole through Fuzz Proxy. Focus mode removes extra Fuzz panels while your desktop is open.";
+      "Launches Apache Guacamole through Fuzz Proxy. Fuzz fullscreen removes the browser controls while your desktop is open.";
     setStatus("ready", "Gateway ready");
   }
 
@@ -46,7 +46,7 @@
   }
 
   function openThroughProxy(url) {
-    sessionStorage.setItem("GoProxyFocus", state.config?.interfaceHidden === false ? "0" : "1");
+    sessionStorage.setItem("GoProxyFullscreen", state.config?.fullscreen === false ? "0" : "1");
     if (typeof window.FuzzProxy?.openStandalone === "function") {
       window.FuzzProxy.openStandalone(url, window.FuzzProxy.getEngine());
       return;
@@ -63,7 +63,7 @@
     elements.launch.classList.add("is-launching");
     elements.launch.querySelector(".cloud-launch-icon i").className = "fa-solid fa-circle-notch";
     elements.launch.querySelector(".cloud-launch-copy strong").textContent = "Opening desktop…";
-    elements.launch.querySelector(".cloud-launch-copy small").textContent = "Preparing the focused Fuzz workspace";
+    elements.launch.querySelector(".cloud-launch-copy small").textContent = "Preparing the Fuzz fullscreen workspace";
     window.setTimeout(() => openThroughProxy(state.config.launchUrl), 350);
   }
 

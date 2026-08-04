@@ -314,9 +314,9 @@ function paint(container, systemPayload, platformPayload) {
                 <span>Launch view</span>
                 ${toggleSetting(
                   "cloud-hide-ui",
-                  "Focused launch",
-                  "Hide Fuzz navigation and proxy controls while the Guacamole desktop is open.",
-                  settings.cloudHideUi !== false,
+                  "Fullscreen launch",
+                  "Use Fuzz’s existing fullscreen browser mode when Guacamole opens.",
+                  settings.cloudFullscreen !== false,
                 )}
               </div>
             </div>
@@ -418,7 +418,7 @@ function bindPlatformForm(container) {
       cloudOwnerOnly: container.querySelector("#cloud-owner-only").checked,
       cloudName: container.querySelector("#cloud-name").value.trim(),
       cloudBaseUrl: container.querySelector("#cloud-base-url").value.trim(),
-      cloudHideUi: container.querySelector("#cloud-hide-ui").checked,
+      cloudFullscreen: container.querySelector("#cloud-fullscreen").checked,
     };
 
     if (payload.maintenanceEnabled && !payload.maintenanceMessage) {
@@ -457,7 +457,7 @@ function bindCloudTestButton(container) {
 
   button?.addEventListener("click", () => {
     const baseUrl = container.querySelector("#cloud-base-url")?.value.trim();
-    const hideUi = container.querySelector("#cloud-hide-ui")?.checked !== false;
+    const fullscreen = container.querySelector("#cloud-fullscreen")?.checked !== false;
 
     if (!baseUrl) {
       showToast("Add the Guacamole gateway URL first.", "error");
@@ -468,7 +468,7 @@ function bindCloudTestButton(container) {
       const url = new URL(baseUrl);
       if (url.protocol !== "https:") throw new Error();
       url.pathname = `${url.pathname.replace(/\/+$/, "")}/`;
-      sessionStorage.setItem("GoProxyFocus", hideUi ? "1" : "0");
+      sessionStorage.setItem("GoProxyFullscreen", fullscreen ? "1" : "0");
       sessionStorage.setItem("GoUrlRaw", url.toString());
       sessionStorage.setItem(
         "GoProxyEngine",
