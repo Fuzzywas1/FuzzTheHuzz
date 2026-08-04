@@ -238,6 +238,12 @@ app.use((req, res, next) => {
   res.setHeader("Referrer-Policy", "no-referrer");
 
   if (!isProxyRuntimeRequest(req.path)) {
+    const isCloudPage =
+      req.path === "/cloud" || req.path === "/cloud.html";
+    const scriptPolicy = isCloudPage
+      ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net"
+      : "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net";
+
     res.setHeader(
       "Permissions-Policy",
       "camera=(), microphone=(), geolocation=(), payment=(), usb=(), battery=(self)",
@@ -246,7 +252,7 @@ app.use((req, res, next) => {
       "Content-Security-Policy",
       [
         "default-src 'self'",
-        "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net",
+        scriptPolicy,
         "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com",
         "font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com",
         "img-src 'self' data: blob: https:",
