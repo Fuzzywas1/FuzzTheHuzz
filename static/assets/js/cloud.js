@@ -48,7 +48,7 @@
     elements.direct.disabled = false;
     elements.message.textContent = "";
     elements.description.textContent =
-      "Launch your Apache Guacamole desktop from Fuzz Cloud.";
+      "Launch your Apache Guacamole desktop through Fuzz Proxy.";
     setStatus("ready", "Gateway ready");
   }
 
@@ -58,6 +58,23 @@
     } catch (error) {
       showError(error.message);
     }
+  }
+
+  function openThroughFuzzProxy() {
+    const engine =
+      typeof window.FuzzProxy?.getEngine === "function"
+        ? window.FuzzProxy.getEngine()
+        : "scramjet";
+
+    if (typeof window.FuzzProxy?.openStandalone === "function") {
+      window.FuzzProxy.openStandalone(GUACAMOLE_URL, engine);
+      return;
+    }
+
+    // Fallback for cases where the proxy helper has not loaded yet.
+    sessionStorage.setItem("GoUrlRaw", GUACAMOLE_URL);
+    sessionStorage.setItem("GoProxyEngine", engine);
+    window.location.assign("/p");
   }
 
   function launch() {
@@ -73,11 +90,9 @@
 
     icon.className = "fa-solid fa-circle-notch";
     title.textContent = "Opening desktop…";
-    subtitle.textContent = "Connecting to Guacamole";
+    subtitle.textContent = "Loading through Fuzz Proxy";
 
-    window.setTimeout(() => {
-      window.location.assign(GUACAMOLE_URL);
-    }, 300);
+    window.setTimeout(openThroughFuzzProxy, 300);
   }
 
   document.addEventListener("DOMContentLoaded", () => {
@@ -90,13 +105,15 @@
 
     document.querySelectorAll('[data-cloud-tab="desktop"]').forEach((button) => {
       button.addEventListener("click", () => {
-        if (state.config) window.location.assign(GUACAMOLE_URL);
+        if (state.config) openThroughFuzzProxy();
       });
     });
 
     elements.launch.addEventListener("click", launch);
+
+    // Keep this button as a true direct fallback.
     elements.direct.addEventListener("click", () => {
-      if (state.config) window.location.assign(GUACAMOLE_URL);
+      window.open(GUACAMOLE_URL, "_blank", "noopener,noreferrer");
     });
 
     load();
