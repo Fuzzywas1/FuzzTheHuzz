@@ -292,6 +292,31 @@ for (const message of warnings) {
   console.warn(`WARN: ${message}`);
 }
 
+const requiredProjectFiles = [
+  ".env.example",
+  "index.js",
+  "package.json",
+  "lib/supabaseAdmin.js",
+  "static/index.html",
+  "static/login.html",
+  "static/assets/js/m1.js",
+  "static/assets/js/cloud.js",
+];
+
+for (const relativePath of requiredProjectFiles) {
+  if (!fs.existsSync(path.join(root, relativePath))) {
+    fail(`Missing required project file: ${relativePath}`);
+  }
+}
+
+const cloudClientPath = path.join(root, "static", "assets", "js", "cloud.js");
+if (fs.existsSync(cloudClientPath)) {
+  const cloudClientSource = fs.readFileSync(cloudClientPath, "utf8");
+  if (/const\s+GUACAMOLE_URL\s*=/.test(cloudClientSource)) {
+    fail("Fuzz Cloud client contains a hardcoded Guacamole URL; use /api/cloud/config instead.");
+  }
+}
+
 if (failures.length > 0) {
   console.error(`\nAudit failed with ${failures.length} problem(s):`);
   for (const message of failures) console.error(`- ${message}`);

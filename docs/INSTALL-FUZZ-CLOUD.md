@@ -1,27 +1,34 @@
-# Fuzz Cloud v1
+# Fuzz Cloud
 
-This update adds a private Fuzz Cloud launcher without redesigning or replacing any existing page.
+Fuzz Cloud is the private remote-PC launcher built around Apache Guacamole.
 
-## Included
+## Current design
 
-- `/cloud` page styled to match the existing Fuzz sidebar and space theme.
-- Direct MeshCentral desktop launch (`viewmode=11`) with all UI regions hidden (`hide=63`).
-- Owner-only access by default.
-- Fuzz Control settings for enabling Cloud, changing the computer name, server URL, node ID, access mode, and desktop-only mode.
-- Server-side launch URL generation so the node ID is not hardcoded into the static Cloud page.
+- `/cloud` is a protected Fuzz page.
+- Configure it under **Admin -> Settings -> Fuzz Cloud**.
+- `/api/cloud/config` returns the active server-side configuration.
+- The frontend uses the returned `launchUrl`; the gateway is not hardcoded in the browser bundle.
+- Launch Desktop opens Guacamole through the selected Fuzz proxy engine.
+- Open gateway directly remains available as a troubleshooting fallback.
+- Guacamole authentication is still required unless you later add a supported SSO design.
 
-## One-time Supabase step
+## Optional environment defaults
 
-Before changing Cloud settings in Fuzz Control, run:
+```env
+FUZZ_CLOUD_NAME=Gaming PC
+FUZZ_CLOUD_BASE_URL=https://guac.example.com
+```
 
-`supabase/FUZZ_CLOUD_SCHEMA.sql`
+The Cloud URL must use HTTPS.
 
-in the Supabase SQL Editor. The Cloud page already has the supplied permanent domain and node ID as server defaults, so it can launch immediately after deployment; the SQL update makes admin changes persistent.
+## Existing SQL
 
-## Permanent MeshCentral address
+The repository contains:
+- `supabase/FUZZ_CLOUD_SCHEMA.sql`
+- `supabase/FUZZ_CLOUD_GUAC_ONLY_MIGRATION.sql`
 
-`https://cloud.fuzzthehuzz-ebsfiygfhsvfbfesg.com`
+Run only the migrations your current database still needs.
 
-## Access
+## Security
 
-Fuzz Cloud is enabled and owner-only by default. Change this from **Admin → Settings → Fuzz Cloud**.
+Keep the Guacamole gateway password protected. Owner-only access in Fuzz does not replace Guacamole authentication. Do not expose Windows RDP port 3389 directly to the public internet.

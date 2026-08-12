@@ -54,6 +54,7 @@ export async function renderHealth(container) {
             body: serviceList([
               { name: "Proxy browsing", icon: "◈", online: payload.platform?.proxyEnabled !== false },
               { name: "Fuzz AI", icon: "✦", online: payload.platform?.aiEnabled !== false },
+              { name: "Fuzz Cloud configured", icon: "▣", online: payload.platform?.cloudEnabled === false || payload.platform?.cloudConfigured === true },
               { name: "Maintenance mode off", icon: "⌁", online: payload.platform?.maintenance !== true },
               { name: "Cache", icon: "↻", online: true },
             ]),

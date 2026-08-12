@@ -43,18 +43,17 @@ const CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
 const cache = new Map();
 
 const FUZZ_RELEASE = Object.freeze({
-  version: "6.2.0",
-  releasedAt: "2026-08-01T03:45:00.000Z",
+  version: "6.8.0",
+  releasedAt: "2026-08-12T00:00:00.000Z",
   summary:
-    "The original Settings experience is restored with advanced customization built into it.",
+    "Full-project stability audit with Fuzz Cloud repairs and owner deployment diagnostics.",
   items: [
-    "Moved the main Settings link back to My Account > Preferences.",
-    "Preserved the original synced account preferences, browser controls, privacy window, panic keys, tab cloak, effects, and import/export tools.",
-    "Added wallpaper uploads, custom colors, glass opacity, sidebar layout, font sizing, and Home-page controls inside the same Settings view.",
-    "Changed /c and /settings to open the unified Settings view instead of a separate customization-only page.",
-    "Made the Admin sidebar button owner-only so it matches the protected admin route.",
-    "Disabled the admin keyboard shortcut for non-owner accounts.",
-    "Fixed same-page Settings navigation so switching to the Preferences hash immediately updates the account view.",
+    "Fixed Fuzz Cloud so the client uses the server-configured Guacamole launch URL instead of a hardcoded hostname.",
+    "Added a complete .env.example covering every environment variable used by the server.",
+    "Added an owner-only Diagnostics page for environment, database, proxy asset and Fuzz Cloud readiness checks.",
+    "Added Fuzz Cloud readiness to System Health and owner dashboard quick actions.",
+    "Updated stale Fuzz Cloud documentation from the old MeshCentral design to the current Apache Guacamole setup.",
+    "Extended the project audit to catch missing required files and future hardcoded Guacamole client URLs.",
   ],
 });
 
@@ -7485,8 +7484,28 @@ async function runSystemHealthChecks() {
       maintenance: platform ? isMaintenanceActive(platform) : false,
       proxyEnabled: platform?.proxy_enabled !== false,
       aiEnabled: platform?.ai_enabled !== false,
+      cloudEnabled: platform?.cloud_enabled !== false,
+      cloudConfigured: Boolean(platform && buildCloudLaunchUrl(platform)),
+      cloudName: platform?.cloud_name || DEFAULT_PLATFORM_SETTINGS.cloud_name,
     },
-    checks,
+    checks: {
+      ...checks,
+      cloud: {
+        status:
+          platform?.cloud_enabled === false
+            ? "disabled"
+            : platform && buildCloudLaunchUrl(platform)
+              ? "configured"
+              : "offline",
+        message:
+          platform?.cloud_enabled === false
+            ? "Fuzz Cloud is disabled in platform settings."
+            : platform && buildCloudLaunchUrl(platform)
+              ? "Fuzz Cloud has a valid HTTPS Guacamole gateway."
+              : "Fuzz Cloud needs a valid HTTPS Guacamole gateway URL.",
+        critical: false,
+      },
+    },
   };
 }
 
@@ -7522,6 +7541,141 @@ app.get(
     });
   },
 );
+
+
+/* =======================================================
+   OWNER DEPLOYMENT DIAGNOSTICS
+======================================================= */
+
+const DIAGNOSTIC_TABLES = [
+  "profiles",
+  "invite_codes",
+  "ai_chats",
+  "ai_messages",
+  "activity_logs",
+  "platform_settings",
+  "user_security_sessions",
+  "usage_policies",
+  "account_preferences",
+  "user_bookmarks",
+  "user_personalization",
+  "chat_conversations",
+  "chat_messages",
+  "feedback",
+  "notifications",
+];
+
+async function probeDiagnosticTable(table) {
+  try {
+    const { error } = await supabaseAdmin
+      .from(table)
+      .select("*", { count: "exact", head: true });
+
+    return {
+      name: table,
+      ok: !error,
+      message: error
+        ? String(error.message || "Unavailable").slice(0, 180)
+        : "Ready",
+    };
+  } catch (error) {
+    return {
+      name: table,
+      ok: false,
+      message: String(error?.message || "Unavailable").slice(0, 180),
+    };
+  }
+}
+
+app.get(
+  "/api/admin/diagnostics",
+  requireRole("owner"),
+  async (_req, res) => {
+    const settings = await getPlatformSettings(true);
+    const tableChecks = await Promise.all(
+      DIAGNOSTIC_TABLES.map(probeDiagnosticTable),
+    );
+
+    const launchUrl = buildCloudLaunchUrl(settings);
+    let cloudHost = null;
+
+    try {
+      cloudHost = launchUrl ? new URL(launchUrl).hostname : null;
+    } catch {
+      cloudHost = null;
+    }
+
+    const environment = {
+      supabaseUrl: Boolean(process.env.SUPABASE_URL),
+      supabaseAnonKey: Boolean(process.env.SUPABASE_ANON_KEY),
+      supabaseServerKey: Boolean(
+        process.env.SUPABASE_SECRET_KEY ||
+          process.env.SUPABASE_SERVICE_ROLE_KEY,
+      ),
+      openaiApiKey: Boolean(process.env.OPENAI_API_KEY),
+      openaiModel,
+      cloudDefaultUrl: Boolean(process.env.FUZZ_CLOUD_BASE_URL),
+    };
+
+    const files = {
+      scramjet: fs.existsSync(path.join(scramjetPath, "scramjet.all.js")),
+      bareMux: fs.existsSync(path.join(bareMuxPath, "index.js")),
+      libcurl: fs.existsSync(path.join(libcurlPath, "index.mjs")),
+      ultraviolet: fs.existsSync(
+        path.join(__dirname, "static", "assets", "mathematics", "bundle.js"),
+      ),
+      serviceWorker: fs.existsSync(path.join(__dirname, "static", "sw.js")),
+      scramjetWorker: fs.existsSync(
+        path.join(__dirname, "static", "scramjet-sw.js"),
+      ),
+    };
+
+    const failedTables = tableChecks.filter((check) => !check.ok);
+    const requiredEnvironment = [
+      ["supabaseUrl", environment.supabaseUrl],
+      ["supabaseAnonKey", environment.supabaseAnonKey],
+      ["supabaseServerKey", environment.supabaseServerKey],
+    ];
+    const issues = [
+      ...requiredEnvironment
+        .filter(([, ok]) => !ok)
+        .map(([key]) => `Missing environment setting: ${key}`),
+      ...Object.entries(files)
+        .filter(([, ok]) => !ok)
+        .map(([key]) => `Missing runtime asset: ${key}`),
+      ...failedTables.map(
+        (check) => `Database table unavailable: ${check.name}`,
+      ),
+    ];
+
+    if (settings.cloud_enabled !== false && !launchUrl) {
+      issues.push(
+        "Fuzz Cloud is enabled but has no valid HTTPS Guacamole URL.",
+      );
+    }
+
+    return res.json({
+      ok: issues.length === 0,
+      version: FUZZ_RELEASE.version,
+      checkedAt: new Date().toISOString(),
+      environment,
+      files,
+      cloud: {
+        enabled: settings.cloud_enabled !== false,
+        ownerOnly: settings.cloud_owner_only !== false,
+        configured: Boolean(launchUrl),
+        name: settings.cloud_name,
+        host: cloudHost,
+      },
+      database: {
+        checks: tableChecks,
+        ready: failedTables.length === 0,
+      },
+      issues,
+    });
+  },
+);
+
 
 /* =======================================================
    PROXY ACTIVITY
@@ -10106,6 +10260,13 @@ app.get(
         route: "settings",
         keywords:
           "configuration maintenance",
+      },
+      {
+        id: "diagnostics",
+        title: "Open Diagnostics",
+        route: "diagnostics",
+        keywords:
+          "deployment environment database schema cloud assets health setup",
       },
     ];
 

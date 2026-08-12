@@ -1,8 +1,6 @@
 (() => {
   "use strict";
 
-  const GUACAMOLE_URL =
-    "https://guac.fuzzthehuzz-ebsfiygfhsvfbfesg.com/";
 
   const state = {
     config: null,
@@ -42,6 +40,11 @@
   }
 
   function renderReady(config) {
+    if (!config?.launchUrl) {
+      showError("Fuzz Cloud does not have a valid launch URL.");
+      return;
+    }
+
     state.config = config;
     elements.name.textContent = config.name || "Gaming PC";
     elements.launch.disabled = false;
@@ -67,12 +70,12 @@
         : "scramjet";
 
     if (typeof window.FuzzProxy?.openStandalone === "function") {
-      window.FuzzProxy.openStandalone(GUACAMOLE_URL, engine);
+      window.FuzzProxy.openStandalone(state.config.launchUrl, engine);
       return;
     }
 
     // Fallback for cases where the proxy helper has not loaded yet.
-    sessionStorage.setItem("GoUrlRaw", GUACAMOLE_URL);
+    sessionStorage.setItem("GoUrlRaw", state.config.launchUrl);
     sessionStorage.setItem("GoProxyEngine", engine);
     window.location.assign("/p");
   }
@@ -113,7 +116,9 @@
 
     // Keep this button as a true direct fallback.
     elements.direct.addEventListener("click", () => {
-      window.open(GUACAMOLE_URL, "_blank", "noopener,noreferrer");
+      if (state.config?.launchUrl) {
+        window.open(state.config.launchUrl, "_blank", "noopener,noreferrer");
+      }
     });
 
     load();
