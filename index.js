@@ -7566,10 +7566,22 @@ const DIAGNOSTIC_TABLES = [
 ];
 
 async function probeDiagnosticTable(table) {
+  const startedAt = Date.now();
+
   try {
-    const { error } = await supabaseAdmin
-      .from(table)
-      .select("*", { count: "exact", head: true });
+    const result = await Promise.race([
+      supabaseAdmin
+        .from(table)
+        .select("*", { count: "exact", head: true }),
+      new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error("Database check timed out after 5 seconds.")),
+          5000,
+        ),
+      ),
+    ]);
+
+    const error = result?.error || null;
 
     return {
       name: table,
@@ -7577,12 +7589,14 @@ async function probeDiagnosticTable(table) {
       message: error
         ? String(error.message || "Unavailable").slice(0, 180)
         : "Ready",
+      durationMs: Date.now() - startedAt,
     };
   } catch (error) {
     return {
       name: table,
       ok: false,
       message: String(error?.message || "Unavailable").slice(0, 180),
+      durationMs: Date.now() - startedAt,
     };
   }
 }
@@ -7591,7 +7605,25 @@ app.get(
   "/api/admin/diagnostics",
   requireRole("owner"),
   async (_req, res) => {
-    const settings = await getPlatformSettings(true);
+    const startedAt = Date.now();
+
+    let settings = normalizePlatformSettings(DEFAULT_PLATFORM_SETTINGS);
+    let settingsWarning = null;
+
+    try {
+      const loadedSettings = await getPlatformSettings(true);
+      if (loadedSettings) {
+        settings = normalizePlatformSettings(loadedSettings);
+      } else {
+        settingsWarning =
+          "Platform settings could not be loaded; diagnostics are using safe defaults.";
+      }
+    } catch (error) {
+      settingsWarning = `Platform settings check failed: ${String(
+        error?.message || "Unavailable",
+      ).slice(0, 160)}`;
+    }
+
     const tableChecks = await Promise.all(
       DIAGNOSTIC_TABLES.map(probeDiagnosticTable),
     );
@@ -7632,10 +7664,11 @@ app.get(
 
     const failedTables = tableChecks.filter((check) => !check.ok);
     const requiredEnvironment = [
-      ["supabaseUrl", environment.supabaseUrl],
-      ["supabaseAnonKey", environment.supabaseAnonKey],
-      ["supabaseServerKey", environment.supabaseServerKey],
+      ["Supabase URL", environment.supabaseUrl],
+      ["Supabase anon key", environment.supabaseAnonKey],
+      ["Supabase server key", environment.supabaseServerKey],
     ];
+
     const issues = [
       ...requiredEnvironment
         .filter(([, ok]) => !ok)
@@ -7644,37 +7677,52 @@ app.get(
         .filter(([, ok]) => !ok)
         .map(([key]) => `Missing runtime asset: ${key}`),
       ...failedTables.map(
-        (check) => `Database table unavailable: ${check.name}`,
+        (check) => `Database table unavailable: ${check.name} — ${check.message}`,
       ),
     ];
 
+    const warnings = [];
+
+    if (settingsWarning) warnings.push(settingsWarning);
+    if (!environment.openaiApiKey) {
+      warnings.push("OpenAI API key is not configured. Fuzz AI will be unavailable.");
+    }
     if (settings.cloud_enabled !== false && !launchUrl) {
-      issues.push(
-        "Fuzz Cloud is enabled but has no valid HTTPS Guacamole URL.",
-      );
+      issues.push("Fuzz Cloud is enabled but has no valid HTTPS Guacamole URL.");
     }
 
     return res.json({
       ok: issues.length === 0,
       version: FUZZ_RELEASE.version,
       checkedAt: new Date().toISOString(),
+      durationMs: Date.now() - startedAt,
+      runtime: {
+        node: process.version,
+        platform: process.platform,
+        uptimeSeconds: Math.round(process.uptime()),
+        memoryMb: Math.round(process.memoryUsage().rss / 1024 / 1024),
+      },
       environment,
       files,
       cloud: {
         enabled: settings.cloud_enabled !== false,
         ownerOnly: settings.cloud_owner_only !== false,
         configured: Boolean(launchUrl),
-        name: settings.cloud_name,
+        name: settings.cloud_name || "Gaming PC",
         host: cloudHost,
       },
       database: {
         checks: tableChecks,
         ready: failedTables.length === 0,
+        passed: tableChecks.length - failedTables.length,
+        total: tableChecks.length,
       },
+      warnings,
       issues,
     });
   },
 );
+
 
 
 /* =======================================================

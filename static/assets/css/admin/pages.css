@@ -1514,3 +1514,108 @@
   .cloud-admin-actions { align-items: stretch; flex-direction: column; }
   .cloud-admin-actions span { text-align: left; }
 }
+
+/* =======================================================
+   DIAGNOSTICS
+======================================================= */
+
+.diagnostics-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 15px 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.diagnostics-toolbar > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.diagnostics-toolbar strong {
+  font-size: 12px;
+}
+
+.diagnostics-toolbar span {
+  color: var(--text-faint);
+  font-size: 9px;
+}
+
+.diagnostics-status-value {
+  font-size: 22px;
+}
+
+.diagnostics-setting-row {
+  min-height: 62px;
+}
+
+.diagnostics-findings {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.diagnostics-finding {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.diagnostics-finding-error {
+  border-color: rgba(255, 105, 120, 0.2);
+  background: rgba(255, 105, 120, 0.045);
+}
+
+.diagnostics-finding-warning {
+  border-color: rgba(248, 200, 90, 0.18);
+  background: rgba(248, 200, 90, 0.04);
+}
+
+.diagnostics-finding-icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 9px;
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.diagnostics-finding-error .diagnostics-finding-icon {
+  color: #ff8a96;
+}
+
+.diagnostics-finding-warning .diagnostics-finding-icon {
+  color: #e6c66e;
+}
+
+.diagnostics-finding strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 10px;
+}
+
+.diagnostics-finding p {
+  margin: 0;
+  color: var(--text-faint);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+@media (max-width: 720px) {
+  .diagnostics-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

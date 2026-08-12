@@ -3,7 +3,7 @@ import { renderAnnouncements } from "./announcements.js";
 import { renderAi } from "./ai.js";
 import { renderAnalytics } from "./analytics.js";
 import { renderDashboard } from "./dashboard.js";
-import { renderDiagnostics } from "./diagnostics.js";
+import { renderDiagnostics } from "./diagnostics.js?v=2";
 import { renderExports } from "./exports.js";
 import { renderInvites } from "./invites.js";
 import { renderLimits } from "./limits.js";
