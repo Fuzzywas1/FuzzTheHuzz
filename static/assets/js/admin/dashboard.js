@@ -155,14 +155,6 @@ function paint(container, dashboard, stats) {
                 </span>
               </button>
 
-              <button class="quick-action" type="button" data-quick-action="diagnostics">
-                <span class="quick-action-icon">✓</span>
-                <span class="quick-action-copy">
-                  <strong>Run diagnostics</strong>
-                  <span>Check deployment and database readiness.</span>
-                </span>
-              </button>
-
               <button class="quick-action" type="button" data-quick-action="cloud">
                 <span class="quick-action-icon">▣</span>
                 <span class="quick-action-copy">
@@ -194,7 +186,7 @@ function paint(container, dashboard, stats) {
     button.addEventListener("click", async () => {
       const action = button.dataset.quickAction;
 
-      if (["users", "activity", "invites", "diagnostics"].includes(action)) {
+      if (["users", "activity", "invites"].includes(action)) {
         navigate(action);
         return;
       }

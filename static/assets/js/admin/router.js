@@ -3,7 +3,6 @@ import { renderAnnouncements } from "./announcements.js";
 import { renderAi } from "./ai.js";
 import { renderAnalytics } from "./analytics.js";
 import { renderDashboard } from "./dashboard.js";
-import { renderDiagnostics } from "./diagnostics.js?v=2";
 import { renderExports } from "./exports.js";
 import { renderInvites } from "./invites.js";
 import { renderLimits } from "./limits.js";
@@ -50,11 +49,6 @@ const routes = {
     title: "System Health",
     subtitle: "Deep checks, proxy assets, platform switches, and client error IDs.",
     render: renderHealth,
-  },
-  diagnostics: {
-    title: "Diagnostics",
-    subtitle: "Deployment, database, proxy assets and Fuzz Cloud readiness.",
-    render: renderDiagnostics,
   },
   history: {
     title: "History",
