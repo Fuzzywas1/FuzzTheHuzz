@@ -91,7 +91,7 @@
     });
   }
 
-  async function saveStoredGame(name, files) {
+  async function saveStoredGame(name, files, entrypoint = "") {
     const db = await openDb();
     return new Promise((resolve, reject) => {
       const tx = db.transaction([STORE_NAME], "readwrite");
@@ -99,6 +99,7 @@
         id: name,
         name,
         files,
+        entrypoint,
         uploadDate: new Date().toISOString(),
         lastPlayed: new Date().toISOString(),
       });
@@ -143,6 +144,42 @@
     return raw.replace(/\.zip$/i, "") || `game-${game.id}`;
   }
 
+  function scoreEntrypoint(path = "") {
+    const clean = String(path)
+      .replace(/\\/g, "/")
+      .replace(/^\/+/, "");
+    const lower = clean.toLowerCase();
+    const parts = lower.split("/");
+    const filename = parts.pop() || "";
+    const depth = parts.length;
+
+    if (filename === "index.html") return 100 - depth;
+    if (filename === "index.htm") return 96 - depth;
+    if (filename === "game.html") return 92 - depth;
+    if (filename === "main.html") return 90 - depth;
+    if (filename === "play.html") return 88 - depth;
+    if (filename === "launcher.html") return 84 - depth;
+    if (filename.endsWith(".html")) return 70 - depth;
+    if (filename.endsWith(".htm")) return 66 - depth;
+
+    return -1;
+  }
+
+  function findEntrypoint(files = {}) {
+    let bestPath = "";
+    let bestScore = -1;
+
+    for (const path of Object.keys(files)) {
+      const score = scoreEntrypoint(path);
+      if (score > bestScore) {
+        bestPath = path;
+        bestScore = score;
+      }
+    }
+
+    return bestScore >= 0 ? bestPath : "";
+  }
+
   async function fetchZip(url) {
     const response = await fetch(url, { cache: "no-store" });
     if (!response.ok) {
@@ -156,7 +193,7 @@
       !/zip|octet-stream/i.test(type) &&
       !/\.zip(?:$|\?)/i.test(url)
     ) {
-      throw new Error("This DogeUB entry is not a playable game package.");
+      throw new Error("This DogeUB entry is not a browser game package.");
     }
 
     const archive = await window.JSZip.loadAsync(blob);
@@ -164,15 +201,24 @@
 
     for (const [path, entry] of Object.entries(archive.files)) {
       if (entry.dir) continue;
-      const binary = isBinary(path);
-      files[path] = {
+
+      const normalizedPath = path
+        .replace(/\\/g, "/")
+        .replace(/^\/+/, "");
+
+      const binary = isBinary(normalizedPath);
+
+      files[normalizedPath] = {
         content: await entry.async(binary ? "base64" : "string"),
-        mime: getMime(path),
+        mime: getMime(normalizedPath),
         binary,
       };
     }
 
-    return files;
+    return {
+      files,
+      entrypoint: findEntrypoint(files),
+    };
   }
 
   async function prepareGame(game) {
@@ -184,8 +230,19 @@
 
     const name = gamePackageName(game);
     const existing = await getStoredGame(name);
+
     if (existing?.files) {
-      return `/game/${encodeURIComponent(name)}/index.html`;
+      const cachedEntrypoint =
+        existing.entrypoint ||
+        findEntrypoint(existing.files);
+
+      if (!cachedEntrypoint) {
+        throw new Error(
+          `${game.name} does not contain a browser-playable HTML entry point.`,
+        );
+      }
+
+      return `/game/${encodeURIComponent(name)}/${cachedEntrypoint}`;
     }
 
     const urls =
@@ -194,17 +251,38 @@
         : [game.url];
 
     const merged = {};
+    let entrypoint = "";
+
     for (const url of urls) {
-      const files = await fetchZip(url);
-      Object.assign(merged, files);
+      const packageData = await fetchZip(url);
+      Object.assign(merged, packageData.files);
+
+      if (!entrypoint && packageData.entrypoint) {
+        entrypoint = packageData.entrypoint;
+      }
     }
 
     if (!Object.keys(merged).length) {
       throw new Error("The downloaded game package was empty.");
     }
 
-    await saveStoredGame(name, merged);
-    return `/game/${encodeURIComponent(name)}/index.html`;
+    entrypoint =
+      entrypoint ||
+      findEntrypoint(merged);
+
+    if (!entrypoint) {
+      throw new Error(
+        `${game.name} is in DogeUB's catalog, but this package does not contain a browser-playable HTML game.`,
+      );
+    }
+
+    await saveStoredGame(
+      name,
+      merged,
+      entrypoint,
+    );
+
+    return `/game/${encodeURIComponent(name)}/${entrypoint}`;
   }
 
   function openInsideFuzzProxyShell(localUrl, game) {

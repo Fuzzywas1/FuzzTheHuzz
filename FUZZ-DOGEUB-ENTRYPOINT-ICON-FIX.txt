@@ -1,0 +1,24 @@
+Fuzz DogeUB Games - browser entrypoint + icon matching fix
+
+What this fixes:
+- Game ZIPs no longer have to contain index.html at the root.
+- Fuzz searches the ZIP for the best browser entry point:
+  index.html, index.htm, game.html, main.html, play.html, launcher.html,
+  then other HTML files.
+- Nested folders like /game-name/index.html now launch correctly.
+- Packages with no HTML entry point show a clear unsupported-game error
+  instead of opening a blank page.
+- Previously cached games are re-checked for their real entry point.
+- Icon matching against Fuzz's existing artwork is now fuzzy instead of
+  requiring an almost exact name, with aliases for common names like CS:GO.
+
+Changed files:
+- index.js
+- static/games.html
+- static/assets/js/games.js
+- static/assets/js/standalone-proxy.js
+- static/assets/js/m1.js
+- static/assets/css/games.css
+- static/proxy.html
+- static/assets/css/proxy.css
+- static/loadersw.js

@@ -7047,60 +7047,167 @@ function normalizeGameName(value = "") {
   return String(value)
     .toLowerCase()
     .replace(/&/g, "and")
-    .replace(/[^a-z0-9]+/g, "");
+    .replace(/\b(the|game|online|html5|web|unblocked|classic|edition)\b/g, " ")
+    .replace(/[^a-z0-9]+/g, "")
+    .trim();
 }
 
-function loadFuzzGameIconMap() {
+function gameNameTokens(value = "") {
+  return String(value)
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .split(/\s+/)
+    .filter((token) =>
+      token &&
+      !["the", "game", "online", "html5", "web", "unblocked", "classic", "edition"].includes(token),
+    );
+}
+
+function levenshteinDistance(a = "", b = "") {
+  const first = String(a);
+  const second = String(b);
+  const rows = second.length + 1;
+  const cols = first.length + 1;
+
+  const previous = Array.from({ length: cols }, (_, index) => index);
+  const current = new Array(cols);
+
+  for (let row = 1; row < rows; row += 1) {
+    current[0] = row;
+
+    for (let col = 1; col < cols; col += 1) {
+      const cost =
+        first[col - 1] === second[row - 1]
+          ? 0
+          : 1;
+
+      current[col] = Math.min(
+        current[col - 1] + 1,
+        previous[col] + 1,
+        previous[col - 1] + cost,
+      );
+    }
+
+    for (let col = 0; col < cols; col += 1) {
+      previous[col] = current[col];
+    }
+  }
+
+  return previous[cols - 1];
+}
+
+function gameNameSimilarity(a = "", b = "") {
+  const first = normalizeGameName(a);
+  const second = normalizeGameName(b);
+
+  if (!first || !second) return 0;
+  if (first === second) return 1;
+
+  if (
+    Math.min(first.length, second.length) >= 5 &&
+    (first.includes(second) || second.includes(first))
+  ) {
+    return 0.93;
+  }
+
+  const firstTokens = new Set(gameNameTokens(a));
+  const secondTokens = new Set(gameNameTokens(b));
+  const union = new Set([...firstTokens, ...secondTokens]);
+  let intersection = 0;
+
+  for (const token of firstTokens) {
+    if (secondTokens.has(token)) intersection += 1;
+  }
+
+  const tokenScore =
+    union.size > 0
+      ? intersection / union.size
+      : 0;
+
+  const maxLength = Math.max(first.length, second.length);
+  const editScore =
+    maxLength > 0
+      ? 1 - levenshteinDistance(first, second) / maxLength
+      : 0;
+
+  return Math.max(
+    tokenScore * 0.94,
+    editScore * 0.9,
+  );
+}
+
+const GAME_ICON_ALIASES = new Map([
+  ["csgo", "counterstrike16"],
+  ["counterstrike", "counterstrike16"],
+  ["counterstrikeglobaloffensive", "counterstrike16"],
+  ["minecraft", "minecraftclassic"],
+  ["mc", "minecraftclassic"],
+  ["1v1lol", "1v1lol"],
+]);
+
+function loadFuzzGameIconEntries() {
   try {
     const data = JSON.parse(
       fs.readFileSync(FUZZ_GAME_ICON_CATALOG_PATH, "utf8"),
     );
 
-    if (!Array.isArray(data)) return new Map();
+    if (!Array.isArray(data)) return [];
 
-    const map = new Map();
-
-    for (const entry of data) {
-      const name = normalizeGameName(entry?.name);
-      const image = String(entry?.image || "").trim();
-
-      if (!name || !image || map.has(name)) continue;
-      map.set(name, image);
-    }
-
-    return map;
+    return data
+      .map((entry) => ({
+        name: String(entry?.name || "").trim(),
+        normalized: normalizeGameName(entry?.name),
+        image: String(entry?.image || "").trim(),
+      }))
+      .filter((entry) =>
+        entry.name &&
+        entry.normalized &&
+        entry.image,
+      );
   } catch (error) {
     console.warn(
       "Could not load Fuzz game icon fallback catalog:",
       error?.message || error,
     );
-    return new Map();
+    return [];
   }
 }
 
-const fuzzGameIconMap = loadFuzzGameIconMap();
+const fuzzGameIconEntries = loadFuzzGameIconEntries();
 
 function findFuzzGameIcon(gameName = "") {
-  const normalized = normalizeGameName(gameName);
+  let normalized = normalizeGameName(gameName);
   if (!normalized) return "";
 
-  if (fuzzGameIconMap.has(normalized)) {
-    return fuzzGameIconMap.get(normalized);
-  }
+  normalized =
+    GAME_ICON_ALIASES.get(normalized) ||
+    normalized;
 
-  // Handle common catalog naming differences like "Vex 7" vs "Vex7".
-  for (const [name, icon] of fuzzGameIconMap) {
-    if (
-      normalized.length >= 5 &&
-      (name === normalized ||
-        name.startsWith(normalized) ||
-        normalized.startsWith(name))
-    ) {
-      return icon;
+  const exact = fuzzGameIconEntries.find(
+    (entry) => entry.normalized === normalized,
+  );
+
+  if (exact) return exact.image;
+
+  let best = null;
+  let bestScore = 0;
+
+  for (const entry of fuzzGameIconEntries) {
+    const score = gameNameSimilarity(
+      normalized,
+      entry.normalized,
+    );
+
+    if (score > bestScore) {
+      best = entry;
+      bestScore = score;
     }
   }
 
-  return "";
+  return bestScore >= 0.72
+    ? best.image
+    : "";
 }
 
 function cleanDogeGameUrl(value) {
