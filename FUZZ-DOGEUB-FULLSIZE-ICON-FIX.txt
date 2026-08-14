@@ -1,0 +1,20 @@
+Fuzz DogeUB Games - full-size player and icon fallback fix
+
+Fixes:
+1. Local DogeUB games now fill the complete Fuzz proxy content area instead
+   of rendering as a small iframe box.
+2. Existing Fuzz fullscreen mode also expands local games to the full viewport.
+3. Game icons now use this fallback order:
+   - DogeUB's supplied icon
+   - Matching icon from Fuzz's existing 324-game catalog
+   - Generated initials tile
+4. Cache versions are bumped so browsers load the corrected files.
+
+Changed files:
+- index.js
+- static/games.html
+- static/proxy.html
+- static/assets/js/games.js
+- static/assets/js/standalone-proxy.js
+- static/assets/css/games.css
+- static/assets/css/proxy.css

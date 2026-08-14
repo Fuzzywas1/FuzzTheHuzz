@@ -47,3 +47,13 @@
   height: 100%;
   object-fit: cover;
 }
+
+
+.games-page .app-card-icon {
+  background: linear-gradient(145deg, #171e3d, #0a0e20);
+}
+
+.games-page .app-card-icon-fallback {
+  font-size: 18px;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}

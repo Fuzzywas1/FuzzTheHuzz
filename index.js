@@ -7035,6 +7035,74 @@ let dogeGamesCatalogCache = {
   payload: null,
 };
 
+const FUZZ_GAME_ICON_CATALOG_PATH = path.join(
+  __dirname,
+  "static",
+  "assets",
+  "json",
+  "g.json",
+);
+
+function normalizeGameName(value = "") {
+  return String(value)
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+function loadFuzzGameIconMap() {
+  try {
+    const data = JSON.parse(
+      fs.readFileSync(FUZZ_GAME_ICON_CATALOG_PATH, "utf8"),
+    );
+
+    if (!Array.isArray(data)) return new Map();
+
+    const map = new Map();
+
+    for (const entry of data) {
+      const name = normalizeGameName(entry?.name);
+      const image = String(entry?.image || "").trim();
+
+      if (!name || !image || map.has(name)) continue;
+      map.set(name, image);
+    }
+
+    return map;
+  } catch (error) {
+    console.warn(
+      "Could not load Fuzz game icon fallback catalog:",
+      error?.message || error,
+    );
+    return new Map();
+  }
+}
+
+const fuzzGameIconMap = loadFuzzGameIconMap();
+
+function findFuzzGameIcon(gameName = "") {
+  const normalized = normalizeGameName(gameName);
+  if (!normalized) return "";
+
+  if (fuzzGameIconMap.has(normalized)) {
+    return fuzzGameIconMap.get(normalized);
+  }
+
+  // Handle common catalog naming differences like "Vex 7" vs "Vex7".
+  for (const [name, icon] of fuzzGameIconMap) {
+    if (
+      normalized.length >= 5 &&
+      (name === normalized ||
+        name.startsWith(normalized) ||
+        normalized.startsWith(name))
+    ) {
+      return icon;
+    }
+  }
+
+  return "";
+}
+
 function cleanDogeGameUrl(value) {
   const candidates = Array.isArray(value)
     ? value
@@ -7103,6 +7171,7 @@ function serializeDogeGamesCatalog(payload = {}) {
           .trim()
           .slice(0, 220),
         icon: cleanDogeGameIcon(entry.icon),
+        fallbackIcon: findFuzzGameIcon(name),
         url,
         urls,
         category,

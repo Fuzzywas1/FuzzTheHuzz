@@ -282,15 +282,20 @@
         >
           <span class="app-card-icon-wrap">
             ${
-              game.icon
+              game.icon || game.fallbackIcon
                 ? `<img
                     class="app-card-icon"
-                    src="${escapeHtml(game.icon)}"
+                    src="${escapeHtml(game.icon || game.fallbackIcon)}"
                     alt=""
                     loading="lazy"
                     decoding="async"
                     referrerpolicy="no-referrer"
                     data-game-image
+                    data-fallback-icon="${escapeHtml(
+                      game.icon && game.fallbackIcon
+                        ? game.fallbackIcon
+                        : "",
+                    )}"
                   />
                   <span class="app-card-icon-fallback" hidden>${escapeHtml(fallback)}</span>`
                 : `<span class="app-card-icon-fallback">${escapeHtml(fallback)}</span>`
@@ -344,9 +349,22 @@
 
     elements.grid.querySelectorAll("[data-game-image]").forEach((image) => {
       image.addEventListener("error", () => {
+        const fallbackIcon = image.dataset.fallbackIcon || "";
+
+        if (
+          fallbackIcon &&
+          image.src !== new URL(fallbackIcon, location.href).href
+        ) {
+          image.dataset.fallbackIcon = "";
+          image.src = fallbackIcon;
+          return;
+        }
+
         image.hidden = true;
-        if (image.nextElementSibling) image.nextElementSibling.hidden = false;
-      }, { once: true });
+        if (image.nextElementSibling) {
+          image.nextElementSibling.hidden = false;
+        }
+      });
     });
 
     elements.grid.querySelectorAll("[data-open-game]").forEach((button) => {
