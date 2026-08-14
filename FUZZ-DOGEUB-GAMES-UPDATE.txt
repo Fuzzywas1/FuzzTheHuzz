@@ -1,0 +1,21 @@
+Fuzz + DogeUB Games integration
+
+What this update does:
+- Restores a separate Games page at /a.
+- Adds Games directly below Apps in the Fuzz sidebar.
+- Uses DogeUB's production game-catalog source:
+  https://ci.baylib.top/apps.json
+- The Fuzz server fetches and caches that catalog.
+- Only the `games` section of the DogeUB catalog is exposed to the page.
+- Clicking any game always opens that game's URL through Fuzz's existing
+  standalone proxy page (/p), using the user's selected Fuzz proxy engine.
+- DogeUB proxy code, navigation, settings, ads, player UI, and other features
+  are not copied.
+- The existing Games enable/disable admin setting remains respected.
+
+Changed/added files:
+- index.js
+- static/games.html
+- static/assets/js/games.js
+- static/assets/js/m1.js
+- static/assets/css/games.css

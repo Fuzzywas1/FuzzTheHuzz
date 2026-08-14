@@ -15,6 +15,7 @@
       label: "Browser",
       items: [
         { href: "/b", match: ["/b", "/apps.html"], label: "Apps", icon: "apps" },
+        { href: "/a", match: ["/a", "/games.html", "/play.html"], label: "Games", icon: "gamepad", feature: "games" },
         { href: "/d", match: ["/d", "/tabs.html"], label: "Tabs", icon: "tabs" },
         { href: "/p", match: ["/p", "/proxy.html"], label: "Proxy", icon: "globe" },
       ],
@@ -37,6 +38,7 @@
     chat: '<path d="M5.1 17.8 3.7 21l4.1-1.9c1.2.5 2.5.8 4.2.8 5.1 0 8.8-3.3 8.8-7.9S17.1 4.1 12 4.1 3.2 7.4 3.2 12c0 2.2.7 4.2 1.9 5.8Z"/><path d="M8.2 12h.1M11.9 12h.1M15.6 12h.1"/>',
     sparkles: '<path d="m12 3 1.2 3.4L16.6 8l-3.4 1.2L12 12.6l-1.2-3.4L7.4 8l3.4-1.6L12 3Z"/><path d="m18.3 13.2.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2Z"/><path d="m5.6 13.8.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8Z"/>',
     apps: '<rect x="3.5" y="3.5" width="6.5" height="6.5" rx="1.5"/><rect x="14" y="3.5" width="6.5" height="6.5" rx="1.5"/><rect x="3.5" y="14" width="6.5" height="6.5" rx="1.5"/><rect x="14" y="14" width="6.5" height="6.5" rx="1.5"/>',
+    gamepad: '<path d="M7.2 8.2h9.6c2 0 3.7 1.4 4.1 3.4l.8 4.2c.4 2.2-2.2 3.6-3.8 2.1l-2-1.9H8.1l-2 1.9c-1.6 1.5-4.2.1-3.8-2.1l.8-4.2c.4-2 2.1-3.4 4.1-3.4Z"/><path d="M7.2 11.3v3.3M5.5 13h3.4M16.8 11.8h.1M18.7 14h.1"/>',
     tabs: '<rect x="3.5" y="5.2" width="17" height="13.6" rx="2.3"/><path d="M3.7 9.2h16.6"/><path d="M7 7.2h.1M10 7.2h.1"/>',
     globe: '<circle cx="12" cy="12" r="8.8"/><path d="M3.5 12h17M12 3.2c2.2 2.4 3.3 5.3 3.3 8.8S14.2 18.4 12 20.8M12 3.2C9.8 5.6 8.7 8.5 8.7 12s1.1 6.4 3.3 8.8"/>',
     desktop: '<rect x="3.2" y="4.2" width="17.6" height="12.2" rx="2.2"/><path d="M8.5 20h7M12 16.4V20"/>',
@@ -418,18 +420,22 @@
   }
 
   function isRouteVisible(item, account = {}) {
-    if (item.feature !== "cloud") {
+    if (!item.feature) {
       return true;
     }
 
-    if (platformConfig.features?.cloud === false) {
+    if (platformConfig.features?.[item.feature] === false) {
       return false;
     }
 
-    return (
-      platformConfig.cloud?.configured === true &&
-      platformConfig.cloud?.allowed === true
-    );
+    if (item.feature === "cloud") {
+      return (
+        platformConfig.cloud?.configured === true &&
+        platformConfig.cloud?.allowed === true
+      );
+    }
+
+    return true;
   }
 
   function renderShell(container, account = {}) {

@@ -1,28 +1,131 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="referrer" content="no-referrer" />
   <meta http-equiv="X-Content-Type-Options" content="nosniff" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="refresh" content="0;url=/b" />
-  <link rel="shortcut icon" href="/favicon.png" />
-  <title>Home</title>
+  <meta name="theme-color" content="#050713" />
+
+  <link rel="shortcut icon" id="tab-favicon" href="/assets/media/favicon/classroom.png" />
+  <title id="t">Home</title>
+
   <link rel="stylesheet" href="/assets/css/global.css?v=6" />
-  <style>
-    :root { color-scheme: dark; }
-    body { display:grid; min-height:100vh; margin:0; place-items:center; color:#f5f7ff; background:radial-gradient(circle at top,#111831,#02030a 68%); font-family:Inter,ui-sans-serif,system-ui,sans-serif; }
-    main { width:min(440px,calc(100% - 32px)); padding:24px; border:1px solid rgba(148,161,255,.18); border-radius:18px; background:rgba(10,15,31,.9); text-align:center; }
-    p { color:#a7b0ca; line-height:1.6; }
-    a { display:inline-flex; min-height:40px; align-items:center; padding:0 14px; border-radius:11px; color:white; background:linear-gradient(135deg,#6878f4,#7956e8); font-weight:800; text-decoration:none; }
-  </style>
-  <script>window.location.replace('/b');</script>
+  <link rel="stylesheet" href="/assets/css/apps.css?v=4" />
+  <link rel="stylesheet" href="/assets/css/games.css?v=1" />
+  <link rel="stylesheet" href="/assets/css/nav.css?v=13" />
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+  />
+
+  <script src="/baremux/index.js"></script>
+  <script src="/scram/scramjet.all.js"></script>
+  <script src="/assets/js/proxy-engine.js?v=4"></script>
+  <link rel="stylesheet" href="/assets/css/fuzz-ui.css?v=1" />
+  <script src="/assets/js/fuzz-ui.js?v=1"></script>
 </head>
-<body>
-  <main>
-    <h1>Opening Apps</h1>
-    <p>The separate legacy game launcher has been retired. The maintained launcher is available from Apps.</p>
-    <a href="/b">Open Apps</a>
+
+<body class="apps-page games-page">
+  <div class="apps-backdrop" aria-hidden="true">
+    <span class="apps-orb apps-orb-one"></span>
+    <span class="apps-orb apps-orb-two"></span>
+    <span class="apps-grid-glow"></span>
+  </div>
+
+  <div class="f-nav"></div>
+
+  <main class="apps-shell" id="games-shell">
+    <header class="apps-page-header">
+      <div>
+        <div class="apps-eyebrow">
+          <span class="apps-eyebrow-dot"></span>
+          Fuzz games
+        </div>
+        <h1 id="games-title">Games</h1>
+        <p>DogeUB's game catalog, launched through Fuzz Proxy.</p>
+      </div>
+    </header>
+
+    <section class="apps-workspace" aria-labelledby="games-title">
+      <aside class="apps-sidebar" aria-label="Game filters">
+        <div class="apps-sidebar-heading">
+          <span>Browse</span>
+          <small>Find a game</small>
+        </div>
+
+        <section class="apps-command-bar" aria-label="Search games">
+          <label class="apps-search-wrap" for="game-search">
+            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+            <input
+              id="game-search"
+              type="search"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="Search games"
+            />
+            <kbd>/</kbd>
+          </label>
+        </section>
+
+        <div class="apps-sidebar-label">Categories</div>
+        <section class="apps-category-strip" aria-label="Game categories">
+          <div id="game-category-chips" class="apps-category-chips"></div>
+        </section>
+
+        <div id="games-status" class="apps-status-row" aria-live="polite">
+          <span>Loading DogeUB games...</span>
+        </div>
+      </aside>
+
+      <div class="apps-content">
+        <section class="apps-section apps-all-section">
+          <div class="apps-section-heading apps-all-heading">
+            <div>
+              <span class="apps-section-kicker">Library</span>
+              <h2 id="game-section-title">All games</h2>
+            </div>
+            <span id="game-count" class="apps-count-pill">0 games</span>
+          </div>
+
+          <div id="games-loading" class="apps-loading-grid" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+          </div>
+
+          <div id="all-games" class="apps-grid" hidden></div>
+
+          <div id="games-empty" class="apps-empty" hidden>
+            <div class="apps-empty-icon">
+              <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
+            </div>
+            <h3>No games found</h3>
+            <p>Try another search or category.</p>
+            <button class="apps-secondary-button" id="reset-game-filters" type="button">
+              Reset filters
+            </button>
+          </div>
+
+          <div id="games-error" class="apps-empty" hidden>
+            <div class="apps-empty-icon">
+              <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+            </div>
+            <h3>Games could not load</h3>
+            <p id="games-error-message">The DogeUB catalog is temporarily unavailable.</p>
+            <button class="apps-secondary-button" id="retry-games" type="button">
+              Try again
+            </button>
+          </div>
+        </section>
+      </div>
+    </section>
   </main>
+
+  <div id="apps-toast-region" class="apps-toast-region" aria-live="polite"></div>
+
+  <script src="/assets/js/games.js?v=1"></script>
+  <script src="/assets/js/m1.js?v=15"></script>
+  <script src="/assets/js/account-shell.js?v=1" defer></script>
+  <script src="/assets/js/site-control.js" defer></script>
 </body>
 </html>

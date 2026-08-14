@@ -1,0 +1,36 @@
+
+.games-page .apps-page-header {
+  align-items: center;
+}
+
+.games-page .apps-content {
+  min-width: 0;
+}
+
+.games-page .app-card-main {
+  cursor: pointer;
+}
+
+.games-page .app-card-icon-fallback {
+  display: grid;
+  place-items: center;
+}
+
+.games-page .game-source-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.games-page .game-source-badge i {
+  font-size: 0.72rem;
+}
+
+.games-page .game-local-note {
+  color: rgba(216, 222, 255, 0.62);
+  font-size: 0.72rem;
+}
+
+.games-page #games-error {
+  margin-top: 24px;
+}

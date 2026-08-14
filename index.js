@@ -7020,6 +7020,192 @@ function parseAppsState(body = {}) {
   };
 }
 
+
+/* =======================================================
+   DOGEUB GAMES CATALOG
+======================================================= */
+
+const DOGE_GAMES_CATALOG_URL =
+  "https://ci.baylib.top/apps.json";
+const DOGE_GAMES_CACHE_TTL_MS =
+  10 * 60 * 1000;
+
+let dogeGamesCatalogCache = {
+  fetchedAt: 0,
+  payload: null,
+};
+
+function cleanDogeGameUrl(value) {
+  const candidates = Array.isArray(value)
+    ? value
+    : [value];
+
+  return candidates
+    .map((item) => String(item || "").trim())
+    .filter((item) => /^https?:\/\//i.test(item))
+    .slice(0, 8);
+}
+
+function cleanDogeGameIcon(value) {
+  const icon = String(value || "").trim();
+  if (!icon) return "";
+  if (/^https?:\/\//i.test(icon)) return icon;
+  return "";
+}
+
+function serializeDogeGamesCatalog(payload = {}) {
+  const source =
+    payload &&
+    typeof payload === "object" &&
+    payload.games &&
+    typeof payload.games === "object"
+      ? payload.games
+      : {};
+
+  const categories = {};
+  const all = [];
+  const seen = new Set();
+
+  for (const [rawCategory, entries] of Object.entries(source)) {
+    if (!Array.isArray(entries)) continue;
+
+    const category = String(rawCategory || "Other")
+      .trim()
+      .slice(0, 60) || "Other";
+
+    const serialized = [];
+
+    for (const entry of entries) {
+      if (!entry || entry.disabled === true) continue;
+
+      const name = String(entry.appName || "")
+        .trim()
+        .slice(0, 120);
+      const urls = cleanDogeGameUrl(entry.url);
+      const url = urls[0] || "";
+
+      if (!name || !url) continue;
+
+      const dedupeKey = `${name.toLowerCase()}|${url}`;
+      if (seen.has(dedupeKey)) continue;
+      seen.add(dedupeKey);
+
+      const game = {
+        id: Buffer.from(dedupeKey)
+          .toString("base64url")
+          .slice(0, 72),
+        name,
+        description: String(entry.desc || "")
+          .trim()
+          .slice(0, 220),
+        icon: cleanDogeGameIcon(entry.icon),
+        url,
+        urls,
+        category,
+        local: entry.local === true,
+      };
+
+      serialized.push(game);
+      all.push(game);
+    }
+
+    if (serialized.length > 0) {
+      categories[category] = serialized;
+    }
+  }
+
+  return {
+    source: "dogeub",
+    total: all.length,
+    categories,
+    games: all,
+  };
+}
+
+async function loadDogeGamesCatalog() {
+  if (
+    dogeGamesCatalogCache.payload &&
+    Date.now() - dogeGamesCatalogCache.fetchedAt <
+      DOGE_GAMES_CACHE_TTL_MS
+  ) {
+    return dogeGamesCatalogCache.payload;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    10000,
+  );
+
+  try {
+    const response = await fetch(
+      `${DOGE_GAMES_CATALOG_URL}?t=${Date.now()}`,
+      {
+        cache: "no-store",
+        signal: controller.signal,
+        headers: {
+          Accept: "application/json",
+          "User-Agent": "FuzzTheHuzz/1.0",
+        },
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `DogeUB catalog returned ${response.status}`,
+      );
+    }
+
+    const normalized =
+      serializeDogeGamesCatalog(
+        await response.json(),
+      );
+
+    if (normalized.total < 1) {
+      throw new Error(
+        "DogeUB returned an empty game catalog.",
+      );
+    }
+
+    dogeGamesCatalogCache = {
+      fetchedAt: Date.now(),
+      payload: normalized,
+    };
+
+    return normalized;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+app.get(
+  "/api/games/catalog",
+  requireApiAuth,
+  async (_req, res) => {
+    try {
+      const catalog =
+        await loadDogeGamesCatalog();
+
+      res.setHeader(
+        "Cache-Control",
+        "private, max-age=300",
+      );
+
+      return res.json(catalog);
+    } catch (error) {
+      console.error(
+        "DogeUB game catalog load failed:",
+        error,
+      );
+
+      return res.status(502).json({
+        error:
+          "The DogeUB game catalog is temporarily unavailable.",
+      });
+    }
+  },
+);
+
 app.get(
   "/api/apps/state",
   requireApiAuth,
