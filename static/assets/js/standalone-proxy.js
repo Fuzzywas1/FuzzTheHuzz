@@ -8,6 +8,8 @@
   const fullscreenButton = document.getElementById("proxy-fullscreen");
 
   let view = null;
+  const localGameUrl = sessionStorage.getItem("GoLocalGame") || "";
+  const localGameTitle = sessionStorage.getItem("GoLocalGameTitle") || "Game";
   let currentUrl = sessionStorage.getItem("GoUrlRaw") || "";
   let currentEngine =
     sessionStorage.getItem("GoProxyEngine") ||
@@ -19,6 +21,8 @@
   sessionStorage.removeItem("GoUrlRaw");
   sessionStorage.removeItem("GoProxyEngine");
   sessionStorage.removeItem("GoProxyFullscreen");
+  sessionStorage.removeItem("GoLocalGame");
+  sessionStorage.removeItem("GoLocalGameTitle");
 
   function setFullscreen(enabled) {
     document.body.classList.toggle("fullscreen-browser", enabled);
@@ -49,6 +53,33 @@
     } catch {
       if (currentUrl) void open(currentUrl, currentEngine);
     }
+  }
+
+
+  function openLocalGame(url, title = "Game") {
+    currentUrl = url;
+    input.value = title;
+    input.readOnly = true;
+    select.disabled = true;
+
+    host.innerHTML = "";
+
+    const frame = document.createElement("iframe");
+    frame.className = "proxy-frame local-game-frame";
+    frame.src = url;
+    frame.title = title;
+    frame.allow =
+      "autoplay; fullscreen; gamepad; clipboard-read; clipboard-write";
+    frame.setAttribute("allowfullscreen", "");
+
+    host.appendChild(frame);
+
+    view = {
+      element: frame,
+      destroy() {
+        frame.remove();
+      },
+    };
   }
 
   async function open(url, engine = currentEngine) {
@@ -122,6 +153,7 @@
 
   setFullscreen(startFullscreen);
 
-  if (currentUrl) void open(currentUrl, currentEngine);
+  if (localGameUrl) openLocalGame(localGameUrl, localGameTitle);
+  else if (currentUrl) void open(currentUrl, currentEngine);
   else location.replace("/");
 })();

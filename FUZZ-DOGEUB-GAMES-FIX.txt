@@ -1,0 +1,22 @@
+Fuzz DogeUB Games - playable ZIP + icon fix
+
+Fixes:
+- DogeUB game URLs are ZIP packages, so clicking them no longer navigates to
+  the ZIP (which caused the browser/proxy to download it).
+- Fuzz now uses DogeUB's client-side model: download ZIP, extract it in the
+  browser, store it in IndexedDB, and serve it under /game/<name>/.
+- The game still opens inside Fuzz's existing /p browser shell.
+- The game package itself is NOT sent through Scramjet/Ultraviolet because
+  those URLs are downloadable archives, not websites.
+- DogeUB icon values are now resolved relative to the DogeUB catalog source,
+  so relative icon paths work instead of being discarded.
+- Multi-part ZIP game entries are supported.
+
+Added/changed:
+- index.js
+- static/games.html
+- static/assets/js/games.js
+- static/assets/js/m1.js
+- static/assets/js/standalone-proxy.js
+- static/assets/css/games.css
+- static/loadersw.js

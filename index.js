@@ -7048,9 +7048,13 @@ function cleanDogeGameUrl(value) {
 
 function cleanDogeGameIcon(value) {
   const icon = String(value || "").trim();
-  if (!icon) return "";
-  if (/^https?:\/\//i.test(icon)) return icon;
-  return "";
+  if (!icon || /^javascript:/i.test(icon)) return "";
+
+  try {
+    return new URL(icon, DOGE_GAMES_CATALOG_URL).href;
+  } catch {
+    return "";
+  }
 }
 
 function serializeDogeGamesCatalog(payload = {}) {
