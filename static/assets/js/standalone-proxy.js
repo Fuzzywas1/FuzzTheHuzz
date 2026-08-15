@@ -61,7 +61,6 @@
     input.value = title;
     input.readOnly = true;
     select.disabled = true;
-
     host.innerHTML = "";
 
     const frame = document.createElement("iframe");
@@ -71,10 +70,10 @@
     frame.allow =
       "autoplay; fullscreen; gamepad; clipboard-read; clipboard-write";
     frame.setAttribute("allowfullscreen", "");
-    frame.style.width = "100%";
-    frame.style.height = "100%";
-    frame.style.border = "0";
-    frame.style.display = "block";
+    frame.setAttribute(
+      "sandbox",
+      "allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-pointer-lock",
+    );
 
     host.appendChild(frame);
 

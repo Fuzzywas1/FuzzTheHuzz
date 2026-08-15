@@ -21,17 +21,15 @@ body.fullscreen-browser .fuzz-proxy-frame {
 }
 
 
-/* Local DogeUB games use the same full content area as normal proxy pages. */
-.proxy-frame,
 .local-game-frame {
   display: block;
   width: 100%;
   height: 100%;
   min-width: 100%;
   min-height: 100%;
-  border: 0;
   margin: 0;
   padding: 0;
+  border: 0;
   background: #000;
 }
 

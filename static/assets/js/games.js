@@ -1,23 +1,17 @@
 (() => {
   "use strict";
 
-  const DB_NAME = "gm loader db";
-  const DB_VER = 1;
-  const STORE_NAME = "gms";
-  const TEXT_EXTS = new Set([
-    "html", "htm", "css", "js", "mjs", "json", "xml", "txt",
-    "md", "csv", "svg",
-  ]);
+  const loader = new window.DogeLocalGmLoader();
 
   const state = {
     games: [],
     categories: {},
     category: "all",
     query: "",
-    loadingGameId: "",
+    launching: "",
   };
 
-  const elements = {};
+  const el = {};
 
   const escapeHtml = (value = "") =>
     String(value).replace(/[&<>'"]/g, (character) => ({
@@ -38,342 +32,76 @@
       .toUpperCase() || "G";
   }
 
-  function getMime(filename) {
-    const ext = String(filename).split(".").pop().toLowerCase();
-    return ({
-      html: "text/html", htm: "text/html", css: "text/css",
-      js: "application/javascript", mjs: "application/javascript",
-      json: "application/json", xml: "application/xml",
-      txt: "text/plain", md: "text/markdown", csv: "text/csv",
-      png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg",
-      gif: "image/gif", svg: "image/svg+xml", ico: "image/x-icon",
-      webp: "image/webp", bmp: "image/bmp", avif: "image/avif",
-      woff: "font/woff", woff2: "font/woff2", ttf: "font/ttf",
-      otf: "font/otf", eot: "application/vnd.ms-fontobject",
-      mp3: "audio/mpeg", wav: "audio/wav", ogg: "audio/ogg",
-      m4a: "audio/mp4", aac: "audio/aac",
-      mp4: "video/mp4", webm: "video/webm", ogv: "video/ogg",
-      wasm: "application/wasm", zip: "application/zip",
-      gz: "application/gzip", pdf: "application/pdf",
-      data: "application/octet-stream", unityweb: "application/octet-stream",
-      bundle: "application/octet-stream", bin: "application/octet-stream",
-      dat: "application/octet-stream", mem: "application/octet-stream",
-      asset: "application/octet-stream", resource: "application/octet-stream",
-    })[ext] || "application/octet-stream";
-  }
-
-  function isBinary(filename) {
-    const ext = String(filename).split(".").pop().toLowerCase();
-    return !TEXT_EXTS.has(ext);
-  }
-
-  function openDb() {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, DB_VER);
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve(request.result);
-      request.onupgradeneeded = (event) => {
-        const db = event.target.result;
-        if (!db.objectStoreNames.contains(STORE_NAME)) {
-          db.createObjectStore(STORE_NAME, { keyPath: "id" });
-        }
-      };
-    });
-  }
-
-  async function getStoredGame(name) {
-    const db = await openDb();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction([STORE_NAME], "readonly");
-      const request = tx.objectStore(STORE_NAME).get(name);
-      request.onsuccess = () => resolve(request.result || null);
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  async function saveStoredGame(name, files, entrypoint = "") {
-    const db = await openDb();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction([STORE_NAME], "readwrite");
-      const request = tx.objectStore(STORE_NAME).put({
-        id: name,
-        name,
-        files,
-        entrypoint,
-        uploadDate: new Date().toISOString(),
-        lastPlayed: new Date().toISOString(),
-      });
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  async function registerGameWorker() {
-    if (!("serviceWorker" in navigator)) {
-      throw new Error("This browser does not support the game loader.");
-    }
-
-    const registrations = await navigator.serviceWorker.getRegistrations();
-    let registration = registrations.find((item) =>
-      item.active?.scriptURL.includes("/loadersw.js"),
-    );
-
-    if (!registration) {
-      registration = await navigator.serviceWorker.register("/loadersw.js", {
-        scope: "/game/",
-        updateViaCache: "none",
-      });
-    }
-
-    if (registration.installing || registration.waiting) {
-      const worker = registration.installing || registration.waiting;
-      await new Promise((resolve) => {
-        if (worker.state === "activated") return resolve();
-        worker.addEventListener("statechange", () => {
-          if (worker.state === "activated") resolve();
-        });
-      });
-    }
-
-    return registration;
-  }
-
-  function gamePackageName(game) {
-    const first = (Array.isArray(game.urls) ? game.urls[0] : game.url) || "";
-    const raw = first.split("/").pop()?.split("?")[0] || `game-${game.id}`;
-    return raw.replace(/\.zip$/i, "") || `game-${game.id}`;
-  }
-
-  function scoreEntrypoint(path = "") {
-    const clean = String(path)
-      .replace(/\\/g, "/")
-      .replace(/^\/+/, "");
-    const lower = clean.toLowerCase();
-    const parts = lower.split("/");
-    const filename = parts.pop() || "";
-    const depth = parts.length;
-
-    if (filename === "index.html") return 100 - depth;
-    if (filename === "index.htm") return 96 - depth;
-    if (filename === "game.html") return 92 - depth;
-    if (filename === "main.html") return 90 - depth;
-    if (filename === "play.html") return 88 - depth;
-    if (filename === "launcher.html") return 84 - depth;
-    if (filename.endsWith(".html")) return 70 - depth;
-    if (filename.endsWith(".htm")) return 66 - depth;
-
-    return -1;
-  }
-
-  function findEntrypoint(files = {}) {
-    let bestPath = "";
-    let bestScore = -1;
-
-    for (const path of Object.keys(files)) {
-      const score = scoreEntrypoint(path);
-      if (score > bestScore) {
-        bestPath = path;
-        bestScore = score;
-      }
-    }
-
-    return bestScore >= 0 ? bestPath : "";
-  }
-
-  async function fetchZip(url) {
-    const response = await fetch(url, { cache: "no-store" });
-    if (!response.ok) {
-      throw new Error(`Game package returned ${response.status}.`);
-    }
-
-    const type = response.headers.get("content-type") || "";
-    const blob = await response.blob();
-
-    if (
-      !/zip|octet-stream/i.test(type) &&
-      !/\.zip(?:$|\?)/i.test(url)
-    ) {
-      throw new Error("This DogeUB entry is not a browser game package.");
-    }
-
-    const archive = await window.JSZip.loadAsync(blob);
-    const files = {};
-
-    for (const [path, entry] of Object.entries(archive.files)) {
-      if (entry.dir) continue;
-
-      const normalizedPath = path
-        .replace(/\\/g, "/")
-        .replace(/^\/+/, "");
-
-      const binary = isBinary(normalizedPath);
-
-      files[normalizedPath] = {
-        content: await entry.async(binary ? "base64" : "string"),
-        mime: getMime(normalizedPath),
-        binary,
-      };
-    }
-
-    return {
-      files,
-      entrypoint: findEntrypoint(files),
-    };
-  }
-
-  async function prepareGame(game) {
-    if (!window.JSZip) {
-      throw new Error("The game unpacker did not load.");
-    }
-
-    await registerGameWorker();
-
-    const name = gamePackageName(game);
-    const existing = await getStoredGame(name);
-
-    if (existing?.files) {
-      const cachedEntrypoint =
-        existing.entrypoint ||
-        findEntrypoint(existing.files);
-
-      if (!cachedEntrypoint) {
-        throw new Error(
-          `${game.name} does not contain a browser-playable HTML entry point.`,
-        );
-      }
-
-      return `/game/${encodeURIComponent(name)}/${cachedEntrypoint}`;
-    }
-
-    const urls =
-      Array.isArray(game.urls) && game.urls.length
-        ? game.urls
-        : [game.url];
-
-    const merged = {};
-    let entrypoint = "";
-
-    for (const url of urls) {
-      const packageData = await fetchZip(url);
-      Object.assign(merged, packageData.files);
-
-      if (!entrypoint && packageData.entrypoint) {
-        entrypoint = packageData.entrypoint;
-      }
-    }
-
-    if (!Object.keys(merged).length) {
-      throw new Error("The downloaded game package was empty.");
-    }
-
-    entrypoint =
-      entrypoint ||
-      findEntrypoint(merged);
-
-    if (!entrypoint) {
-      throw new Error(
-        `${game.name} is in DogeUB's catalog, but this package does not contain a browser-playable HTML game.`,
-      );
-    }
-
-    await saveStoredGame(
-      name,
-      merged,
-      entrypoint,
-    );
-
-    return `/game/${encodeURIComponent(name)}/${entrypoint}`;
-  }
-
-  function openInsideFuzzProxyShell(localUrl, game) {
-    sessionStorage.setItem("GoLocalGame", localUrl);
-    sessionStorage.setItem("GoLocalGameTitle", game?.name || "Game");
-    window.location.assign("/p");
-  }
-
-  function categoryCounts() {
-    const counts = new Map([["all", state.games.length]]);
-    for (const [category, games] of Object.entries(state.categories)) {
-      counts.set(category, Array.isArray(games) ? games.length : 0);
-    }
-    return counts;
-  }
-
-  function renderCategories() {
-    const counts = categoryCounts();
-    const order = ["all", ...Object.keys(state.categories)];
-
-    elements.categories.innerHTML = order.map((category) => {
-      const active = state.category === category;
-      const label = category === "all" ? "All" : category;
-      return `
-        <button
-          class="apps-category-chip ${active ? "is-active" : ""}"
-          type="button"
-          data-game-category="${escapeHtml(category)}"
-        >
-          <span>${escapeHtml(label)}</span>
-          <small>${counts.get(category) || 0}</small>
-        </button>
-      `;
-    }).join("");
-
-    elements.categories
-      .querySelectorAll("[data-game-category]")
-      .forEach((button) => {
-        button.addEventListener("click", () => {
-          state.category = button.dataset.gameCategory || "all";
-          render();
-        });
-      });
-  }
-
-  function filteredGames() {
+  function currentGames() {
     const source =
       state.category === "all"
         ? state.games
         : state.categories[state.category] || [];
 
-    const query = state.query.trim().toLowerCase().replace(/\s+/g, "");
+    const query = state.query.trim().toLowerCase();
     if (!query) return source;
 
     return source.filter((game) =>
-      `${game.name || ""}${game.description || ""}${game.category || ""}`
+      `${game.name} ${game.description} ${game.category}`
         .toLowerCase()
-        .replace(/\s+/g, "")
         .includes(query),
     );
   }
 
-  function cardTemplate(game) {
+  function renderCategories() {
+    const items = [
+      ["all", "All", state.games.length],
+      ...Object.entries(state.categories).map(
+        ([name, games]) => [name, name, games.length],
+      ),
+    ];
+
+    el.categories.innerHTML = items
+      .map(([value, label, count]) => `
+        <button
+          class="apps-category-chip ${
+            state.category === value ? "is-active" : ""
+          }"
+          type="button"
+          data-category="${escapeHtml(value)}"
+        >
+          <span>${escapeHtml(label)}</span>
+          <small>${count}</small>
+        </button>
+      `)
+      .join("");
+
+    el.categories.querySelectorAll("[data-category]").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.category = button.dataset.category || "all";
+        render();
+      });
+    });
+  }
+
+  function card(game) {
+    const busy = state.launching === game.id;
     const fallback = initials(game.name);
-    const busy = state.loadingGameId === game.id;
 
     return `
-      <article class="app-card" data-game-id="${escapeHtml(game.id)}">
+      <article class="app-card">
         <button
           class="app-card-main"
           type="button"
-          data-open-game="${escapeHtml(game.id)}"
-          ${state.loadingGameId ? "disabled" : ""}
-          title="Play ${escapeHtml(game.name)}"
+          data-game="${escapeHtml(game.id)}"
+          ${state.launching ? "disabled" : ""}
         >
           <span class="app-card-icon-wrap">
             ${
-              game.icon || game.fallbackIcon
+              game.icon
                 ? `<img
                     class="app-card-icon"
-                    src="${escapeHtml(game.icon || game.fallbackIcon)}"
+                    src="${escapeHtml(game.icon)}"
                     alt=""
                     loading="lazy"
                     decoding="async"
                     referrerpolicy="no-referrer"
                     data-game-image
-                    data-fallback-icon="${escapeHtml(
-                      game.icon && game.fallbackIcon
-                        ? game.fallbackIcon
-                        : "",
-                    )}"
                   />
                   <span class="app-card-icon-fallback" hidden>${escapeHtml(fallback)}</span>`
                 : `<span class="app-card-icon-fallback">${escapeHtml(fallback)}</span>`
@@ -385,14 +113,24 @@
             <span class="app-card-text">
               <strong class="app-card-name">${escapeHtml(game.name)}</strong>
               <span class="app-card-description">${escapeHtml(
-                busy ? "Preparing game..." : (game.description || game.category || "Game"),
+                busy
+                  ? game.local
+                    ? "Downloading game..."
+                    : "Opening through Fuzz Proxy..."
+                  : game.description || game.category,
               )}</span>
               <span class="app-card-footer">
-                <span class="app-card-category game-source-badge">
-                  <i class="fa-solid ${busy ? "fa-circle-notch fa-spin" : "fa-play"}" aria-hidden="true"></i>
-                  ${busy ? "Loading" : escapeHtml(game.category || "Game")}
+                <span class="app-card-category game-type-badge">
+                  <i class="fa-solid ${
+                    busy
+                      ? "fa-circle-notch fa-spin"
+                      : game.local
+                        ? "fa-hard-drive"
+                        : "fa-globe"
+                  }"></i>
+                  ${busy ? "Loading" : escapeHtml(game.category)}
                 </span>
-                <i class="fa-solid fa-arrow-right app-card-arrow" aria-hidden="true"></i>
+                <i class="fa-solid fa-arrow-right app-card-arrow"></i>
               </span>
             </span>
           </span>
@@ -401,90 +139,113 @@
     `;
   }
 
-  async function openGame(game) {
-    if (!game || state.loadingGameId) return;
+  function openWebGame(game) {
+    const target = Array.isArray(game.url) ? game.url[0] : game.url;
+    const engine =
+      typeof window.FuzzProxy?.getEngine === "function"
+        ? window.FuzzProxy.getEngine()
+        : "scramjet";
 
-    state.loadingGameId = game.id;
-    elements.status.textContent = `Preparing ${game.name}...`;
+    if (typeof window.FuzzProxy?.openStandalone === "function") {
+      window.FuzzProxy.openStandalone(target, engine);
+      return;
+    }
+
+    sessionStorage.setItem("GoUrlRaw", target);
+    sessionStorage.setItem("GoProxyEngine", engine);
+    location.assign("/p");
+  }
+
+  async function openLocalGame(game) {
+    const result = await loader.load(game.url, (downloading) => {
+      el.status.textContent = downloading
+        ? `Downloading ${game.name}...`
+        : `Preparing ${game.name}...`;
+    });
+
+    sessionStorage.setItem("GoLocalGame", result.url);
+    sessionStorage.setItem("GoLocalGameTitle", game.name);
+    location.assign("/p");
+  }
+
+  async function launch(game) {
+    if (!game || state.launching) return;
+
+    state.launching = game.id;
     render();
 
     try {
-      const localUrl = await prepareGame(game);
-      openInsideFuzzProxyShell(localUrl, game);
+      if (game.local) {
+        await openLocalGame(game);
+      } else {
+        openWebGame(game);
+      }
     } catch (error) {
-      state.loadingGameId = "";
+      state.launching = "";
       render();
-      elements.status.textContent = "Game could not start";
+      el.status.textContent = "Game could not start";
       window.FuzzUI?.toast?.(
-        error?.message || "The game could not be prepared.",
+        error?.message || "The game could not start.",
         "error",
       );
     }
   }
 
-  function renderCards(games) {
-    elements.grid.innerHTML = games.map(cardTemplate).join("");
+  function render() {
+    renderCategories();
 
-    elements.grid.querySelectorAll("[data-game-image]").forEach((image) => {
+    const games = currentGames();
+    el.sectionTitle.textContent =
+      state.category === "all" ? "All games" : state.category;
+    el.count.textContent =
+      `${games.length} ${games.length === 1 ? "game" : "games"}`;
+
+    el.empty.hidden = games.length > 0;
+    el.grid.hidden = games.length === 0;
+    el.grid.innerHTML = games.map(card).join("");
+
+    el.grid.querySelectorAll("[data-game-image]").forEach((image) => {
       image.addEventListener("error", () => {
-        const fallbackIcon = image.dataset.fallbackIcon || "";
-
-        if (
-          fallbackIcon &&
-          image.src !== new URL(fallbackIcon, location.href).href
-        ) {
-          image.dataset.fallbackIcon = "";
-          image.src = fallbackIcon;
-          return;
-        }
-
         image.hidden = true;
         if (image.nextElementSibling) {
           image.nextElementSibling.hidden = false;
         }
-      });
+      }, { once: true });
     });
 
-    elements.grid.querySelectorAll("[data-open-game]").forEach((button) => {
+    el.grid.querySelectorAll("[data-game]").forEach((button) => {
       button.addEventListener("click", () => {
-        const game = state.games.find((item) => item.id === button.dataset.openGame);
-        void openGame(game);
+        const game = state.games.find(
+          (item) => item.id === button.dataset.game,
+        );
+        void launch(game);
       });
     });
-  }
 
-  function render() {
-    renderCategories();
-    const games = filteredGames();
-    const label = state.category === "all" ? "All games" : state.category;
-
-    elements.sectionTitle.textContent = label;
-    elements.count.textContent = `${games.length} ${games.length === 1 ? "game" : "games"}`;
-    elements.empty.hidden = games.length !== 0;
-    elements.grid.hidden = games.length === 0;
-    renderCards(games);
-
-    if (!state.loadingGameId) {
-      elements.status.textContent = `${state.games.length} DogeUB games available`;
+    if (!state.launching) {
+      el.status.textContent =
+        `${state.games.length} DogeUB games available`;
     }
   }
 
-  async function loadGames() {
-    elements.error.hidden = true;
-    elements.empty.hidden = true;
-    elements.grid.hidden = true;
-    elements.loading.hidden = false;
-    elements.status.textContent = "Loading DogeUB games...";
+  async function loadCatalog() {
+    el.loading.hidden = false;
+    el.grid.hidden = true;
+    el.error.hidden = true;
+    el.empty.hidden = true;
 
     try {
       const response = await fetch("/api/games/catalog", {
         credentials: "same-origin",
         headers: { Accept: "application/json" },
       });
+
       const payload = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(payload.error || "The game catalog could not be loaded.");
+        throw new Error(
+          payload.error || "The game catalog could not be loaded.",
+        );
       }
 
       state.games = Array.isArray(payload.games) ? payload.games : [];
@@ -494,55 +255,62 @@
           : {};
       state.category = "all";
       state.query = "";
-      state.loadingGameId = "";
-      elements.search.value = "";
-      elements.loading.hidden = true;
+      state.launching = "";
+
+      el.search.value = "";
+      el.loading.hidden = true;
       render();
+
+      void loader.cleanupOld().catch(() => {});
     } catch (error) {
-      elements.loading.hidden = true;
-      elements.grid.hidden = true;
-      elements.empty.hidden = true;
-      elements.error.hidden = false;
-      elements.status.textContent = "Game catalog unavailable";
-      elements.errorMessage.textContent =
-        error?.message || "The DogeUB catalog is temporarily unavailable.";
+      el.loading.hidden = true;
+      el.error.hidden = false;
+      el.errorMessage.textContent =
+        error?.message || "The game catalog could not be loaded.";
+      el.status.textContent = "Game catalog unavailable";
     }
   }
 
   function init() {
-    elements.search = document.querySelector("#game-search");
-    elements.categories = document.querySelector("#game-category-chips");
-    elements.status = document.querySelector("#games-status");
-    elements.loading = document.querySelector("#games-loading");
-    elements.grid = document.querySelector("#all-games");
-    elements.empty = document.querySelector("#games-empty");
-    elements.error = document.querySelector("#games-error");
-    elements.errorMessage = document.querySelector("#games-error-message");
-    elements.count = document.querySelector("#game-count");
-    elements.sectionTitle = document.querySelector("#game-section-title");
+    el.search = document.querySelector("#game-search");
+    el.categories = document.querySelector("#game-category-chips");
+    el.status = document.querySelector("#games-status");
+    el.loading = document.querySelector("#games-loading");
+    el.grid = document.querySelector("#all-games");
+    el.empty = document.querySelector("#games-empty");
+    el.error = document.querySelector("#games-error");
+    el.errorMessage = document.querySelector("#games-error-message");
+    el.count = document.querySelector("#game-count");
+    el.sectionTitle = document.querySelector("#game-section-title");
 
-    elements.search.addEventListener("input", () => {
-      state.query = elements.search.value || "";
+    el.search.addEventListener("input", () => {
+      state.query = el.search.value || "";
       render();
     });
 
-    document.querySelector("#reset-game-filters").addEventListener("click", () => {
-      state.category = "all";
-      state.query = "";
-      elements.search.value = "";
-      render();
-    });
+    document.querySelector("#reset-game-filters").addEventListener(
+      "click",
+      () => {
+        state.category = "all";
+        state.query = "";
+        el.search.value = "";
+        render();
+      },
+    );
 
-    document.querySelector("#retry-games").addEventListener("click", loadGames);
+    document.querySelector("#retry-games").addEventListener(
+      "click",
+      loadCatalog,
+    );
 
-    window.addEventListener("keydown", (event) => {
-      if (event.key === "/" && document.activeElement !== elements.search) {
+    addEventListener("keydown", (event) => {
+      if (event.key === "/" && document.activeElement !== el.search) {
         event.preventDefault();
-        elements.search.focus();
+        el.search.focus();
       }
     });
 
-    void loadGames();
+    void loadCatalog();
   }
 
   if (document.readyState === "loading") {

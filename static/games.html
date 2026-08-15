@@ -22,6 +22,9 @@
   <script src="/baremux/index.js"></script>
   <script src="/scram/scramjet.all.js"></script>
   <script src="/assets/js/proxy-engine.js?v=4"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="/assets/js/doge-local-gm-loader.js?v=1"></script>
+
   <link rel="stylesheet" href="/assets/css/fuzz-ui.css?v=1" />
   <script src="/assets/js/fuzz-ui.js?v=1"></script>
 </head>
@@ -35,28 +38,28 @@
 
   <div class="f-nav"></div>
 
-  <main class="apps-shell" id="games-shell">
+  <main class="apps-shell">
     <header class="apps-page-header">
       <div>
         <div class="apps-eyebrow">
           <span class="apps-eyebrow-dot"></span>
           Fuzz games
         </div>
-        <h1 id="games-title">Games</h1>
-        <p>DogeUB's game catalog, launched through Fuzz Proxy.</p>
+        <h1>Games</h1>
+        <p>DogeUB's game library, running through Fuzz.</p>
       </div>
     </header>
 
-    <section class="apps-workspace" aria-labelledby="games-title">
-      <aside class="apps-sidebar" aria-label="Game filters">
+    <section class="apps-workspace">
+      <aside class="apps-sidebar">
         <div class="apps-sidebar-heading">
           <span>Browse</span>
           <small>Find a game</small>
         </div>
 
-        <section class="apps-command-bar" aria-label="Search games">
+        <section class="apps-command-bar">
           <label class="apps-search-wrap" for="game-search">
-            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+            <i class="fa-solid fa-magnifying-glass"></i>
             <input
               id="game-search"
               type="search"
@@ -69,12 +72,12 @@
         </section>
 
         <div class="apps-sidebar-label">Categories</div>
-        <section class="apps-category-strip" aria-label="Game categories">
+        <section class="apps-category-strip">
           <div id="game-category-chips" class="apps-category-chips"></div>
         </section>
 
         <div id="games-status" class="apps-status-row" aria-live="polite">
-          <span>Loading DogeUB games...</span>
+          Loading games...
         </div>
       </aside>
 
@@ -88,16 +91,16 @@
             <span id="game-count" class="apps-count-pill">0 games</span>
           </div>
 
-          <div id="games-loading" class="apps-loading-grid" aria-hidden="true">
-            <span></span><span></span><span></span><span></span><span></span><span></span>
-            <span></span><span></span><span></span><span></span><span></span><span></span>
+          <div id="games-loading" class="apps-loading-grid">
+            <span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span>
           </div>
 
           <div id="all-games" class="apps-grid" hidden></div>
 
           <div id="games-empty" class="apps-empty" hidden>
             <div class="apps-empty-icon">
-              <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
+              <i class="fa-solid fa-gamepad"></i>
             </div>
             <h3>No games found</h3>
             <p>Try another search or category.</p>
@@ -108,10 +111,10 @@
 
           <div id="games-error" class="apps-empty" hidden>
             <div class="apps-empty-icon">
-              <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+              <i class="fa-solid fa-triangle-exclamation"></i>
             </div>
             <h3>Games could not load</h3>
-            <p id="games-error-message">The DogeUB catalog is temporarily unavailable.</p>
+            <p id="games-error-message"></p>
             <button class="apps-secondary-button" id="retry-games" type="button">
               Try again
             </button>
@@ -123,8 +126,7 @@
 
   <div id="apps-toast-region" class="apps-toast-region" aria-live="polite"></div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <script src="/assets/js/games.js?v=4"></script>
+  <script src="/assets/js/games.js?v=1"></script>
   <script src="/assets/js/m1.js?v=15"></script>
   <script src="/assets/js/account-shell.js?v=1" defer></script>
   <script src="/assets/js/site-control.js" defer></script>

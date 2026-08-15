@@ -15,7 +15,7 @@
       label: "Browser",
       items: [
         { href: "/b", match: ["/b", "/apps.html"], label: "Apps", icon: "apps" },
-        { href: "/a", match: ["/a", "/games.html", "/play.html"], label: "Games", icon: "gamepad", feature: "games" },
+        { href: "/a", match: ["/a", "/games.html"], label: "Games", icon: "gamepad", feature: "games" },
         { href: "/d", match: ["/d", "/tabs.html"], label: "Tabs", icon: "tabs" },
         { href: "/p", match: ["/p", "/proxy.html"], label: "Proxy", icon: "globe" },
       ],

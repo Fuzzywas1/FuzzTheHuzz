@@ -7027,209 +7027,49 @@ function parseAppsState(body = {}) {
 
 const DOGE_GAMES_CATALOG_URL =
   "https://ci.baylib.top/apps.json";
-const DOGE_GAMES_CACHE_TTL_MS =
-  10 * 60 * 1000;
+const DOGE_GAMES_CACHE_TTL_MS = 10 * 60 * 1000;
 
 let dogeGamesCatalogCache = {
   fetchedAt: 0,
   payload: null,
 };
 
-const FUZZ_GAME_ICON_CATALOG_PATH = path.join(
-  __dirname,
-  "static",
-  "assets",
-  "json",
-  "g.json",
-);
-
-function normalizeGameName(value = "") {
-  return String(value)
-    .toLowerCase()
-    .replace(/&/g, "and")
-    .replace(/\b(the|game|online|html5|web|unblocked|classic|edition)\b/g, " ")
-    .replace(/[^a-z0-9]+/g, "")
-    .trim();
-}
-
-function gameNameTokens(value = "") {
-  return String(value)
-    .toLowerCase()
-    .replace(/&/g, " and ")
-    .replace(/[^a-z0-9]+/g, " ")
-    .split(/\s+/)
-    .filter((token) =>
-      token &&
-      !["the", "game", "online", "html5", "web", "unblocked", "classic", "edition"].includes(token),
-    );
-}
-
-function levenshteinDistance(a = "", b = "") {
-  const first = String(a);
-  const second = String(b);
-  const rows = second.length + 1;
-  const cols = first.length + 1;
-
-  const previous = Array.from({ length: cols }, (_, index) => index);
-  const current = new Array(cols);
-
-  for (let row = 1; row < rows; row += 1) {
-    current[0] = row;
-
-    for (let col = 1; col < cols; col += 1) {
-      const cost =
-        first[col - 1] === second[row - 1]
-          ? 0
-          : 1;
-
-      current[col] = Math.min(
-        current[col - 1] + 1,
-        previous[col] + 1,
-        previous[col - 1] + cost,
-      );
-    }
-
-    for (let col = 0; col < cols; col += 1) {
-      previous[col] = current[col];
-    }
-  }
-
-  return previous[cols - 1];
-}
-
-function gameNameSimilarity(a = "", b = "") {
-  const first = normalizeGameName(a);
-  const second = normalizeGameName(b);
-
-  if (!first || !second) return 0;
-  if (first === second) return 1;
-
-  if (
-    Math.min(first.length, second.length) >= 5 &&
-    (first.includes(second) || second.includes(first))
-  ) {
-    return 0.93;
-  }
-
-  const firstTokens = new Set(gameNameTokens(a));
-  const secondTokens = new Set(gameNameTokens(b));
-  const union = new Set([...firstTokens, ...secondTokens]);
-  let intersection = 0;
-
-  for (const token of firstTokens) {
-    if (secondTokens.has(token)) intersection += 1;
-  }
-
-  const tokenScore =
-    union.size > 0
-      ? intersection / union.size
-      : 0;
-
-  const maxLength = Math.max(first.length, second.length);
-  const editScore =
-    maxLength > 0
-      ? 1 - levenshteinDistance(first, second) / maxLength
-      : 0;
-
-  return Math.max(
-    tokenScore * 0.94,
-    editScore * 0.9,
-  );
-}
-
-const GAME_ICON_ALIASES = new Map([
-  ["csgo", "counterstrike16"],
-  ["counterstrike", "counterstrike16"],
-  ["counterstrikeglobaloffensive", "counterstrike16"],
-  ["minecraft", "minecraftclassic"],
-  ["mc", "minecraftclassic"],
-  ["1v1lol", "1v1lol"],
-]);
-
-function loadFuzzGameIconEntries() {
-  try {
-    const data = JSON.parse(
-      fs.readFileSync(FUZZ_GAME_ICON_CATALOG_PATH, "utf8"),
-    );
-
-    if (!Array.isArray(data)) return [];
-
-    return data
-      .map((entry) => ({
-        name: String(entry?.name || "").trim(),
-        normalized: normalizeGameName(entry?.name),
-        image: String(entry?.image || "").trim(),
-      }))
-      .filter((entry) =>
-        entry.name &&
-        entry.normalized &&
-        entry.image,
-      );
-  } catch (error) {
-    console.warn(
-      "Could not load Fuzz game icon fallback catalog:",
-      error?.message || error,
-    );
-    return [];
-  }
-}
-
-const fuzzGameIconEntries = loadFuzzGameIconEntries();
-
-function findFuzzGameIcon(gameName = "") {
-  let normalized = normalizeGameName(gameName);
-  if (!normalized) return "";
-
-  normalized =
-    GAME_ICON_ALIASES.get(normalized) ||
-    normalized;
-
-  const exact = fuzzGameIconEntries.find(
-    (entry) => entry.normalized === normalized,
-  );
-
-  if (exact) return exact.image;
-
-  let best = null;
-  let bestScore = 0;
-
-  for (const entry of fuzzGameIconEntries) {
-    const score = gameNameSimilarity(
-      normalized,
-      entry.normalized,
-    );
-
-    if (score > bestScore) {
-      best = entry;
-      bestScore = score;
-    }
-  }
-
-  return bestScore >= 0.72
-    ? best.image
-    : "";
-}
-
-function cleanDogeGameUrl(value) {
-  const candidates = Array.isArray(value)
-    ? value
-    : [value];
-
-  return candidates
-    .map((item) => String(item || "").trim())
-    .filter((item) => /^https?:\/\//i.test(item))
-    .slice(0, 8);
-}
-
-function cleanDogeGameIcon(value) {
+function resolveDogeIcon(value) {
   const icon = String(value || "").trim();
   if (!icon || /^javascript:/i.test(icon)) return "";
 
+  if (/^https?:\/\//i.test(icon)) return icon;
+
+  if (icon.startsWith("/assets/img/")) {
+    return `https://dogeub-assets.pages.dev/img/${icon.slice(
+      "/assets/img/".length,
+    )}`;
+  }
+
+  if (icon.startsWith("/assets-fb/")) {
+    return `https://dogeub-assets.pages.dev/img/server/${icon.slice(
+      "/assets-fb/".length,
+    )}`;
+  }
+
+  if (icon.startsWith("assets/img/")) {
+    return `https://dogeub-assets.pages.dev/img/${icon.slice(
+      "assets/img/".length,
+    )}`;
+  }
+
   try {
-    return new URL(icon, DOGE_GAMES_CATALOG_URL).href;
+    return new URL(icon, "https://dogeub-assets.pages.dev/").href;
   } catch {
     return "";
   }
+}
+
+function cleanDogeUrls(value) {
+  return (Array.isArray(value) ? value : [value])
+    .map((item) => String(item || "").trim())
+    .filter((item) => /^https?:\/\//i.test(item))
+    .slice(0, 12);
 }
 
 function serializeDogeGamesCatalog(payload = {}) {
@@ -7242,63 +7082,52 @@ function serializeDogeGamesCatalog(payload = {}) {
       : {};
 
   const categories = {};
-  const all = [];
+  const games = [];
   const seen = new Set();
 
   for (const [rawCategory, entries] of Object.entries(source)) {
     if (!Array.isArray(entries)) continue;
 
-    const category = String(rawCategory || "Other")
-      .trim()
-      .slice(0, 60) || "Other";
-
-    const serialized = [];
+    const category =
+      String(rawCategory || "Other").trim().slice(0, 60) || "Other";
+    const categoryGames = [];
 
     for (const entry of entries) {
       if (!entry || entry.disabled === true) continue;
 
-      const name = String(entry.appName || "")
-        .trim()
-        .slice(0, 120);
-      const urls = cleanDogeGameUrl(entry.url);
-      const url = urls[0] || "";
+      const name = String(entry.appName || "").trim().slice(0, 120);
+      const urls = cleanDogeUrls(entry.url);
+      if (!name || urls.length < 1) continue;
 
-      if (!name || !url) continue;
-
-      const dedupeKey = `${name.toLowerCase()}|${url}`;
-      if (seen.has(dedupeKey)) continue;
-      seen.add(dedupeKey);
+      const key = `${name.toLowerCase()}|${urls.join("|")}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
 
       const game = {
-        id: Buffer.from(dedupeKey)
-          .toString("base64url")
-          .slice(0, 72),
+        id: Buffer.from(key).toString("base64url").slice(0, 72),
         name,
-        description: String(entry.desc || "")
-          .trim()
-          .slice(0, 220),
-        icon: cleanDogeGameIcon(entry.icon),
-        fallbackIcon: findFuzzGameIcon(name),
-        url,
+        description: String(entry.desc || "").trim().slice(0, 240),
+        icon: resolveDogeIcon(entry.icon),
+        url: urls.length === 1 ? urls[0] : urls,
         urls,
-        category,
         local: entry.local === true,
+        category,
       };
 
-      serialized.push(game);
-      all.push(game);
+      categoryGames.push(game);
+      games.push(game);
     }
 
-    if (serialized.length > 0) {
-      categories[category] = serialized;
+    if (categoryGames.length) {
+      categories[category] = categoryGames;
     }
   }
 
   return {
     source: "dogeub",
-    total: all.length,
+    total: games.length,
     categories,
-    games: all,
+    games,
   };
 }
 
@@ -7312,10 +7141,7 @@ async function loadDogeGamesCatalog() {
   }
 
   const controller = new AbortController();
-  const timeout = setTimeout(
-    () => controller.abort(),
-    10000,
-  );
+  const timeout = setTimeout(() => controller.abort(), 10000);
 
   try {
     const response = await fetch(
@@ -7331,28 +7157,21 @@ async function loadDogeGamesCatalog() {
     );
 
     if (!response.ok) {
-      throw new Error(
-        `DogeUB catalog returned ${response.status}`,
-      );
+      throw new Error(`DogeUB catalog returned ${response.status}`);
     }
 
-    const normalized =
-      serializeDogeGamesCatalog(
-        await response.json(),
-      );
+    const catalog = serializeDogeGamesCatalog(await response.json());
 
-    if (normalized.total < 1) {
-      throw new Error(
-        "DogeUB returned an empty game catalog.",
-      );
+    if (!catalog.total) {
+      throw new Error("DogeUB returned an empty game catalog.");
     }
 
     dogeGamesCatalogCache = {
       fetchedAt: Date.now(),
-      payload: normalized,
+      payload: catalog,
     };
 
-    return normalized;
+    return catalog;
   } finally {
     clearTimeout(timeout);
   }
@@ -7363,24 +7182,13 @@ app.get(
   requireApiAuth,
   async (_req, res) => {
     try {
-      const catalog =
-        await loadDogeGamesCatalog();
-
-      res.setHeader(
-        "Cache-Control",
-        "private, max-age=300",
-      );
-
+      const catalog = await loadDogeGamesCatalog();
+      res.setHeader("Cache-Control", "private, max-age=300");
       return res.json(catalog);
     } catch (error) {
-      console.error(
-        "DogeUB game catalog load failed:",
-        error,
-      );
-
+      console.error("DogeUB game catalog load failed:", error);
       return res.status(502).json({
-        error:
-          "The DogeUB game catalog is temporarily unavailable.",
+        error: "The DogeUB game catalog is temporarily unavailable.",
       });
     }
   },
