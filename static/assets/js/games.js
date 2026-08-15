@@ -2,6 +2,9 @@
   "use strict";
 
   const loader = new window.DogeLocalGmLoader();
+  const VIEW_STATE_KEY = "FuzzGamesViewState";
+
+  let pageActive = true;
 
   const state = {
     games: [],
@@ -30,6 +33,55 @@
       .map((part) => part[0] || "")
       .join("")
       .toUpperCase() || "G";
+  }
+
+  function saveViewState() {
+    try {
+      sessionStorage.setItem(
+        VIEW_STATE_KEY,
+        JSON.stringify({
+          category: state.category,
+          query: state.query,
+        }),
+      );
+    } catch {}
+  }
+
+  function readViewState() {
+    try {
+      const parsed = JSON.parse(
+        sessionStorage.getItem(VIEW_STATE_KEY) || "{}",
+      );
+
+      return {
+        category:
+          typeof parsed.category === "string"
+            ? parsed.category
+            : "all",
+        query:
+          typeof parsed.query === "string"
+            ? parsed.query
+            : "",
+      };
+    } catch {
+      return {
+        category: "all",
+        query: "",
+      };
+    }
+  }
+
+  function clearPendingGameNavigation() {
+    sessionStorage.removeItem("GoLocalGame");
+    sessionStorage.removeItem("GoLocalGameTitle");
+    sessionStorage.removeItem("GoUrlRaw");
+    sessionStorage.removeItem("GoProxyEngine");
+    sessionStorage.removeItem("GoProxyFullscreen");
+  }
+
+  function prepareGameNavigation() {
+    saveViewState();
+    sessionStorage.setItem("GoProxyReturnPath", "/a");
   }
 
   function currentGames() {
@@ -74,6 +126,7 @@
     el.categories.querySelectorAll("[data-category]").forEach((button) => {
       button.addEventListener("click", () => {
         state.category = button.dataset.category || "all";
+        saveViewState();
         render();
       });
     });
@@ -146,6 +199,9 @@
         ? window.FuzzProxy.getEngine()
         : "scramjet";
 
+    clearPendingGameNavigation();
+    prepareGameNavigation();
+
     if (typeof window.FuzzProxy?.openStandalone === "function") {
       window.FuzzProxy.openStandalone(target, engine);
       return;
@@ -157,11 +213,20 @@
   }
 
   async function openLocalGame(game) {
+    clearPendingGameNavigation();
+    prepareGameNavigation();
+
     const result = await loader.load(game.url, (downloading) => {
+      if (!pageActive) return;
+
       el.status.textContent = downloading
         ? `Downloading ${game.name}...`
         : `Preparing ${game.name}...`;
     });
+
+    // If the user left the page while a large game was downloading,
+    // never pull them back into the proxy after the download finishes.
+    if (!pageActive) return;
 
     sessionStorage.setItem("GoLocalGame", result.url);
     sessionStorage.setItem("GoLocalGameTitle", game.name);
@@ -253,11 +318,20 @@
         payload.categories && typeof payload.categories === "object"
           ? payload.categories
           : {};
-      state.category = "all";
-      state.query = "";
+      const savedView = readViewState();
+
+      state.category =
+        savedView.category === "all" ||
+        Object.prototype.hasOwnProperty.call(
+          state.categories,
+          savedView.category,
+        )
+          ? savedView.category
+          : "all";
+      state.query = savedView.query;
       state.launching = "";
 
-      el.search.value = "";
+      el.search.value = state.query;
       el.loading.hidden = true;
       render();
 
@@ -285,6 +359,7 @@
 
     el.search.addEventListener("input", () => {
       state.query = el.search.value || "";
+      saveViewState();
       render();
     });
 
@@ -294,6 +369,7 @@
         state.category = "all";
         state.query = "";
         el.search.value = "";
+        saveViewState();
         render();
       },
     );
@@ -307,6 +383,29 @@
       if (event.key === "/" && document.activeElement !== el.search) {
         event.preventDefault();
         el.search.focus();
+      }
+    });
+
+    addEventListener("pagehide", () => {
+      pageActive = false;
+
+      // A page placed into BFCache keeps its JavaScript state. Clear the
+      // transient launch state before it is cached so Back never restores
+      // a card that still says "Loading".
+      state.launching = "";
+    });
+
+    addEventListener("pageshow", () => {
+      pageActive = true;
+
+      if (state.launching) {
+        state.launching = "";
+      }
+
+      // pageshow also fires when returning from BFCache.
+      // Re-render so all buttons/status text are immediately normal again.
+      if (state.games.length > 0) {
+        render();
       }
     });
 

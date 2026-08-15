@@ -10,6 +10,13 @@
   let view = null;
   const localGameUrl = sessionStorage.getItem("GoLocalGame") || "";
   const localGameTitle = sessionStorage.getItem("GoLocalGameTitle") || "Game";
+  const requestedReturnPath =
+    sessionStorage.getItem("GoProxyReturnPath") || "/";
+  const returnPath =
+    /^\/(?!\/)/.test(requestedReturnPath)
+      ? requestedReturnPath
+      : "/";
+  const localMode = Boolean(localGameUrl);
   let currentUrl = sessionStorage.getItem("GoUrlRaw") || "";
   let currentEngine =
     sessionStorage.getItem("GoProxyEngine") ||
@@ -23,6 +30,7 @@
   sessionStorage.removeItem("GoProxyFullscreen");
   sessionStorage.removeItem("GoLocalGame");
   sessionStorage.removeItem("GoLocalGameTitle");
+  sessionStorage.removeItem("GoProxyReturnPath");
 
   function setFullscreen(enabled) {
     document.body.classList.toggle("fullscreen-browser", enabled);
@@ -48,6 +56,18 @@
   }
 
   function reload() {
+    if (localMode) {
+      const frame = view?.element;
+
+      if (frame) {
+        // Reassigning the local URL is reliable even if a game changed the
+        // iframe's internal history or contentWindow access is restricted.
+        frame.src = localGameUrl;
+      }
+
+      return;
+    }
+
     try {
       view?.element?.contentWindow?.location.reload();
     } catch {
@@ -72,7 +92,7 @@
     frame.setAttribute("allowfullscreen", "");
     frame.setAttribute(
       "sandbox",
-      "allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-pointer-lock",
+      "allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-pointer-lock allow-downloads allow-presentation allow-orientation-lock allow-storage-access-by-user-activation",
     );
 
     host.appendChild(frame);
@@ -130,11 +150,16 @@
     if (currentUrl) void open(currentUrl, engine);
   });
 
-  document
-    .getElementById("proxy-back-home")
-    .addEventListener("click", () => {
-      location.href = "/";
-    });
+  const backButton = document.getElementById("proxy-back-home");
+
+  if (returnPath === "/a") {
+    backButton.title = "Back to Games";
+    backButton.setAttribute("aria-label", "Back to Games");
+  }
+
+  backButton.addEventListener("click", () => {
+    location.href = returnPath;
+  });
 
   document
     .getElementById("proxy-reload")
