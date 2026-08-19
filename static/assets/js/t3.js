@@ -647,8 +647,6 @@
       } else if (event.key === "F11") {
         event.preventDefault();
         toggleFullscreen();
-      } else if (event.key === "Escape" && document.body.classList.contains("fullscreen-browser")) {
-        document.body.classList.remove("fullscreen-browser");
       }
     });
   }
