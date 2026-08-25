@@ -1,34 +1,51 @@
-# Fuzz Cloud
+# Fuzz Cloud — noVNC
 
-Fuzz Cloud is the private remote-PC launcher built around Apache Guacamole.
+Fuzz Cloud now uses **noVNC + websockify** instead of Apache Guacamole.
 
-## Current design
+## Connection path
 
-- `/cloud` is a protected Fuzz page.
-- Configure it under **Admin -> Settings -> Fuzz Cloud**.
-- `/api/cloud/config` returns the active server-side configuration.
-- The frontend uses the returned `launchUrl`; the gateway is not hardcoded in the browser bundle.
-- Launch Desktop opens Guacamole through the selected Fuzz proxy engine.
-- Open gateway directly remains available as a troubleshooting fallback.
-- Guacamole authentication is still required unless you later add a supported SSO design.
+```text
+Fuzz Cloud
+  -> HTTPS Cloudflare Tunnel
+  -> noVNC / websockify
+  -> TightVNC on the Windows PC
+```
 
-## Optional environment defaults
+The public Cloudflare hostname should point to the local noVNC/websockify HTTP port. Do **not** expose TightVNC port 5900 directly to the internet.
+
+## Default Fuzz configuration
 
 ```env
 FUZZ_CLOUD_NAME=Gaming PC
-FUZZ_CLOUD_BASE_URL=https://guac.example.com
+FUZZ_CLOUD_BASE_URL=https://vnc.fuzzthehuzz-ebsfiygfhsvfbfesg.com
 ```
 
-The Cloud URL must use HTTPS.
+The Cloud page automatically builds:
 
-## Existing SQL
+```text
+/vnc.html?autoconnect=true&resize=scale
+```
 
-The repository contains:
-- `supabase/FUZZ_CLOUD_SCHEMA.sql`
-- `supabase/FUZZ_CLOUD_GUAC_ONLY_MIGRATION.sql`
+The VNC password is entered in noVNC and is not stored by Fuzz.
 
-Run only the migrations your current database still needs.
+## Admin settings
 
-## Security
+Open **Admin -> Settings -> Fuzz Cloud**. The noVNC gateway must be an HTTPS URL.
 
-Keep the Guacamole gateway password protected. Owner-only access in Fuzz does not replace Guacamole authentication. Do not expose Windows RDP port 3389 directly to the public internet.
+- **Owner only** keeps Fuzz Cloud hidden/blocked for non-owner accounts.
+- **Integrated workspace** embeds noVNC inside the Fuzz Cloud page.
+- Turning integrated workspace off opens noVNC in its own browser tab.
+
+## Windows-side services
+
+The Windows PC should have these running automatically:
+
+- TightVNC Server
+- Docker Desktop / the `fuzz-novnc` container
+- Cloudflare Tunnel (`cloudflared`)
+
+TightVNC must allow the local/loopback connection used by websockify.
+
+## Removing old Guacamole
+
+Only remove the old Guacamole containers after noVNC has been tested remotely. The Fuzz website no longer depends on Guacamole, `guacd`, or the Guacamole PostgreSQL container.

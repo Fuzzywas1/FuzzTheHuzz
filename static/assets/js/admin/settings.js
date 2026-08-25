@@ -254,7 +254,7 @@ function paint(container, systemPayload, platformPayload) {
 
         ${panel({
           title: "Fuzz Cloud",
-          subtitle: "Configure the private Apache Guacamole gateway opened by the Cloud page",
+          subtitle: "Configure the private noVNC gateway used by the Cloud page",
           body: `
             <div class="cloud-admin-summary">
               <span class="cloud-admin-icon">▣</span>
@@ -263,8 +263,8 @@ function paint(container, systemPayload, platformPayload) {
                 <small>
                   ${
                     settings.cloudConfigured
-                      ? "Guacamole launch is configured."
-                      : "Add a valid Guacamole URL to finish setup."
+                      ? "noVNC launch is configured."
+                      : "Add a valid noVNC URL to finish setup."
                   }
                 </small>
               </span>
@@ -287,17 +287,17 @@ function paint(container, systemPayload, platformPayload) {
               </label>
 
               <label class="field-group field-span-two">
-                <span>Guacamole gateway URL</span>
+                <span>noVNC gateway URL</span>
                 <input
                   class="field"
                   id="cloud-base-url"
                   type="url"
                   maxlength="500"
                   value="${escapeHtml(settings.cloudBaseUrl || "")}"
-                  placeholder="https://guac.example.com"
+                  placeholder="https://vnc.example.com"
                   spellcheck="false"
                 />
-                <small>Use the permanent Cloudflare Tunnel hostname for Apache Guacamole.</small>
+                <small>Use the HTTPS Cloudflare Tunnel hostname that points to your noVNC/websockify port.</small>
               </label>
 
               <div class="field-group">
@@ -314,8 +314,8 @@ function paint(container, systemPayload, platformPayload) {
                 <span>Launch view</span>
                 ${toggleSetting(
                   "cloud-hide-ui",
-                  "Fullscreen launch",
-                  "Use Fuzz’s existing fullscreen browser mode when Guacamole opens.",
+                  "Integrated workspace",
+                  "Show noVNC inside Fuzz Cloud. Turn this off if you always want a separate noVNC tab.",
                   settings.cloudFullscreen !== false,
                 )}
               </div>
@@ -427,7 +427,7 @@ function bindPlatformForm(container) {
     }
 
     if (payload.cloudEnabled && !payload.cloudBaseUrl) {
-      showToast("Add the Guacamole gateway URL before enabling Fuzz Cloud.", "error");
+      showToast("Add the noVNC gateway URL before enabling Fuzz Cloud.", "error");
       return;
     }
 
@@ -435,7 +435,7 @@ function bindPlatformForm(container) {
       const cloudUrl = new URL(payload.cloudBaseUrl);
       if (cloudUrl.protocol !== "https:") throw new Error();
     } catch {
-      showToast("Fuzz Cloud requires a valid HTTPS Guacamole URL.", "error");
+      showToast("Fuzz Cloud requires a valid HTTPS noVNC URL.", "error");
       return;
     }
 
@@ -457,26 +457,26 @@ function bindCloudTestButton(container) {
 
   button?.addEventListener("click", () => {
     const baseUrl = container.querySelector("#cloud-base-url")?.value.trim();
-    const fullscreen = container.querySelector("#cloud-fullscreen")?.checked !== false;
 
     if (!baseUrl) {
-      showToast("Add the Guacamole gateway URL first.", "error");
+      showToast("Add the noVNC gateway URL first.", "error");
       return;
     }
 
     try {
       const url = new URL(baseUrl);
       if (url.protocol !== "https:") throw new Error();
-      url.pathname = `${url.pathname.replace(/\/+$/, "")}/`;
-      sessionStorage.setItem("GoProxyFullscreen", fullscreen ? "1" : "0");
-      sessionStorage.setItem("GoUrlRaw", url.toString());
-      sessionStorage.setItem(
-        "GoProxyEngine",
-        window.FuzzProxy?.getEngine?.() || "scramjet",
-      );
-      window.location.assign("/p");
+
+      const cleanPath = url.pathname.replace(/\/+$/, "");
+      if (!/\/vnc(?:_lite)?\.html$/i.test(cleanPath)) {
+        url.pathname = `${cleanPath}/vnc.html`.replace(/\/{2,}/g, "/");
+      }
+
+      url.searchParams.set("autoconnect", "true");
+      url.searchParams.set("resize", "scale");
+      window.open(url.toString(), "_blank", "noopener,noreferrer");
     } catch {
-      showToast("Enter a valid HTTPS Guacamole URL.", "error");
+      showToast("Enter a valid HTTPS noVNC URL.", "error");
     }
   });
 }

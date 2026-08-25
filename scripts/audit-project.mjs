@@ -312,8 +312,8 @@ for (const relativePath of requiredProjectFiles) {
 const cloudClientPath = path.join(root, "static", "assets", "js", "cloud.js");
 if (fs.existsSync(cloudClientPath)) {
   const cloudClientSource = fs.readFileSync(cloudClientPath, "utf8");
-  if (/const\s+GUACAMOLE_URL\s*=/.test(cloudClientSource)) {
-    fail("Fuzz Cloud client contains a hardcoded Guacamole URL; use /api/cloud/config instead.");
+  if (/const\s+(?:GUACAMOLE|NOVNC)_URL\s*=/.test(cloudClientSource)) {
+    fail("Fuzz Cloud client contains a hardcoded remote-desktop URL; use /api/cloud/config instead.");
   }
 }
 

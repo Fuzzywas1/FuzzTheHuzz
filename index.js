@@ -43,17 +43,19 @@ const CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
 const cache = new Map();
 
 const FUZZ_RELEASE = Object.freeze({
-  version: "6.8.0",
-  releasedAt: "2026-08-12T00:00:00.000Z",
+  version: "7.0.0",
+  releasedAt: "2026-08-25T00:00:00.000Z",
   summary:
-    "Full-project stability audit with Fuzz Cloud repairs and owner deployment diagnostics.",
+    "Major usability update with a simpler noVNC-powered Fuzz Cloud and cleaner home navigation.",
   items: [
-    "Fixed Fuzz Cloud so the client uses the server-configured Guacamole launch URL instead of a hardcoded hostname.",
-    "Added a complete .env.example covering every environment variable used by the server.",
-    "Added an owner-only Diagnostics page for environment, database, proxy asset and Fuzz Cloud readiness checks.",
-    "Added Fuzz Cloud readiness to System Health and owner dashboard quick actions.",
-    "Updated stale Fuzz Cloud documentation from the old MeshCentral design to the current Apache Guacamole setup.",
-    "Extended the project audit to catch missing required files and future hardcoded Guacamole client URLs.",
+    "Replaced Apache Guacamole with noVNC for Fuzz Cloud.",
+    "Fuzz Cloud now opens noVNC directly instead of routing WebSocket desktop traffic through the web proxy.",
+    "Added an integrated desktop workspace with a direct-open fallback and reconnect controls.",
+    "Automatically migrates the old default Guacamole hostname to the new noVNC hostname.",
+    "Added Games and Fuzz Cloud to the Home quick-launch area.",
+    "Updated Admin, Status, documentation, and health messages for noVNC.",
+    "Restored the missing .env.example so the project audit can validate the repository correctly.",
+    "Kept the current Games loader, back-navigation fixes, and Escape/fullscreen fixes intact.",
   ],
 });
 
@@ -257,7 +259,7 @@ app.use((req, res, next) => {
         "img-src 'self' data: blob: https:",
         "connect-src 'self' https: wss:",
         "worker-src 'self' blob:",
-        "frame-src 'self' blob:",
+        isCloudPage ? "frame-src 'self' blob: https:" : "frame-src 'self' blob:",
         "object-src 'none'",
         "base-uri 'self'",
         "form-action 'self'",
@@ -970,6 +972,9 @@ async function getProfilesByIds(userIds) {
 
 const PLATFORM_SETTINGS_CACHE_TTL = 5 * 1000;
 
+const DEFAULT_NOVNC_CLOUD_BASE_URL =
+  "https://vnc.fuzzthehuzz-ebsfiygfhsvfbfesg.com";
+
 const DEFAULT_PLATFORM_SETTINGS = Object.freeze({
   id: 1,
   maintenance_enabled: false,
@@ -988,7 +993,7 @@ const DEFAULT_PLATFORM_SETTINGS = Object.freeze({
   cloud_name: String(process.env.FUZZ_CLOUD_NAME || "Gaming PC").trim() || "Gaming PC",
   cloud_base_url: String(
     process.env.FUZZ_CLOUD_BASE_URL ||
-      "https://guac.fuzzthehuzz-ebsfiygfhsvfbfesg.com",
+      DEFAULT_NOVNC_CLOUD_BASE_URL,
   ).trim(),
   cloud_hide_ui: true,
   updated_by: null,
@@ -1032,11 +1037,10 @@ function normalizePlatformSettings(row = {}) {
         .slice(0, 80) ||
       DEFAULT_PLATFORM_SETTINGS.cloud_name,
     cloud_base_url:
-      normalizeCloudBaseUrl(
+      resolveCloudBaseUrl(
         row.cloud_base_url ||
           DEFAULT_PLATFORM_SETTINGS.cloud_base_url,
-      ) ||
-      DEFAULT_PLATFORM_SETTINGS.cloud_base_url,
+      ),
     cloud_hide_ui:
       row.cloud_hide_ui !== false,
   };
@@ -1066,6 +1070,34 @@ function normalizeCloudBaseUrl(value) {
   }
 }
 
+const LEGACY_FUZZ_CLOUD_HOSTS = new Set([
+  "guac.fuzzthehuzz-ebsfiygfhsvfbfesg.com",
+  "cloud.fuzzthehuzz-ebsfiygfhsvfbfesg.com",
+]);
+
+function resolveCloudBaseUrl(value) {
+  const normalized = normalizeCloudBaseUrl(value);
+  const fallback = DEFAULT_NOVNC_CLOUD_BASE_URL;
+
+  if (!normalized) {
+    return fallback;
+  }
+
+  try {
+    const url = new URL(normalized);
+
+    // Transparently move the old built-in Guacamole/Cloud defaults to noVNC.
+    // Custom owner-configured HTTPS hosts are preserved.
+    if (LEGACY_FUZZ_CLOUD_HOSTS.has(url.hostname.toLowerCase())) {
+      return fallback;
+    }
+  } catch {
+    return fallback;
+  }
+
+  return normalized;
+}
+
 function canAccessCloud(settings, profile) {
   if (!settings?.cloud_enabled) {
     return false;
@@ -1078,7 +1110,7 @@ function canAccessCloud(settings, profile) {
 }
 
 function buildCloudLaunchUrl(settings) {
-  const baseUrl = normalizeCloudBaseUrl(
+  const baseUrl = resolveCloudBaseUrl(
     settings?.cloud_base_url,
   );
 
@@ -1086,9 +1118,23 @@ function buildCloudLaunchUrl(settings) {
     return "";
   }
 
-  // Guacamole is launched at its configured root. Authentication and the
-  // selected desktop connection are handled by Guacamole itself.
-  return `${baseUrl}/`;
+  try {
+    const url = new URL(baseUrl);
+    const cleanPath = url.pathname.replace(/\/+$/, "");
+
+    if (!/\/vnc(?:_lite)?\.html$/i.test(cleanPath)) {
+      url.pathname = `${cleanPath}/vnc.html`.replace(/\/{2,}/g, "/");
+    }
+
+    // noVNC handles the VNC password prompt. These options only make the
+    // launch experience simpler and scale the remote desktop to the window.
+    url.searchParams.set("autoconnect", "true");
+    url.searchParams.set("resize", "scale");
+
+    return url.toString();
+  } catch {
+    return "";
+  }
 }
 
 function setPlatformSettingsCache(value) {
@@ -1470,8 +1516,10 @@ app.get(
       enabled: true,
       name: settings.cloud_name,
       launchUrl,
-      baseUrl: settings.cloud_base_url,
-      provider: "guacamole",
+      baseUrl: resolveCloudBaseUrl(settings.cloud_base_url),
+      provider: "novnc",
+      embedded:
+        settings.cloud_hide_ui !== false,
       fullscreen:
         settings.cloud_hide_ui !== false,
     });
@@ -1835,7 +1883,7 @@ app.patch(
     if (!cloudBaseUrl) {
       return res.status(400).json({
         error:
-          "Enter a valid HTTPS URL for the Guacamole gateway.",
+          "Enter a valid HTTPS URL for the noVNC gateway.",
       });
     }
 
@@ -7675,8 +7723,8 @@ async function runSystemHealthChecks() {
           platform?.cloud_enabled === false
             ? "Fuzz Cloud is disabled in platform settings."
             : platform && buildCloudLaunchUrl(platform)
-              ? "Fuzz Cloud has a valid HTTPS Guacamole gateway."
-              : "Fuzz Cloud needs a valid HTTPS Guacamole gateway URL.",
+              ? "Fuzz Cloud has a valid HTTPS noVNC gateway."
+              : "Fuzz Cloud needs a valid HTTPS noVNC gateway URL.",
         critical: false,
       },
     },
