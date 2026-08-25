@@ -32,27 +32,35 @@
   sessionStorage.removeItem("GoLocalGameTitle");
   sessionStorage.removeItem("GoProxyReturnPath");
 
-  function setFullscreen(enabled) {
-    document.body.classList.toggle("fullscreen-browser", enabled);
+  function syncFullscreenButton(enabled = window.FuzzFullscreen?.isActive?.()) {
+    const active = Boolean(enabled);
 
     const icon = fullscreenButton?.querySelector("i");
     if (icon) {
-      icon.className = enabled
+      icon.className = active
         ? "fa-solid fa-compress"
         : "fa-solid fa-expand";
     }
 
     if (fullscreenButton) {
-      fullscreenButton.title = enabled
-        ? "Exit fullscreen browser"
-        : "Fullscreen browser";
+      fullscreenButton.title = active
+        ? "Exit game fullscreen"
+        : "Game fullscreen";
+      fullscreenButton.setAttribute(
+        "aria-label",
+        active ? "Exit game fullscreen" : "Game fullscreen",
+      );
     }
   }
 
   function toggleFullscreen() {
-    setFullscreen(
-      !document.body.classList.contains("fullscreen-browser"),
-    );
+    if (!window.FuzzFullscreen) {
+      document.body.classList.toggle("fullscreen-browser");
+      syncFullscreenButton();
+      return;
+    }
+
+    void window.FuzzFullscreen.toggle();
   }
 
   function reload() {
@@ -167,18 +175,23 @@
 
   fullscreenButton?.addEventListener("click", toggleFullscreen);
 
-  document.addEventListener("keydown", (event) => {
-    // Fuzz fullscreen is a CSS "browser" mode, not the browser Fullscreen API.
-    // Do not reserve Escape here: sites like GeForce NOW and games need Esc
-    // for their own in-game menus. Exit Fuzz fullscreen with F11 or the
-    // toolbar fullscreen button instead.
-    if (event.key === "F11") {
-      event.preventDefault();
-      toggleFullscreen();
-    }
+  window.addEventListener("fuzz:fullscreenchange", (event) => {
+    syncFullscreenButton(event.detail?.active);
   });
 
-  setFullscreen(startFullscreen);
+  syncFullscreenButton();
+
+  // A page cannot enter native fullscreen automatically without a user
+  // gesture. Preserve the old popout behavior as CSS immersive mode until
+  // the user presses the fullscreen button.
+  if (startFullscreen) {
+    if (window.FuzzFullscreen) {
+      void window.FuzzFullscreen.enter({ native: false });
+    } else {
+      document.body.classList.add("fullscreen-browser");
+      syncFullscreenButton(true);
+    }
+  }
 
   if (localGameUrl) openLocalGame(localGameUrl, localGameTitle);
   else if (currentUrl) void open(currentUrl, currentEngine);

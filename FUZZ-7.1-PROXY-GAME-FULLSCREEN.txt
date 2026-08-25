@@ -1,0 +1,37 @@
+Fuzz 7.1 - Proxy Game Fullscreen
+
+What changed
+------------
+- The Fuzz fullscreen button now requests the real browser Fullscreen API.
+- Chromium keyboard locking is requested while fullscreen is active so plain
+  Escape can be delivered to games/streaming apps instead of being used as
+  Fuzz's normal exit shortcut.
+- Fuzz has an explicit floating Exit fullscreen button. It appears when the
+  pointer moves and hides after a short delay.
+- Shift+Escape is the Fuzz keyboard shortcut to leave fullscreen.
+- F11 still toggles Fuzz fullscreen when the top-level page receives it.
+- The normal tabbed proxy and standalone /p proxy use the same controller.
+- Scramjet now receives the same fullscreen/gamepad/microphone/camera/autoplay
+  iframe permissions that the Ultraviolet frame already had.
+- Ultraviolet iframe permissions were cleaned up and allowfullscreen is set.
+- CSS immersive mode remains as a fallback if a browser refuses the native
+  fullscreen request.
+
+Important browser behavior
+--------------------------
+Keyboard Lock is browser-dependent. Current Chromium browsers support the
+intended game/remote-app use case. If the browser refuses keyboard locking,
+its own Escape-to-exit-fullscreen behavior may still take priority.
+
+Changed/added files
+-------------------
+- index.js
+- package.json
+- package-lock.json
+- static/tabs.html
+- static/proxy.html
+- static/assets/js/t3.js
+- static/assets/js/standalone-proxy.js
+- static/assets/js/proxy-engine.js
+- static/assets/js/fuzz-fullscreen.js
+- static/assets/css/fuzz-fullscreen.css

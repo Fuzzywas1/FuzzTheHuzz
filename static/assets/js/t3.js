@@ -549,8 +549,36 @@
   }
 
   function toggleFullscreen() {
-    document.body.classList.toggle("fullscreen-browser");
     closeMenu();
+
+    if (!window.FuzzFullscreen) {
+      document.body.classList.toggle("fullscreen-browser");
+      return;
+    }
+
+    void window.FuzzFullscreen.toggle();
+  }
+
+  function syncFullscreenButton(active = window.FuzzFullscreen?.isActive?.()) {
+    const enabled = Boolean(active);
+
+    elements.fullscreen.title = enabled
+      ? "Exit game fullscreen"
+      : "Game fullscreen";
+    elements.fullscreen.setAttribute(
+      "aria-label",
+      enabled ? "Exit game fullscreen" : "Game fullscreen",
+    );
+
+    const menuItem = elements.menu.querySelector(
+      '[data-menu-action="fullscreen"] span',
+    );
+
+    if (menuItem) {
+      menuItem.textContent = enabled
+        ? "Exit fullscreen"
+        : "Game fullscreen";
+    }
   }
 
   function toggleTabStrip() {
@@ -613,6 +641,10 @@
       closeMenu();
     });
     window.addEventListener("fuzz:proxy-engine-change", (event) => updateEngineUi(event.detail?.engine));
+    window.addEventListener("fuzz:fullscreenchange", (event) => {
+      syncFullscreenButton(event.detail?.active);
+    });
+    syncFullscreenButton();
   }
 
   function bindKeyboard() {
@@ -644,9 +676,6 @@
       } else if (event.altKey && event.key === "ArrowRight") {
         event.preventDefault();
         historyAction("forward");
-      } else if (event.key === "F11") {
-        event.preventDefault();
-        toggleFullscreen();
       }
     });
   }

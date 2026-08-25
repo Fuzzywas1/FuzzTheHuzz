@@ -43,14 +43,15 @@ const CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
 const cache = new Map();
 
 const FUZZ_RELEASE = Object.freeze({
-  version: "7.0.1",
+  version: "7.1.0",
   releasedAt: "2026-08-25T00:00:00.000Z",
   summary:
-    "noVNC launch reliability fix for Fuzz Cloud.",
+    "Game Fullscreen update for the Fuzz proxy with real browser fullscreen and improved streaming controls.",
   items: [
-    "Fixed Fuzz Cloud getting stuck on an infinite noVNC loading screen.",
-    "Connect to PC now navigates directly to the noVNC Cloudflare session instead of embedding it in a cross-origin iframe.",
-    "Kept an Open in new tab option for users who want to leave Fuzz open.",
+    "Added real browser fullscreen to the normal and standalone Fuzz proxy.",
+    "Added Chromium keyboard-lock support so Escape can be used by fullscreen games and streaming apps.",
+    "Added an auto-hiding Exit fullscreen control plus Shift+Escape as a Fuzz-specific exit shortcut.",
+    "Improved Scramjet iframe permissions for fullscreen, gamepad, microphone, camera, autoplay, and clipboard use.",
     "Automatically migrates the old default Guacamole hostname to the new noVNC hostname.",
     "Added Games and Fuzz Cloud to the Home quick-launch area.",
     "Updated Admin, Status, documentation, and health messages for noVNC.",

@@ -327,9 +327,13 @@
     const iframe = document.createElement("iframe");
     iframe.setAttribute(
       "sandbox",
-      "allow-same-origin allow-scripts allow-forms allow-pointer-lock allow-modals allow-orientation-lock allow-presentation allow-storage-access-by-user-activation allow-downloads",
+      "allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-pointer-lock allow-modals allow-orientation-lock allow-presentation allow-storage-access-by-user-activation allow-downloads",
     );
-    iframe.setAttribute("allow", "fullscreen; autoplay; clipboard-read; clipboard-write; gamepad; microphone; camera");
+    iframe.setAttribute(
+      "allow",
+      "fullscreen; autoplay; clipboard-read; clipboard-write; gamepad; microphone; camera",
+    );
+    iframe.setAttribute("allowfullscreen", "");
     return iframe;
   }
 
@@ -343,6 +347,15 @@
       const frame = scramjet.createFrame();
       frame.frame.classList.add("fuzz-proxy-frame");
       frame.frame.dataset.proxyEngine = engine;
+
+      // Match the capabilities already granted to the Ultraviolet iframe.
+      // Streaming/game sites commonly need these for their normal web client.
+      frame.frame.setAttribute(
+        "allow",
+        "fullscreen; autoplay; clipboard-read; clipboard-write; gamepad; microphone; camera",
+      );
+      frame.frame.setAttribute("allowfullscreen", "");
+
       container.appendChild(frame.frame);
       await frame.go(url);
       return {

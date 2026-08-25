@@ -1,0 +1,78 @@
+/*
+ * Fuzz Game Fullscreen
+ * Shared by the normal tab browser and standalone proxy.
+ */
+
+.fuzz-fullscreen-exit {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  z-index: 2147483647;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 13px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 11px;
+  color: #fff;
+  background: rgba(6, 9, 20, 0.82);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  font: 600 12px/1 Inter, system-ui, sans-serif;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-7px);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease,
+    background 140ms ease;
+}
+
+.fuzz-fullscreen-exit:hover,
+.fuzz-fullscreen-exit:focus-visible {
+  background: rgba(14, 20, 42, 0.96);
+}
+
+.fuzz-fullscreen-exit.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+body:not(.fullscreen-browser) .fuzz-fullscreen-exit {
+  display: none !important;
+}
+
+/* Use dynamic viewport units in immersive mode so the proxy frame exactly
+   matches the usable screen area on current desktop/mobile browsers. */
+body.fullscreen-browser,
+body.fullscreen-browser .browser-viewport,
+body.fullscreen-browser .proxy-frame-host {
+  width: 100dvw !important;
+  height: 100dvh !important;
+  max-width: none !important;
+  max-height: none !important;
+}
+
+body.fullscreen-browser .browser-viewport,
+body.fullscreen-browser .proxy-frame-host {
+  position: fixed !important;
+  inset: 0 !important;
+  background: #000 !important;
+}
+
+body.fullscreen-browser .fuzz-proxy-frame,
+body.fullscreen-browser .local-game-frame {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 100% !important;
+  min-height: 100% !important;
+  border: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: #000 !important;
+}
