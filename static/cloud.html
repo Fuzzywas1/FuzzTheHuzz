@@ -19,7 +19,7 @@
   <script src="/assets/js/fuzz-ui.js?v=1"></script>
   <script src="/assets/js/fuzz-diagnostics.js?v=1"></script>
   <script src="/assets/js/m1.js?v=14" defer></script>
-  <script src="/assets/js/cloud.js?v=10" defer></script>
+  <script src="/assets/js/cloud.js?v=11" defer></script>
 </head>
 
 <body class="fuzz-cloud-page">
@@ -79,7 +79,7 @@
 
         <div class="cloud-secondary-actions">
           <button class="cloud-secondary-button" id="cloud-direct" type="button" disabled>
-            <i class="fa-solid fa-up-right-from-square" aria-hidden="true"></i>Open noVNC directly
+            <i class="fa-solid fa-up-right-from-square" aria-hidden="true"></i>Open in new tab
           </button>
           <span><i class="fa-solid fa-lock" aria-hidden="true"></i>Your VNC password is still required.</span>
         </div>
@@ -98,35 +98,7 @@
       </div>
     </section>
 
-    <section class="cloud-workspace" id="cloud-workspace" hidden>
-      <header class="cloud-desktop-toolbar">
-        <div class="cloud-desktop-title">
-          <span><i class="fa-solid fa-display" aria-hidden="true"></i></span>
-          <div><strong id="cloud-desktop-title">Gaming PC</strong><small>noVNC remote desktop</small></div>
-        </div>
-        <div class="cloud-desktop-actions">
-          <span class="cloud-engine-badge"><i class="fa-solid fa-circle" aria-hidden="true"></i>Direct</span>
-          <button id="cloud-desktop-reload" type="button" title="Reconnect desktop" aria-label="Reconnect desktop"><i class="fa-solid fa-rotate-right"></i></button>
-          <button id="cloud-desktop-expand" type="button" title="Expand desktop workspace" aria-label="Expand desktop workspace"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></button>
-          <button id="cloud-desktop-close" type="button" title="Close desktop" aria-label="Close desktop"><i class="fa-solid fa-xmark"></i></button>
-        </div>
-      </header>
-      <div id="cloud-desktop-host" class="cloud-desktop-host">
-        <div id="cloud-desktop-state" class="cloud-desktop-state">
-          <span class="cloud-desktop-spinner"></span>
-          <strong>Opening noVNC…</strong>
-          <small>Your VNC password prompt will appear inside the desktop viewer.</small>
-        </div>
-        <iframe
-          id="cloud-desktop-frame"
-          class="cloud-desktop-frame"
-          title="Fuzz Cloud desktop"
-          allow="fullscreen; clipboard-read; clipboard-write"
-          referrerpolicy="no-referrer"
-          hidden
-        ></iframe>
-      </div>
-    </section>
+
   </main>
 
   <script src="/assets/js/account-shell.js?v=1" defer></script>

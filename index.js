@@ -43,14 +43,14 @@ const CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
 const cache = new Map();
 
 const FUZZ_RELEASE = Object.freeze({
-  version: "7.0.0",
+  version: "7.0.1",
   releasedAt: "2026-08-25T00:00:00.000Z",
   summary:
-    "Major usability update with a simpler noVNC-powered Fuzz Cloud and cleaner home navigation.",
+    "noVNC launch reliability fix for Fuzz Cloud.",
   items: [
-    "Replaced Apache Guacamole with noVNC for Fuzz Cloud.",
-    "Fuzz Cloud now opens noVNC directly instead of routing WebSocket desktop traffic through the web proxy.",
-    "Added an integrated desktop workspace with a direct-open fallback and reconnect controls.",
+    "Fixed Fuzz Cloud getting stuck on an infinite noVNC loading screen.",
+    "Connect to PC now navigates directly to the noVNC Cloudflare session instead of embedding it in a cross-origin iframe.",
+    "Kept an Open in new tab option for users who want to leave Fuzz open.",
     "Automatically migrates the old default Guacamole hostname to the new noVNC hostname.",
     "Added Games and Fuzz Cloud to the Home quick-launch area.",
     "Updated Admin, Status, documentation, and health messages for noVNC.",
@@ -1518,10 +1518,10 @@ app.get(
       launchUrl,
       baseUrl: resolveCloudBaseUrl(settings.cloud_base_url),
       provider: "novnc",
-      embedded:
-        settings.cloud_hide_ui !== false,
-      fullscreen:
-        settings.cloud_hide_ui !== false,
+      // noVNC is intentionally launched directly. Embedding the separate
+      // Cloudflare hostname can be blocked or stall in some browsers.
+      embedded: false,
+      fullscreen: false,
     });
   },
 );
