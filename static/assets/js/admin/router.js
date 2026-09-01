@@ -126,7 +126,7 @@ function resolveRoute() {
 function updateChrome(route) {
   const definition = routes[route.key];
 
-  document.title = `${definition.title} · Novaris Control`;
+  document.title = "Home";
   document.getElementById("page-title").textContent = definition.title;
   const breadcrumb = document.getElementById("breadcrumb-page");
   if (breadcrumb) breadcrumb.textContent = definition.title;

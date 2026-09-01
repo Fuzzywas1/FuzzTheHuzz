@@ -487,7 +487,7 @@
         <header class="fuzz-sidebar-header">
           <a class="fuzz-sidebar-brand" href="/" data-tooltip="Novaris Home" title="Novaris Home" aria-label="Novaris Home">
             <span class="fuzz-sidebar-logo" aria-hidden="true"><img src="/assets/media/brand/novaris-mark.svg" alt="" /></span>
-            <span class="fuzz-sidebar-brand-copy"><strong>Novaris</strong><small>Digital universe</small></span>
+            <span class="fuzz-sidebar-brand-copy"><strong>Novaris</strong><small>Workspace</small></span>
           </a>
 
           <section class="fuzz-device-status" data-fuzz-device-status aria-label="Device status">

@@ -43,18 +43,18 @@ const CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
 const cache = new Map();
 
 const NOVARIS_RELEASE = Object.freeze({
-  version: "8.1.0",
+  version: "8.1.1",
   date: "2026-08-31",
-  title: "Novaris, redesigned",
+  title: "Novaris home cleanup",
   summary:
-    "A new orbital Novaris home experience, a real brand mark, and improved Control navigation.",
+    "A simpler Novaris home page with the original Home browser titles restored.",
   items: [
-    "Redesigned the Novaris home page around a simpler orbital command-center layout.",
-    "Introduced the new Novaris orbit-star brand mark and added it to the home page, main sidebar, and Novaris Control.",
-    "Made search and proxy-engine selection faster and less cluttered while keeping the existing browser behavior.",
-    "Added a visual orbit launcher for Novaris AI, Apps, Games, and Cloud plus cleaner quick-space cards.",
-    "Fixed Novaris Control navigation so long sidebars scroll independently while the account/footer controls stay available.",
-    "Preserved all existing Games, noVNC, proxy, account, admin, and Game Fullscreen functionality.",
+    "Simplified the Novaris home page copy while keeping the new space design and orbital logo.",
+    "Removed marketing-style phrases and shortened the AI, Apps, Games, and Cloud descriptions.",
+    "Changed the main sidebar subtitle from Digital universe to Workspace.",
+    "Restored every static HTML page title to Home.",
+    "Stopped Novaris Control from changing the browser title away from Home.",
+    "Kept all proxy, Games, noVNC, fullscreen, account, and admin functionality unchanged.",
   ],
 });
 
