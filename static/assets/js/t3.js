@@ -172,9 +172,18 @@
   function setFavicon(tab, source = "") {
     tab.favicon.innerHTML = "";
     if (!source) {
+      if (tab.isStart) {
+        const brand = document.createElement("img");
+        brand.alt = "";
+        brand.src = "/assets/media/brand/novaris-mark.svg";
+        brand.className = "tab-favicon-brand";
+        tab.favicon.appendChild(brand);
+        return;
+      }
+
       const fallback = document.createElement("span");
       fallback.className = "tab-favicon-fallback";
-      fallback.textContent = tab.isStart ? "F" : "•";
+      fallback.textContent = "•";
       tab.favicon.appendChild(fallback);
       return;
     }
@@ -294,7 +303,9 @@
     tab.host.innerHTML = `
       <section class="browser-start-page">
         <div class="start-content">
-          <div class="start-logo">F</div>
+          <div class="start-logo" aria-hidden="true">
+            <img src="/assets/media/brand/novaris-mark.svg" alt="" />
+          </div>
           <h1>New tab</h1>
           <p>Search the web or jump back into Novaris.</p>
           <form class="start-search" data-start-search>

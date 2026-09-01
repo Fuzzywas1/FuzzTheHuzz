@@ -107,22 +107,29 @@ svg {
   height: 32px;
   flex: 0 0 auto;
   place-items: center;
+  overflow: hidden;
   margin-bottom: 6px;
-  border: 1px solid rgba(137, 149, 255, 0.26);
+  padding: 0;
+  border: 1px solid rgba(137, 149, 255, 0.2);
   border-radius: 10px;
   color: white;
-  background:
-    linear-gradient(145deg, #6f7df1, #7848db);
-  box-shadow: 0 8px 20px rgba(76, 67, 190, 0.24);
+  background: rgba(7, 10, 23, 0.88);
+  box-shadow:
+    0 8px 20px rgba(76, 67, 190, 0.2),
+    inset 0 1px rgba(255, 255, 255, 0.05);
   cursor: pointer;
   transition:
     transform var(--ease),
-    filter var(--ease);
+    filter var(--ease),
+    border-color var(--ease);
 }
 
-.browser-brand span {
-  font-size: 13px;
-  font-weight: 900;
+.browser-brand-logo {
+  display: block;
+  width: 29px;
+  height: 29px;
+  object-fit: contain;
+  pointer-events: none;
 }
 
 .browser-brand:hover {
@@ -222,6 +229,12 @@ svg {
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+.tab-favicon .tab-favicon-brand {
+  width: 17px;
+  height: 17px;
+  border-radius: 5px;
 }
 
 .tab-favicon-fallback {
@@ -643,20 +656,24 @@ svg {
 
 .start-logo {
   display: grid;
-  width: 66px;
-  height: 66px;
+  width: 72px;
+  height: 72px;
   place-items: center;
+  overflow: hidden;
   margin: 0 auto 18px;
-  border: 1px solid rgba(154, 164, 255, 0.3);
-  border-radius: 21px;
-  color: white;
-  background:
-    linear-gradient(145deg, #6979f1, #7449dc);
+  border: 1px solid rgba(154, 164, 255, 0.18);
+  border-radius: 23px;
+  background: rgba(7, 10, 23, 0.82);
   box-shadow:
-    0 22px 55px rgba(75, 63, 191, 0.3),
-    inset 0 1px rgba(255, 255, 255, 0.16);
-  font-size: 26px;
-  font-weight: 900;
+    0 22px 55px rgba(75, 63, 191, 0.24),
+    inset 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.start-logo img {
+  display: block;
+  width: 68px;
+  height: 68px;
+  object-fit: contain;
 }
 
 .start-content h1 {

@@ -43,18 +43,18 @@ const CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
 const cache = new Map();
 
 const NOVARIS_RELEASE = Object.freeze({
-  version: "8.1.1",
+  version: "8.1.2",
   date: "2026-08-31",
-  title: "Novaris home cleanup",
+  title: "Novaris proxy branding fix",
   summary:
-    "A simpler Novaris home page with the original Home browser titles restored.",
+    "Replaced the final old proxy F branding with the Novaris orbital mark.",
   items: [
-    "Simplified the Novaris home page copy while keeping the new space design and orbital logo.",
-    "Removed marketing-style phrases and shortened the AI, Apps, Games, and Cloud descriptions.",
-    "Changed the main sidebar subtitle from Digital universe to Workspace.",
-    "Restored every static HTML page title to Home.",
-    "Stopped Novaris Control from changing the browser title away from Home.",
-    "Kept all proxy, Games, noVNC, fullscreen, account, and admin functionality unchanged.",
+    "Replaced the old F logo in the tabbed proxy toolbar with the Novaris orbital mark.",
+    "Replaced the F on the proxy new-tab screen with the Novaris orbital mark.",
+    "Replaced the start-tab F favicon fallback with the Novaris orbital mark.",
+    "Double-checked first-level HTML titles remain exactly Home.",
+    "Scanned the current frontend for leftover visible FuzzTheHuzz/Fuzz branding.",
+    "Kept compatibility-sensitive internal Fuzz-prefixed JavaScript APIs and storage keys unchanged.",
   ],
 });
 
