@@ -1,16 +1,16 @@
-# FuzzTheHuzz v6.0 Community + Customization Changelog
+# Novaris v6.0 Community + Customization Changelog
 
 ## Universal sidebar
 
-- Replaced the old top navigation with one collapsible left sidebar shared by the protected Fuzz pages.
-- Added links for Home, Chat, Fuzz AI, Apps, Tabs, Proxy, Settings, Feedback, Status, Account, and Admin.
+- Replaced the old top navigation with one collapsible left sidebar shared by the protected Novaris pages.
+- Added links for Home, Chat, Novaris AI, Apps, Tabs, Proxy, Settings, Feedback, Status, Account, and Admin.
 - Added active-page highlighting, compact mode, mobile navigation, and route-aware overlay behavior for Tabs and Proxy.
 - Added unread Chat badges and a notification center for direct messages and feedback updates.
 - Kept the account and logout controls at the bottom of the sidebar.
 
-## Fuzz Chat
+## Novaris Chat
 
-- Added a permanent **Everyone** room available to every signed-in Fuzz account.
+- Added a permanent **Everyone** room available to every signed-in Novaris account.
 - Added one-to-one direct messages between users.
 - Added live-style polling, online presence, typing indicators, unread counts, replies, reactions, edits, soft deletion, and image attachments.
 - Added message reporting and a moderator report queue.
@@ -42,11 +42,11 @@
 - Added tables for personalization, conversations, members, messages, reactions, typing, presence, blocks, reports, feedback, comments, and notifications.
 - Added private Storage buckets for wallpapers, chat images, and feedback screenshots.
 - Enabled Row Level Security and retained server-only service-role access.
-- Added an expanded setup diagnostic that reports whether the Fuzz 6 modules are installed.
+- Added an expanded setup diagnostic that reports whether the Novaris 6 modules are installed.
 
 ## Compatibility and stability
 
-- Preserved Scramjet, Ultraviolet, Apps, Tabs, Fuzz AI, account management, status, and existing admin features.
+- Preserved Scramjet, Ultraviolet, Apps, Tabs, Novaris AI, account management, status, and existing admin features.
 - Added `/settings` as an alias for the existing `/c` route.
 - Updated the login redirect to honor a user's saved default page unless an explicit `next` address is present.
 - Updated the project audit to check the new pages, scripts, SQL migration, API markers, and required DOM hooks.

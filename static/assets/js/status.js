@@ -64,7 +64,7 @@
     browserGrid.innerHTML = `<article class="status-browser-item"><strong>… Running browser checks</strong><span>This takes a few seconds.</span></article>`;
     const wispConnected = await testWisp();
     const checks = [
-      { name: "Secure context", ok: window.isSecureContext, detail: window.isSecureContext ? "HTTPS features available" : "Open Fuzz over HTTPS" },
+      { name: "Secure context", ok: window.isSecureContext, detail: window.isSecureContext ? "HTTPS features available" : "Open Novaris over HTTPS" },
       { name: "Service workers", ok: "serviceWorker" in navigator, detail: "serviceWorker" in navigator ? "Supported by this browser" : "Not supported" },
       { name: "Local storage", ok: (() => { try { localStorage.setItem("__fuzz_test", "1"); localStorage.removeItem("__fuzz_test"); return true; } catch { return false; } })(), detail: "Required for preferences and sessions" },
       { name: "Wisp WebSocket", ok: wispConnected, detail: wispConnected ? "Connected to /wisp/" : "Connection failed or timed out" },
@@ -82,7 +82,7 @@
       if (!response.ok) throw new Error(payload.error || "Status checks failed.");
       lastPayload = payload;
       const healthy = payload.overall === "online";
-      summary.innerHTML = `<div class="status-overall ${healthy ? "" : "is-warning"}"><span class="status-overall-dot"></span><div><strong>${healthy ? "All critical systems are operational" : "Some systems need attention"}</strong><span>Fuzz ${escapeHtml(payload.version)} · Uptime ${escapeHtml(formatUptime(payload.uptime))}</span></div></div><div class="status-meta">Checked ${escapeHtml(new Date(payload.checkedAt).toLocaleString())}</div>`;
+      summary.innerHTML = `<div class="status-overall ${healthy ? "" : "is-warning"}"><span class="status-overall-dot"></span><div><strong>${healthy ? "All critical systems are operational" : "Some systems need attention"}</strong><span>Novaris ${escapeHtml(payload.version)} · Uptime ${escapeHtml(formatUptime(payload.uptime))}</span></div></div><div class="status-meta">Checked ${escapeHtml(new Date(payload.checkedAt).toLocaleString())}</div>`;
       grid.innerHTML = [
         card("Server", "fa-solid fa-server", payload.checks.server),
         card("Supabase", "fa-solid fa-database", payload.checks.database),
@@ -102,7 +102,7 @@
   document.getElementById("copy-diagnostics")?.addEventListener("click", async () => {
     if (!lastPayload) return showToast("Run the checks first.");
     const text = [
-      `Fuzz ${lastPayload.version}`,
+      `Novaris ${lastPayload.version}`,
       `Overall: ${lastPayload.overall}`,
       `Checked: ${lastPayload.checkedAt}`,
       ...Object.entries(lastPayload.checks || {}).map(([name, check]) => `${name}: ${check.status} — ${check.message}`),

@@ -178,7 +178,7 @@ async function renderOverview() {
 
         ${panel("Today's usage", "Limits reset according to the server's UTC day", `
           <div class="account-usage-list">
-            ${usageRow("Fuzz AI messages", totals.aiMessagesToday, policy.aiMessagesDaily)}
+            ${usageRow("Novaris AI messages", totals.aiMessagesToday, policy.aiMessagesDaily)}
             ${usageRow("AI image uploads", totals.aiImagesToday, policy.aiImagesDaily)}
             ${usageRow("Proxy requests today", totals.proxyRequestsToday, policy.proxyRequestsDaily)}
             ${usageRow("Proxy requests this minute", totals.proxyRequestsMinute, policy.proxyRequestsMinute)}
@@ -267,7 +267,7 @@ async function renderSecurity() {
 }
 
 async function renderAi() {
-  loading("Loading saved Fuzz AI chats…");
+  loading("Loading saved Novaris AI chats…");
   const params = new URLSearchParams({ page: String(state.ai.page), limit: "30" });
   if (state.ai.search) params.set("search", state.ai.search);
   const payload = await request(`/api/account/ai/chats?${params}`);
@@ -280,7 +280,7 @@ async function renderAi() {
   content.innerHTML = `
     <div class="account-section">
       <section class="account-metrics">
-        ${metric("Saved chats", formatNumber(pagination.total), "Your Fuzz AI conversations")}
+        ${metric("Saved chats", formatNumber(pagination.total), "Your Novaris AI conversations")}
         ${metric("Messages today", formatNumber(totals.aiMessagesToday), policy.aiMessagesDaily ? `of ${formatNumber(policy.aiMessagesDaily)}` : "Unlimited")}
         ${metric("Images today", formatNumber(totals.aiImagesToday), policy.aiImagesDaily ? `of ${formatNumber(policy.aiImagesDaily)}` : "Unlimited")}
         ${metric("Response style", state.preferences?.aiBehavior || "balanced", "Change under Preferences")}
@@ -291,7 +291,7 @@ async function renderAi() {
           <div class="account-toolbar-group"><input class="account-field" id="ai-search" type="search" value="${escapeHtml(state.ai.search)}" placeholder="Search chat titles…" style="width:260px" /><button class="account-button" type="submit">Search</button>${state.ai.search ? `<button class="account-button" id="clear-ai-search" type="button">Clear</button>` : ""}</div>
           <button class="account-button danger" id="delete-all-ai" type="button">Delete all AI history</button>
         </form>
-        ${chats.length ? `<div class="account-table-wrap"><table class="account-table"><thead><tr><th>Chat</th><th>Messages</th><th>Updated</th><th></th></tr></thead><tbody>${chats.map((chat) => `<tr><td><div class="account-primary-copy"><strong>${escapeHtml(chat.title || "New chat")}</strong><span>${escapeHtml(chat.lastMessagePreview || "No saved messages")}</span></div></td><td>${badge(`${chat.messageCount || 0} messages`)}</td><td>${escapeHtml(formatDate(chat.updatedAt))}</td><td><div class="account-toolbar-group"><button class="account-button small" data-open-chat="${escapeHtml(chat.id)}" type="button">Open</button><button class="account-button small" data-rename-chat="${escapeHtml(chat.id)}" data-chat-title="${escapeHtml(chat.title || "New chat")}" type="button">Rename</button><button class="account-button small danger" data-delete-chat="${escapeHtml(chat.id)}" type="button">Delete</button></div></td></tr>`).join("")}</tbody></table></div><div class="account-toolbar" style="margin-top:12px"><span class="account-help">Page ${pagination.page} of ${pagination.totalPages}</span><div class="account-toolbar-group"><button class="account-button small" data-ai-page="previous" ${pagination.page <= 1 ? "disabled" : ""}>Previous</button><button class="account-button small" data-ai-page="next" ${pagination.page >= pagination.totalPages ? "disabled" : ""}>Next</button></div></div>` : emptyState("No saved chats", "Start a conversation in Fuzz AI and it will appear here.", "fa-robot")}
+        ${chats.length ? `<div class="account-table-wrap"><table class="account-table"><thead><tr><th>Chat</th><th>Messages</th><th>Updated</th><th></th></tr></thead><tbody>${chats.map((chat) => `<tr><td><div class="account-primary-copy"><strong>${escapeHtml(chat.title || "New chat")}</strong><span>${escapeHtml(chat.lastMessagePreview || "No saved messages")}</span></div></td><td>${badge(`${chat.messageCount || 0} messages`)}</td><td>${escapeHtml(formatDate(chat.updatedAt))}</td><td><div class="account-toolbar-group"><button class="account-button small" data-open-chat="${escapeHtml(chat.id)}" type="button">Open</button><button class="account-button small" data-rename-chat="${escapeHtml(chat.id)}" data-chat-title="${escapeHtml(chat.title || "New chat")}" type="button">Rename</button><button class="account-button small danger" data-delete-chat="${escapeHtml(chat.id)}" type="button">Delete</button></div></td></tr>`).join("")}</tbody></table></div><div class="account-toolbar" style="margin-top:12px"><span class="account-help">Page ${pagination.page} of ${pagination.totalPages}</span><div class="account-toolbar-group"><button class="account-button small" data-ai-page="previous" ${pagination.page <= 1 ? "disabled" : ""}>Previous</button><button class="account-button small" data-ai-page="next" ${pagination.page >= pagination.totalPages ? "disabled" : ""}>Next</button></div></div>` : emptyState("No saved chats", "Start a conversation in Novaris AI and it will appear here.", "fa-robot")}
       `)}
     </div>`;
 
@@ -322,12 +322,12 @@ async function openChat(chatId) {
     const payload = await request(`/api/ai/chats/${encodeURIComponent(chatId)}`);
     const chat = payload.chat || {};
     const messages = payload.messages || [];
-    modalRoot.innerHTML = `<div class="account-modal-backdrop" data-close-modal><section class="account-modal"><header class="account-modal-header"><div><h2>${escapeHtml(chat.title || "New chat")}</h2><p>${messages.length} messages · Updated ${escapeHtml(formatDate(chat.updated_at))}</p></div><div class="account-toolbar-group"><button class="account-button small" id="export-chat" type="button">Export</button><button class="account-button small" id="close-modal" type="button">Close</button></div></header><div class="account-modal-body"><div class="account-message-list">${messages.length ? messages.map((message) => `<article class="account-message ${message.role === "assistant" ? "assistant" : "user"}"><header><strong>${message.role === "assistant" ? "Fuzz AI" : "You"}</strong><time>${escapeHtml(formatDate(message.created_at))}</time></header>${message.has_image ? badge(`Image attached${message.image_name ? ` · ${message.image_name}` : ""}`) : ""}<pre>${escapeHtml(message.content || "")}</pre></article>`).join("") : emptyState("Empty chat", "This conversation has no saved messages.")}</div></div></section></div>`;
+    modalRoot.innerHTML = `<div class="account-modal-backdrop" data-close-modal><section class="account-modal"><header class="account-modal-header"><div><h2>${escapeHtml(chat.title || "New chat")}</h2><p>${messages.length} messages · Updated ${escapeHtml(formatDate(chat.updated_at))}</p></div><div class="account-toolbar-group"><button class="account-button small" id="export-chat" type="button">Export</button><button class="account-button small" id="close-modal" type="button">Close</button></div></header><div class="account-modal-body"><div class="account-message-list">${messages.length ? messages.map((message) => `<article class="account-message ${message.role === "assistant" ? "assistant" : "user"}"><header><strong>${message.role === "assistant" ? "Novaris AI" : "You"}</strong><time>${escapeHtml(formatDate(message.created_at))}</time></header>${message.has_image ? badge(`Image attached${message.image_name ? ` · ${message.image_name}` : ""}`) : ""}<pre>${escapeHtml(message.content || "")}</pre></article>`).join("") : emptyState("Empty chat", "This conversation has no saved messages.")}</div></div></section></div>`;
     const close = () => { modalRoot.innerHTML = ""; };
     modalRoot.querySelector("#close-modal")?.addEventListener("click", close);
     modalRoot.querySelector("[data-close-modal]")?.addEventListener("mousedown", (event) => { if (event.target.dataset.closeModal !== undefined) close(); });
     modalRoot.querySelector("#export-chat")?.addEventListener("click", () => {
-      const transcript = [`Fuzz AI Conversation: ${chat.title || "New chat"}`, `Exported: ${new Date().toISOString()}`, "", ...messages.map((message) => `[${message.role === "assistant" ? "Fuzz AI" : "You"}] ${formatDate(message.created_at)}\n${message.content || ""}\n`)].join("\n");
+      const transcript = [`Novaris AI Conversation: ${chat.title || "New chat"}`, `Exported: ${new Date().toISOString()}`, "", ...messages.map((message) => `[${message.role === "assistant" ? "Novaris AI" : "You"}] ${formatDate(message.created_at)}\n${message.content || ""}\n`)].join("\n");
       const blob = new Blob([transcript], { type: "text/plain;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -420,8 +420,8 @@ const SETTINGS_CLOAK_PRESETS = Object.freeze({
     icon: "/assets/media/favicon/ixl.png",
   },
   Fuzz: {
-    label: "FuzzTheHuzz",
-    title: "FuzzTheHuzz",
+    label: "Novaris",
+    title: "Novaris",
     icon: "/favicon.png",
   },
 });
@@ -605,7 +605,7 @@ function exportBrowserSettings() {
   }
 
   const payload = {
-    product: "FuzzTheHuzz",
+    product: "Novaris",
     type: "browser-settings",
     exportedAt: new Date().toISOString(),
     browserSettings,
@@ -631,7 +631,7 @@ function importBrowserSettings(file) {
         const payload = JSON.parse(String(reader.result || "{}"));
         const values = payload.browserSettings;
         if (!values || typeof values !== "object" || Array.isArray(values)) {
-          throw new Error("That is not a valid Fuzz browser-settings export.");
+          throw new Error("That is not a valid Novaris browser-settings export.");
         }
 
         const allowedKeys = new Set([
@@ -726,14 +726,14 @@ function customizationSettingsMarkup() {
 
         <div class="settings-column">
           <article class="settings-card">
-            <header><div><i class="fa-solid fa-bars-staggered"></i><span><strong>Sidebar and layout</strong><small>Choose how the main Fuzz menu behaves.</small></span></div></header>
+            <header><div><i class="fa-solid fa-bars-staggered"></i><span><strong>Sidebar and layout</strong><small>Choose how the main Novaris menu behaves.</small></span></div></header>
             <div class="settings-choice-grid">
               <label class="choice-card"><input type="radio" name="sidebar-mode" value="expanded" checked /><span><i class="fa-solid fa-rectangle-list"></i><strong>Expanded</strong><small>Icons and names</small></span></label>
               <label class="choice-card"><input type="radio" name="sidebar-mode" value="collapsed" /><span><i class="fa-solid fa-grip-lines-vertical"></i><strong>Compact</strong><small>Icons only</small></span></label>
             </div>
             <div class="settings-grid two">
               <label class="settings-field"><span>Page spacing</span><select id="density"><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select></label>
-              <label class="settings-field"><span>Default page</span><select id="default-page"><option value="/">Home</option><option value="/chat">Chat</option><option value="/ai">Fuzz AI</option><option value="/b">Apps</option><option value="/d">Tabs</option></select></label>
+              <label class="settings-field"><span>Default page</span><select id="default-page"><option value="/">Home</option><option value="/chat">Chat</option><option value="/ai">Novaris AI</option><option value="/b">Apps</option><option value="/d">Tabs</option></select></label>
             </div>
             <label class="settings-toggle"><span><strong>Reduce motion</strong><small>Minimize animations and transitions.</small></span><input id="reduced-motion" type="checkbox" /><span class="toggle-track"></span></label>
             <label class="settings-toggle"><span><strong>Show device status</strong><small>Display local time, date, connection, device type, and battery when supported.</small></span><input id="show-device-status" type="checkbox" checked /><span class="toggle-track"></span></label>
@@ -753,7 +753,7 @@ function customizationSettingsMarkup() {
 
           <article class="settings-card settings-info-card">
             <i class="fa-solid fa-cloud-arrow-up"></i>
-            <div><strong>Synced to your Fuzz account</strong><p>These customization choices follow your account to another signed-in device. Your original account and browser settings remain above.</p></div>
+            <div><strong>Synced to your Novaris account</strong><p>These customization choices follow your account to another signed-in device. Your original account and browser settings remain above.</p></div>
           </article>
         </div>
       </div>
@@ -786,12 +786,12 @@ async function renderPreferences() {
         </div>
 
         <div class="account-grid-2">
-          ${panel("Site preferences", "How Fuzz looks and behaves", `
+          ${panel("Site preferences", "How Novaris looks and behaves", `
             <div class="account-form">
               <label class="account-label">Appearance<select class="account-select" id="pref-appearance"><option value="space" ${p.appearance === "space" ? "selected" : ""}>Space</option><option value="midnight" ${p.appearance === "midnight" ? "selected" : ""}>Midnight</option><option value="dim" ${p.appearance === "dim" ? "selected" : ""}>Dim</option></select></label>
               <label class="account-label">Default search engine<select class="account-select" id="pref-engine">${Object.entries(payload.proxyEngines || {}).map(([key, engine]) => `<option value="${escapeHtml(key)}" ${p.defaultProxyEngine === key ? "selected" : ""}>${escapeHtml(engine.name)}</option>`).join("")}</select></label>
               <label class="account-label">Default proxy<select class="account-select" id="pref-proxy-technology"><option value="scramjet" ${p.proxyTechnology !== "ultraviolet" ? "selected" : ""}>Scramjet · Recommended</option><option value="ultraviolet" ${p.proxyTechnology === "ultraviolet" ? "selected" : ""}>Ultraviolet · Legacy fallback</option></select></label>
-              <label class="account-label">Fuzz AI response style<select class="account-select" id="pref-ai"><option value="balanced" ${p.aiBehavior === "balanced" ? "selected" : ""}>Balanced</option><option value="concise" ${p.aiBehavior === "concise" ? "selected" : ""}>Concise</option><option value="detailed" ${p.aiBehavior === "detailed" ? "selected" : ""}>Detailed</option><option value="creative" ${p.aiBehavior === "creative" ? "selected" : ""}>Creative</option></select></label>
+              <label class="account-label">Novaris AI response style<select class="account-select" id="pref-ai"><option value="balanced" ${p.aiBehavior === "balanced" ? "selected" : ""}>Balanced</option><option value="concise" ${p.aiBehavior === "concise" ? "selected" : ""}>Concise</option><option value="detailed" ${p.aiBehavior === "detailed" ? "selected" : ""}>Detailed</option><option value="creative" ${p.aiBehavior === "creative" ? "selected" : ""}>Creative</option></select></label>
             </div>
           `)}
 
@@ -802,7 +802,7 @@ async function renderPreferences() {
           `)}
         </div>
 
-        <div class="account-toolbar account-settings-save-row"><span class="account-help">Saved account preferences are applied across your signed-in Fuzz pages.</span><button class="account-button primary" type="submit"><i class="fa-solid fa-cloud-arrow-up"></i>Save account preferences</button></div>
+        <div class="account-toolbar account-settings-save-row"><span class="account-help">Saved account preferences are applied across your signed-in Novaris pages.</span><button class="account-button primary" type="submit"><i class="fa-solid fa-cloud-arrow-up"></i>Save account preferences</button></div>
       </form>
 
       <form id="browser-settings-form" class="account-section">
@@ -839,8 +839,8 @@ async function renderPreferences() {
               <label class="account-label">Interface density<select class="account-select" id="browser-density"><option value="comfortable" ${browser.ui.density === "comfortable" ? "selected" : ""}>Comfortable</option><option value="compact" ${browser.ui.density === "compact" ? "selected" : ""}>Compact</option></select></label>
               <label class="account-label">Animated background<select class="account-select" id="browser-ui-background"><option value="stars" ${browser.ui.background === "stars" ? "selected" : ""}>Stars and effects</option><option value="quiet" ${browser.ui.background === "quiet" ? "selected" : ""}>Quiet background</option></select></label>
               <div class="account-switch-row"><div class="account-switch-copy"><strong>Reduce interface motion locally</strong><span>Overrides animations on this browser without changing your synced account setting.</span></div><label class="account-switch"><input id="browser-ui-motion" type="checkbox" ${browser.ui.motion === "reduced" ? "checked" : ""} /><span></span></label></div>
-              <div class="account-switch-row"><div class="account-switch-copy"><strong>Show New Tab shortcuts</strong><span>Display Home, Apps, Fuzz AI, and Settings shortcuts under the proxy selector.</span></div><label class="account-switch"><input id="browser-new-tab-shortcuts" type="checkbox" ${browser.ui.showNewTabShortcuts !== false ? "checked" : ""} /><span></span></label></div>
-              <div class="account-switch-row"><div class="account-switch-copy"><strong>Show update notices</strong><span>Display a small banner when a new Fuzz version is installed.</span></div><label class="account-switch"><input id="browser-update-notices" type="checkbox" ${browser.ui.showUpdateNotices !== false ? "checked" : ""} /><span></span></label></div>
+              <div class="account-switch-row"><div class="account-switch-copy"><strong>Show New Tab shortcuts</strong><span>Display Home, Apps, Novaris AI, and Settings shortcuts under the proxy selector.</span></div><label class="account-switch"><input id="browser-new-tab-shortcuts" type="checkbox" ${browser.ui.showNewTabShortcuts !== false ? "checked" : ""} /><span></span></label></div>
+              <div class="account-switch-row"><div class="account-switch-copy"><strong>Show update notices</strong><span>Display a small banner when a new Novaris version is installed.</span></div><label class="account-switch"><input id="browser-update-notices" type="checkbox" ${browser.ui.showUpdateNotices !== false ? "checked" : ""} /><span></span></label></div>
               <div class="account-toolbar-group"><button class="account-button" id="reset-interface-defaults" type="button"><i class="fa-solid fa-rotate-left"></i>Reset interface defaults</button><button class="account-button" type="button" data-fuzz-open-changelog><i class="fa-solid fa-sparkles"></i>View changelog</button><a class="account-button" href="/status"><i class="fa-solid fa-heart-pulse"></i>System status</a></div>
             </div>
           `)}

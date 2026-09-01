@@ -1,4 +1,4 @@
-# Fuzz 6.1 Validation
+# Novaris 6.1 Validation
 
 Completed before packaging:
 
@@ -6,10 +6,10 @@ Completed before packaging:
 - 53 first-party JavaScript and module files checked.
 - 19 HTML files checked for duplicate IDs and required sidebar mounts.
 - 140 local HTML asset references checked.
-- Required Fuzz AI DOM hooks verified.
+- Required Novaris AI DOM hooks verified.
 - CSS brace balance checked for all CSS files.
 - Sidebar cache versions checked across every protected page.
-- Patch applied to a clean copy of Fuzz 6.0 and audited again.
+- Patch applied to a clean copy of Novaris 6.0 and audited again.
 - Full-project and patch ZIP integrity verified.
 - Release archives checked to ensure `.env`, `.git`, and `node_modules` were excluded.
 

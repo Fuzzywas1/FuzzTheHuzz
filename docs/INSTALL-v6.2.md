@@ -1,10 +1,10 @@
-# Install Fuzz 6.2
+# Install Novaris 6.2
 
 Apply the patch from the project root:
 
 ```bash
-unzip Fuzz-v6.2-Unified-Settings-Patch.zip
-bash Fuzz-v6.2-Unified-Settings-Patch/apply-patch.sh .
+unzip Novaris-v6.2-Unified-Settings-Patch.zip
+bash Novaris-v6.2-Unified-Settings-Patch/apply-patch.sh .
 ```
 
 Then run:

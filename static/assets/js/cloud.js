@@ -16,7 +16,7 @@
     const payload = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      throw new Error(payload.error || "Fuzz Cloud could not be loaded.");
+      throw new Error(payload.error || "Novaris Cloud could not be loaded.");
     }
 
     return payload;
@@ -47,13 +47,13 @@
     elements.direct.disabled = true;
     elements.message.textContent = message;
     elements.description.textContent =
-      "Open Fuzz Control and verify the noVNC address in Fuzz Cloud settings.";
+      "Open Novaris Control and verify the noVNC address in Novaris Cloud settings.";
     setStatus("error", "Unavailable");
   }
 
   function renderReady(config) {
     if (!config?.launchUrl) {
-      showError("Fuzz Cloud does not have a valid noVNC launch URL.");
+      showError("Novaris Cloud does not have a valid noVNC launch URL.");
       return;
     }
 
@@ -90,7 +90,7 @@
 
     // noVNC is hosted on its own Cloudflare hostname. Navigating directly
     // avoids cross-origin iframe restrictions and keeps its WebSocket
-    // connection completely outside Fuzz's proxy/service-worker runtime.
+    // connection completely outside Novaris's proxy/service-worker runtime.
     window.location.assign(state.config.launchUrl);
   }
 

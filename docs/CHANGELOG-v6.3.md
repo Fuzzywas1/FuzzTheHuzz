@@ -1,4 +1,4 @@
-# Fuzz 6.3 — Sidebar Scroll Cleanup
+# Novaris 6.3 — Sidebar Scroll Cleanup
 
 - Removed the visible vertical scrollbar from the sidebar while keeping vertical scrolling functional.
 - Removed the accidental horizontal scrollbar and arrow controls.

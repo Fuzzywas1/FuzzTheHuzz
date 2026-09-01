@@ -1,6 +1,6 @@
-# FuzzTheHuzz v5.4 Stability Update
+# Novaris v5.4 Stability Update
 
-This release repairs authentication, Fuzz AI chat persistence, private-route protection, database setup, stale client caching, and deployment hygiene.
+This release repairs authentication, Novaris AI chat persistence, private-route protection, database setup, stale client caching, and deployment hygiene.
 
 ## Before replacing the project
 
@@ -20,7 +20,7 @@ Run it once. The migration is idempotent, so it can be run again if the first at
 
 The migration:
 
-- creates or upgrades every table used by Fuzz;
+- creates or upgrades every table used by Novaris;
 - restores missing profiles for existing Auth users;
 - promotes the oldest profile only when the project has no owner at all;
 - adds the `fuzz_consume_usage` RPC required by AI and proxy usage checks;
@@ -41,7 +41,7 @@ OPENAI_MODEL
 
 `SUPABASE_SERVICE_ROLE_KEY` is also supported as the legacy alternative to `SUPABASE_SECRET_KEY`. `OPENAI_MODEL` is optional and defaults to `gpt-5-mini`.
 
-Fuzz can start without `OPENAI_API_KEY`, but `/ai` will return a clear setup error until the key is added.
+Novaris can start without `OPENAI_API_KEY`, but `/ai` will return a clear setup error until the key is added.
 
 ## Install the full project
 
@@ -73,7 +73,7 @@ After deployment, verify:
 
 ## First login after migration
 
-The login page now sends credentials to the Fuzz server. The server creates HTTP-only Supabase session cookies; no Supabase key is embedded in the login JavaScript.
+The login page now sends credentials to the Novaris server. The server creates HTTP-only Supabase session cookies; no Supabase key is embedded in the login JavaScript.
 
 If an existing Supabase Auth user did not have a `profiles` row, the migration creates one. When no owner exists at all, the oldest profile is promoted to owner.
 

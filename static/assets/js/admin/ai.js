@@ -16,7 +16,7 @@ import {
 let selectedDays = 30;
 
 export async function renderAi(container) {
-  container.innerHTML = loadingState("Loading Fuzz AI analytics...");
+  container.innerHTML = loadingState("Loading Novaris AI analytics...");
 
   try {
     const payload = await api.aiAnalytics(selectedDays);
@@ -69,7 +69,7 @@ function paint(container, payload) {
               { name: "Messages", data: payload.charts?.messages },
               { name: "Responses", data: payload.charts?.responses },
             ],
-            { label: "Fuzz AI usage" },
+            { label: "Novaris AI usage" },
           ),
         })}
 

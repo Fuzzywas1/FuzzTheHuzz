@@ -261,7 +261,7 @@
         suspendedUntil = new Date(suspension.suspendedUntil);
 
         document.getElementById("intro").textContent =
-          "You cannot use protected FuzzTheHuzz features until this suspension ends or an administrator removes it.";
+          "You cannot use protected Novaris features until this suspension ends or an administrator removes it.";
         document.getElementById("username").textContent = payload.user?.username || "Unknown";
         document.getElementById("reason").textContent = suspension.reason || "No reason was provided.";
         document.getElementById("until").textContent = Number.isFinite(suspendedUntil.getTime())

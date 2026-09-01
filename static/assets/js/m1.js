@@ -7,8 +7,8 @@
       items: [
         { href: "/", match: ["/", "/index.html"], label: "Home", icon: "home" },
         { href: "/chat", match: ["/chat", "/chat.html"], label: "Chat", icon: "chat", badge: "chat" },
-        { href: "/ai", match: ["/ai", "/ai.html"], label: "Fuzz AI", icon: "sparkles" },
-        { href: "/cloud", match: ["/cloud", "/cloud.html"], label: "Fuzz Cloud", icon: "desktop", feature: "cloud" },
+        { href: "/ai", match: ["/ai", "/ai.html"], label: "Novaris AI", icon: "sparkles" },
+        { href: "/cloud", match: ["/cloud", "/cloud.html"], label: "Novaris Cloud", icon: "desktop", feature: "cloud" },
       ],
     },
     {
@@ -472,22 +472,22 @@
     const adminLink = canAccessAdmin
       ? `<section class="fuzz-sidebar-group" aria-label="Management">
           <div class="fuzz-sidebar-section-label">Management</div>
-          <a class="fuzz-sidebar-link${path.startsWith("/admin") ? " is-active" : ""}" href="/admin" data-tooltip="Admin" title="Admin" ${path.startsWith("/admin") ? 'aria-current="page"' : ""}>
+          <a class="fuzz-sidebar-link${path.startsWith("/admin") ? " is-active" : ""}" href="/admin" data-tooltip="Novaris Control" title="Novaris Control" ${path.startsWith("/admin") ? 'aria-current="page"' : ""}>
             <span class="fuzz-sidebar-icon">${iconSvg("admin")}</span>
-            <span class="fuzz-sidebar-label">Admin</span>
+            <span class="fuzz-sidebar-label">Control</span>
           </a>
         </section>`
       : "";
 
-    const safeUsername = escapeHtml(account.username || "Fuzz user");
+    const safeUsername = escapeHtml(account.username || "Novaris user");
     const safeRole = escapeHtml(account.role || "user");
 
     container.innerHTML = `
-      <aside class="fuzz-sidebar" aria-label="Fuzz navigation">
+      <aside class="fuzz-sidebar" aria-label="Novaris navigation">
         <header class="fuzz-sidebar-header">
-          <a class="fuzz-sidebar-brand" href="/" data-tooltip="Fuzz Home" title="Fuzz Home" aria-label="Fuzz Home">
-            <span class="fuzz-sidebar-logo" aria-hidden="true"><span>F</span></span>
-            <span class="fuzz-sidebar-brand-copy"><strong>FuzzTheHuzz</strong><small>Private workspace</small></span>
+          <a class="fuzz-sidebar-brand" href="/" data-tooltip="Novaris Home" title="Novaris Home" aria-label="Novaris Home">
+            <span class="fuzz-sidebar-logo" aria-hidden="true"><span>N</span></span>
+            <span class="fuzz-sidebar-brand-copy"><strong>Novaris</strong><small>Digital universe</small></span>
           </a>
 
           <section class="fuzz-device-status" data-fuzz-device-status aria-label="Device status">

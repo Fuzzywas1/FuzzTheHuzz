@@ -169,7 +169,7 @@
                 busy
                   ? game.local
                     ? "Downloading game..."
-                    : "Opening through Fuzz Proxy..."
+                    : "Opening through Novaris Proxy..."
                   : game.description || game.category,
               )}</span>
               <span class="app-card-footer">

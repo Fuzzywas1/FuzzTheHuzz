@@ -296,16 +296,16 @@
         <div class="start-content">
           <div class="start-logo">F</div>
           <h1>New tab</h1>
-          <p>Search the web or jump back into Fuzz.</p>
+          <p>Search the web or jump back into Novaris.</p>
           <form class="start-search" data-start-search>
             ${icons.search}
             <input type="text" placeholder="Search or enter a URL" aria-label="Search or enter a URL" autocomplete="off" spellcheck="false" />
             <button type="submit">Search</button>
           </form>
           <div class="start-shortcuts">
-            ${startShortcut("Fuzz Home", "Return to the main page", "/", icons.home)}
+            ${startShortcut("Novaris Home", "Return to the main page", "/", icons.home)}
             ${startShortcut("Apps", "Open your app library", "/b", icons.grid)}
-            ${startShortcut("Fuzz AI", "Start an AI conversation", "/ai", icons.spark)}
+            ${startShortcut("Novaris AI", "Start an AI conversation", "/ai", icons.spark)}
             ${startShortcut("Settings", "Account and browser options", "/account#preferences", icons.settings)}
           </div>
         </div>

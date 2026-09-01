@@ -87,7 +87,16 @@ async function loadResults(query) {
   try {
     const payload = await api.search(query);
 
+    const utilityItems = query
+      ? []
+      : [
+          { type: "link", title: "Back to Novaris", subtitle: "Open the main page", href: "/", icon: "↗" },
+          { type: "link", title: "Open Novaris AI", subtitle: "AI workspace", href: "/ai", icon: "✦" },
+          { type: "link", title: "Open Novaris Cloud", subtitle: "Remote PC", href: "/cloud", icon: "▣" },
+        ];
+
     currentItems = [
+      ...utilityItems,
       ...(payload.commands || []).map((command) => ({
         type: "command",
         title: command.title,
@@ -128,6 +137,7 @@ function paintResults() {
     return;
   }
 
+  const linkItems = currentItems.filter((item) => item.type === "link");
   const commandItems = currentItems.filter((item) => item.type === "command");
   const userItems = currentItems.filter((item) => item.type === "user");
 
@@ -163,7 +173,8 @@ function paintResults() {
   };
 
   results.innerHTML =
-    group("Navigation", commandItems) +
+    group("Novaris", linkItems) +
+    group("Control pages", commandItems) +
     group("Users", userItems);
 
   results.querySelectorAll("[data-command-index]").forEach((button) => {
@@ -208,7 +219,9 @@ function activateSelected() {
     return;
   }
 
-  if (item.type === "command") {
+  if (item.type === "link") {
+    window.location.href = item.href;
+  } else if (item.type === "command") {
     navigate(item.route);
   } else if (item.type === "user") {
     navigate(`user/${encodeURIComponent(item.user.id)}`);

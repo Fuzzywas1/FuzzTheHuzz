@@ -130,7 +130,7 @@ async function openChat(container, chatId) {
 
 function messageRow(message) {
   const role = message.role === "assistant" ? "assistant" : "user";
-  return `<article class="history-message history-message-${role}"><header><strong>${role === "assistant" ? "Fuzz AI" : "User"}</strong><time>${escapeHtml(formatDate(message.createdAt))}</time></header>${message.hasImage ? badge(`Image attached${message.imageName ? ` · ${message.imageName}` : ""}`, "badge-info") : ""}<pre>${escapeHtml(message.content || "")}</pre></article>`;
+  return `<article class="history-message history-message-${role}"><header><strong>${role === "assistant" ? "Novaris AI" : "User"}</strong><time>${escapeHtml(formatDate(message.createdAt))}</time></header>${message.hasImage ? badge(`Image attached${message.imageName ? ` · ${message.imageName}` : ""}`, "badge-info") : ""}<pre>${escapeHtml(message.content || "")}</pre></article>`;
 }
 
 function paintProxy(container, payload) {

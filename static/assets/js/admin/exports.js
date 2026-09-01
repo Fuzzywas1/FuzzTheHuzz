@@ -127,7 +127,7 @@ function paint(container, payload) {
 
           <div>
             <p class="eyebrow">Owner-only data backup</p>
-            <h2>Download a complete Fuzz data snapshot</h2>
+            <h2>Download a complete Novaris data snapshot</h2>
             <p>
               Includes app database tables and safe authentication-account details.
               Password hashes, API keys and session tokens are excluded.

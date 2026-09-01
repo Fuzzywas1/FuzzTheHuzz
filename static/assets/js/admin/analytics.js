@@ -65,7 +65,7 @@ function paint(container, payload) {
             { name: "Proxy", data: charts.proxyRequests },
             { name: "Activity", data: charts.activityLogs },
           ],
-          { label: "FuzzTheHuzz platform analytics" },
+          { label: "Novaris platform analytics" },
         ),
       })}
 

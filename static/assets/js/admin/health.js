@@ -36,7 +36,7 @@ export async function renderHealth(container) {
     container.innerHTML = `
       <div class="page-section">
         <section class="stat-grid">
-          <article class="stat-card"><div class="stat-header"><span class="stat-label">Overall status</span><span class="stat-icon">♥</span></div><strong class="stat-value" style="font-size:24px">${escapeHtml(payload.overall)}</strong><div class="stat-footer"><span>Fuzz ${escapeHtml(payload.version)}</span></div></article>
+          <article class="stat-card"><div class="stat-header"><span class="stat-label">Overall status</span><span class="stat-icon">♥</span></div><strong class="stat-value" style="font-size:24px">${escapeHtml(payload.overall)}</strong><div class="stat-footer"><span>Novaris ${escapeHtml(payload.version)}</span></div></article>
           <article class="stat-card"><div class="stat-header"><span class="stat-label">Uptime</span><span class="stat-icon">◷</span></div><strong class="stat-value" style="font-size:24px">${escapeHtml(formatUptime(payload.uptime))}</strong><div class="stat-footer"><span>Current revision</span></div></article>
           <article class="stat-card"><div class="stat-header"><span class="stat-label">Memory</span><span class="stat-icon">◫</span></div><strong class="stat-value" style="font-size:24px">${escapeHtml(formatBytes(payload.memory))}</strong><div class="stat-footer"><span>Resident process memory</span></div></article>
           <article class="stat-card"><div class="stat-header"><span class="stat-label">Client errors</span><span class="stat-icon">!</span></div><strong class="stat-value">${recentErrors.length}</strong><div class="stat-footer"><span>Newest 30 events</span></div></article>
@@ -53,8 +53,8 @@ export async function renderHealth(container) {
             subtitle: "Live feature availability",
             body: serviceList([
               { name: "Proxy browsing", icon: "◈", online: payload.platform?.proxyEnabled !== false },
-              { name: "Fuzz AI", icon: "✦", online: payload.platform?.aiEnabled !== false },
-              { name: "Fuzz Cloud configured", icon: "▣", online: payload.platform?.cloudEnabled === false || payload.platform?.cloudConfigured === true },
+              { name: "Novaris AI", icon: "✦", online: payload.platform?.aiEnabled !== false },
+              { name: "Novaris Cloud configured", icon: "▣", online: payload.platform?.cloudEnabled === false || payload.platform?.cloudConfigured === true },
               { name: "Maintenance mode off", icon: "⌁", online: payload.platform?.maintenance !== true },
               { name: "Cache", icon: "↻", online: true },
             ]),

@@ -1,16 +1,17 @@
 import { api } from "./api.js";
-import { initCommandPalette } from "./command-palette.js";
+import { initCommandPalette } from "./command-palette.js?v=8";
 import {
   getCurrentRoute,
   initRouter,
   navigate,
   renderCurrentRoute,
-} from "./router.js?v=2";
+} from "./router.js?v=8";
 import { showToast } from "./toast.js";
 import { initials, setButtonBusy } from "./utils.js";
 
 let notificationRefreshTimer = null;
 let heartbeatTimer = null;
+const SIDEBAR_KEY = "novarisAdminSidebarCollapsed";
 
 async function initialize() {
   try {
@@ -31,6 +32,7 @@ async function initialize() {
   initRouter();
   initCommandPalette();
   bindGlobalActions();
+  initSidebar();
   startLiveRefresh();
   startSecurityHeartbeat();
   startNotificationRefresh();
@@ -58,7 +60,7 @@ function bindGlobalActions() {
   });
 
   document.getElementById("logout-button")?.addEventListener("click", async () => {
-    if (!window.confirm("Sign out of Fuzz Control?")) {
+    if (!window.confirm("Sign out of Novaris Control?")) {
       return;
     }
 
@@ -73,6 +75,35 @@ function bindGlobalActions() {
 
   window.addEventListener("fuzz:notifications-changed", () => {
     refreshNotificationBadge();
+  });
+}
+
+function initSidebar() {
+  const button = document.getElementById("sidebar-collapse-button");
+  let collapsed = false;
+
+  try {
+    collapsed = localStorage.getItem(SIDEBAR_KEY) === "1";
+  } catch {}
+
+  const apply = () => {
+    document.body.classList.toggle("admin-sidebar-collapsed", collapsed);
+    if (button) {
+      button.textContent = collapsed ? "›" : "‹";
+      button.title = collapsed ? "Expand sidebar" : "Collapse sidebar";
+      button.setAttribute("aria-label", button.title);
+      button.setAttribute("aria-pressed", String(collapsed));
+    }
+  };
+
+  apply();
+
+  button?.addEventListener("click", () => {
+    collapsed = !collapsed;
+    apply();
+    try {
+      localStorage.setItem(SIDEBAR_KEY, collapsed ? "1" : "0");
+    } catch {}
   });
 }
 

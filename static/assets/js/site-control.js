@@ -309,7 +309,7 @@
         extras.push({
           id: "system-proxy-disabled",
           title: "Proxy temporarily unavailable",
-          message: "Browsing through the Fuzz proxy is currently disabled by an administrator.",
+          message: "Browsing through the Novaris proxy is currently disabled by an administrator.",
           style: "warning",
           dismissible: false,
         });
@@ -327,7 +327,7 @@
 
       renderAnnouncements(announcementPayload.announcements, extras);
     } catch (error) {
-      console.warn("Fuzz site controls could not be loaded:", error);
+      console.warn("Novaris site controls could not be loaded:", error);
     }
   }
 

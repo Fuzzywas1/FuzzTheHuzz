@@ -2,7 +2,7 @@ import { renderActivity } from "./activity.js";
 import { renderAnnouncements } from "./announcements.js";
 import { renderAi } from "./ai.js";
 import { renderAnalytics } from "./analytics.js";
-import { renderDashboard } from "./dashboard.js";
+import { renderDashboard } from "./dashboard.js?v=8";
 import { renderExports } from "./exports.js";
 import { renderInvites } from "./invites.js";
 import { renderLimits } from "./limits.js";
@@ -10,7 +10,7 @@ import { renderHistory } from "./history.js";
 import { renderHealth } from "./health.js";
 import { renderProxy } from "./proxy.js";
 import { renderSecurityCenter } from "./security-center.js";
-import { renderSettings } from "./settings.js";
+import { renderSettings } from "./settings.js?v=8";
 import { renderUserProfile } from "./user-profile.js";
 import { renderUsers } from "./users.js";
 
@@ -32,7 +32,7 @@ const routes = {
   },
   activity: {
     title: "Activity",
-    subtitle: "Search the complete FuzzTheHuzz audit trail.",
+    subtitle: "Search the complete Novaris audit trail.",
     render: renderActivity,
   },
   security: {
@@ -62,11 +62,11 @@ const routes = {
   },
   announcements: {
     title: "Announcements",
-    subtitle: "Publish banners and scheduled notices across FuzzTheHuzz.",
+    subtitle: "Publish banners and scheduled notices across Novaris.",
     render: renderAnnouncements,
   },
   ai: {
-    title: "Fuzz AI",
+    title: "Novaris AI",
     subtitle: "Usage, performance and account activity.",
     render: renderAi,
   },
@@ -126,8 +126,10 @@ function resolveRoute() {
 function updateChrome(route) {
   const definition = routes[route.key];
 
-  document.title = "Home";
+  document.title = `${definition.title} · Novaris Control`;
   document.getElementById("page-title").textContent = definition.title;
+  const breadcrumb = document.getElementById("breadcrumb-page");
+  if (breadcrumb) breadcrumb.textContent = definition.title;
   document.getElementById("page-subtitle").textContent = definition.subtitle;
 
   document.querySelectorAll("[data-route]").forEach((button) => {

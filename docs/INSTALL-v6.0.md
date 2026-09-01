@@ -1,6 +1,6 @@
-# Install FuzzTheHuzz v6.0
+# Install Novaris v6.0
 
-Fuzz 6.0 is a large application and database update. Back up the project and Supabase database before replacing files.
+Novaris 6.0 is a large application and database update. Back up the project and Supabase database before replacing files.
 
 ## Environment variables
 
@@ -60,8 +60,8 @@ npm start
 Place the patch ZIP in the root of the existing v5.4 project, then run:
 
 ```bash
-unzip Fuzz-v6.0-Community-Customization-Mega-Patch.zip
-bash Fuzz-v6.0-Community-Customization-Mega-Patch/apply-patch.sh .
+unzip Novaris-v6.0-Community-Customization-Mega-Patch.zip
+bash Novaris-v6.0-Community-Customization-Mega-Patch/apply-patch.sh .
 ```
 
 The installer:
@@ -105,7 +105,7 @@ After deployment, test:
 
 ## First-use test
 
-Use two separate Fuzz accounts in separate browser profiles:
+Use two separate Novaris accounts in separate browser profiles:
 
 1. Open Chat on both accounts.
 2. Send messages in Everyone.

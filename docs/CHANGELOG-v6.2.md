@@ -1,4 +1,4 @@
-# Fuzz 6.2 — Unified Settings
+# Novaris 6.2 — Unified Settings
 
 ## Fixed
 
@@ -11,7 +11,7 @@
 
 - Synced account preferences
 - Search-engine and proxy defaults
-- Fuzz AI response style
+- Novaris AI response style
 - Announcements, reduced motion, and proxy-history controls
 - About:blank behavior and panic keys
 - Tab cloak and local background URL

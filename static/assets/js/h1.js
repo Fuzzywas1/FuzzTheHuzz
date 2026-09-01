@@ -167,7 +167,7 @@ document.addEventListener("DOMContentLoaded", event => {
 });
 // Splash texts
 const SplashT = [
-  "Search the web, open your apps, or jump into Fuzz AI.",
+  "Search the web, open your apps, or jump into Novaris AI.",
   "Everything you need, all in one place.",
   "Type a question, search, or paste a URL.",
   "Your space to browse, create, and explore.",

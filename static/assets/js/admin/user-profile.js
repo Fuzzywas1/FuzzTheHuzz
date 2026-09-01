@@ -1059,7 +1059,7 @@ function messageRow(message) {
   return `
     <article class="history-message history-message-${role}">
       <header>
-        <strong>${role === "assistant" ? "Fuzz AI" : profilePayload.user.username}</strong>
+        <strong>${role === "assistant" ? "Novaris AI" : profilePayload.user.username}</strong>
         <time>${escapeHtml(formatDate(message.createdAt))}</time>
       </header>
       ${message.hasImage ? badge(`Image attached${message.imageName ? ` · ${message.imageName}` : ""}`, "badge-info") : ""}

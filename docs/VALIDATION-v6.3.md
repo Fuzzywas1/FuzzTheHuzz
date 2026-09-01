@@ -1,4 +1,4 @@
-# Fuzz 6.3 validation
+# Novaris 6.3 validation
 
 - Project audit passed.
 - JavaScript syntax checks passed.

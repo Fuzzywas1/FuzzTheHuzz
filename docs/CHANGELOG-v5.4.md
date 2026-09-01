@@ -1,4 +1,4 @@
-# FuzzTheHuzz v5.4 Stability Changelog
+# Novaris v5.4 Stability Changelog
 
 ## Authentication
 
@@ -10,9 +10,9 @@
 - Protected all private `.html` files, not only the short routes.
 - Added `account.html` and other direct file addresses to protected access.
 
-## Fuzz AI
+## Novaris AI
 
-- Restored the correct Fuzz AI client after `ai.js` had been overwritten by unrelated admin code.
+- Restored the correct Novaris AI client after `ai.js` had been overwritten by unrelated admin code.
 - Connected chat creation to the first user message.
 - Saves both user and assistant messages.
 - Loads saved conversations when `/ai` opens.
@@ -42,7 +42,7 @@
 - Removed the hardcoded browser-delivered Supabase key.
 - Removed Express's `X-Powered-By` response header.
 - Corrected CSP sources required by the AI rendering libraries.
-- Preserves local Fuzz preferences during logout instead of clearing all browser storage.
+- Preserves local Novaris preferences during logout instead of clearing all browser storage.
 
 ## Interface and reliability
 

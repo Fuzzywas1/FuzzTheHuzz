@@ -41,7 +41,7 @@
   }
 
   function conversationName(conversation){ return conversation.title || (conversation.type === "global" ? "Everyone" : conversation.otherUser?.username || "Direct message"); }
-  function conversationSubtitle(conversation){ if(conversation.type === "global") return "Everyone on Fuzz"; return conversation.otherUser?.online ? "Online" : conversation.otherUser?.lastSeenAt ? `Active ${timeAgo(conversation.otherUser.lastSeenAt)} ago` : "Direct message"; }
+  function conversationSubtitle(conversation){ if(conversation.type === "global") return "Everyone on Novaris"; return conversation.otherUser?.online ? "Online" : conversation.otherUser?.lastSeenAt ? `Active ${timeAgo(conversation.otherUser.lastSeenAt)} ago` : "Direct message"; }
 
   function renderConversations(){
     const root=$("conversation-list");
@@ -153,7 +153,7 @@
     try{const data=await request(`/api/chat/messages/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({body})}); const index=state.messages.findIndex((item)=>item.id===id); if(index>=0)state.messages[index]=data.message; renderMessages(false);}catch(error){toast(error.message)}
   }
   async function deleteMessage(id){try{await request(`/api/chat/messages/${id}`,{method:"DELETE"}); const message=state.messages.find((item)=>item.id===id); if(message){message.deletedAt=new Date().toISOString();message.body="";message.attachmentUrl="";}renderMessages(false);}catch(error){toast(error.message)}}
-  async function reportMessage(id,reason){try{await request(`/api/chat/messages/${id}/report`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({reason})});toast("Message reported to the Fuzz team.");}catch(error){toast(error.message)}}
+  async function reportMessage(id,reason){try{await request(`/api/chat/messages/${id}/report`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({reason})});toast("Message reported to the Novaris team.");}catch(error){toast(error.message)}}
   async function toggleReaction(id,emoji){try{await request(`/api/chat/messages/${id}/reactions`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({emoji})});await pollMessages(true);}catch(error){toast(error.message)}}
 
   async function fileToDataUrl(file){ if(!["image/png","image/jpeg","image/webp"].includes(file.type))throw new Error("Use a PNG, JPEG, or WebP image."); if(file.size>8*1024*1024)throw new Error("Chat images must be 8 MB or smaller."); return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error("Image could not be read."));reader.readAsDataURL(file);}); }

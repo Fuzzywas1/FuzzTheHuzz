@@ -203,9 +203,9 @@
     emit();
   });
 
-  // Plain Escape is deliberately NOT an exit shortcut for Fuzz. In a
+  // Plain Escape is deliberately NOT an exit shortcut for Novaris. In a
   // fullscreen game/remote app it belongs to the content. Shift+Escape is
-  // Fuzz's explicit keyboard escape hatch.
+  // Novaris's explicit keyboard escape hatch.
   document.addEventListener(
     "keydown",
     (event) => {

@@ -9,7 +9,7 @@
 
   /*
    * These hosts must open as normal top-level websites instead of being sent
-   * through Fuzz's proxy, about:blank wrapper, or alternate proxy engines.
+   * through Novaris's proxy, about:blank wrapper, or alternate proxy engines.
    */
   const DIRECT_HOSTS = [
     "now.gg",

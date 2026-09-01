@@ -95,12 +95,12 @@
       <section class="fuzz-modal" role="dialog" aria-modal="true" aria-labelledby="fuzz-changelog-title">
         <header class="fuzz-modal-header">
           <div>
-            <h2 id="fuzz-changelog-title">Fuzz ${escapeHtml(release?.version || "Update")}</h2>
+            <h2 id="fuzz-changelog-title">Novaris ${escapeHtml(release?.version || "Update")}</h2>
           </div>
           <button class="fuzz-modal-close" type="button" aria-label="Close">×</button>
         </header>
         <div class="fuzz-modal-body">
-          <p style="margin:0 0 15px;color:#8993ad;font-size:10px;line-height:1.6">${escapeHtml(release?.summary || "The latest Fuzz improvements.")}</p>
+          <p style="margin:0 0 15px;color:#8993ad;font-size:10px;line-height:1.6">${escapeHtml(release?.summary || "The latest Novaris improvements.")}</p>
           <ul class="fuzz-changelog-list">
             ${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("") || "<li>No release notes are available.</li>"}
           </ul>
@@ -151,7 +151,7 @@
       const banner = document.createElement("aside");
       banner.className = "fuzz-release-banner";
       banner.innerHTML = `
-        <strong>Fuzz was updated · ${escapeHtml(release.version)}</strong>
+        <strong>Novaris was updated · ${escapeHtml(release.version)}</strong>
         <p>${escapeHtml(release.summary || "New improvements are ready.")}</p>
         <div class="fuzz-release-actions">
           <button type="button" data-release-details>What's new</button>
@@ -197,9 +197,9 @@
 
     const steps = [
       {
-        title: "Welcome to Fuzz",
+        title: "Welcome to Novaris",
         text: "Set up browsing, appearance, and shortcuts. You can change everything later from My Account.",
-        body: `<div class="fuzz-onboarding-options"><button class="fuzz-onboarding-option is-selected" type="button"><strong>One connected workspace</strong><small>Browse, open Apps, use Fuzz AI, and manage your account from one place.</small></button><button class="fuzz-onboarding-option" type="button"><strong>Private account controls</strong><small>Your saved account data and preferences remain tied to your signed-in profile.</small></button></div>`,
+        body: `<div class="fuzz-onboarding-options"><button class="fuzz-onboarding-option is-selected" type="button"><strong>One connected workspace</strong><small>Browse, open Apps, use Novaris AI, and manage your account from one place.</small></button><button class="fuzz-onboarding-option" type="button"><strong>Private account controls</strong><small>Your saved account data and preferences remain tied to your signed-in profile.</small></button></div>`,
       },
       {
         title: "Choose your default proxy",
@@ -207,13 +207,13 @@
         body: () => `<div class="fuzz-onboarding-options"><button class="fuzz-onboarding-option ${selectedProxy === "scramjet" ? "is-selected" : ""}" type="button" data-onboarding-proxy="scramjet"><strong>Scramjet</strong><small>Recommended for modern and JavaScript-heavy websites.</small></button><button class="fuzz-onboarding-option ${selectedProxy === "ultraviolet" ? "is-selected" : ""}" type="button" data-onboarding-proxy="ultraviolet"><strong>Ultraviolet</strong><small>Legacy fallback for sites that behave differently.</small></button></div>`,
       },
       {
-        title: "Make Fuzz yours",
+        title: "Make Novaris yours",
         text: "Pick an accent and spacing. These choices stay on this browser.",
-        body: () => `<div class="fuzz-onboarding-options"><button class="fuzz-onboarding-option ${draft.accent === "violet" ? "is-selected" : ""}" data-onboarding-accent="violet" type="button"><strong>Violet</strong><small>Classic Fuzz appearance.</small></button><button class="fuzz-onboarding-option ${draft.accent === "cyan" ? "is-selected" : ""}" data-onboarding-accent="cyan" type="button"><strong>Cyan</strong><small>Cooler and brighter highlights.</small></button><button class="fuzz-onboarding-option ${draft.density === "comfortable" ? "is-selected" : ""}" data-onboarding-density="comfortable" type="button"><strong>Comfortable spacing</strong><small>Roomier cards and controls.</small></button><button class="fuzz-onboarding-option ${draft.density === "compact" ? "is-selected" : ""}" data-onboarding-density="compact" type="button"><strong>Compact spacing</strong><small>Fit more information on screen.</small></button></div>`,
+        body: () => `<div class="fuzz-onboarding-options"><button class="fuzz-onboarding-option ${draft.accent === "violet" ? "is-selected" : ""}" data-onboarding-accent="violet" type="button"><strong>Violet</strong><small>Classic Novaris appearance.</small></button><button class="fuzz-onboarding-option ${draft.accent === "cyan" ? "is-selected" : ""}" data-onboarding-accent="cyan" type="button"><strong>Cyan</strong><small>Cooler and brighter highlights.</small></button><button class="fuzz-onboarding-option ${draft.density === "comfortable" ? "is-selected" : ""}" data-onboarding-density="comfortable" type="button"><strong>Comfortable spacing</strong><small>Roomier cards and controls.</small></button><button class="fuzz-onboarding-option ${draft.density === "compact" ? "is-selected" : ""}" data-onboarding-density="compact" type="button"><strong>Compact spacing</strong><small>Fit more information on screen.</small></button></div>`,
       },
       {
         title: "You're ready",
-        text: "Fuzz will remember your setup. The Status page can diagnose future proxy or account issues.",
+        text: "Novaris will remember your setup. The Status page can diagnose future proxy or account issues.",
         body: `<div class="fuzz-onboarding-options"><a class="fuzz-onboarding-option" href="/d" style="text-decoration:none"><strong>Open Tabs</strong><small>Start browsing with your selected proxy.</small></a><a class="fuzz-onboarding-option" href="/status" style="text-decoration:none"><strong>View Status</strong><small>Check server, proxy assets, and your browser.</small></a></div>`,
       },
     ];

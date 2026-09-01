@@ -90,7 +90,7 @@ body.fuzz-chat-page { height:100vh; margin:0; overflow:hidden; color:#f4f6ff; ba
 @media(max-width:820px){.fuzz-chat-shell{height:100dvh;padding-top:62px}.conversation-sidebar,.conversation-main{height:calc(100dvh - 62px)}}
 @media(max-width:700px){body.fuzz-chat-page{overflow:auto}.fuzz-chat-shell{display:block;min-height:100dvh}.conversation-sidebar{height:250px;border-right:0;border-bottom:1px solid rgba(255,255,255,.07)}.conversation-main{height:calc(100dvh - 312px)}.message-list{padding-inline:12px}.message-composer{padding-inline:12px}.reply-banner{margin-inline:12px}.typing-indicator{padding-inline:12px}}
 
-/* Fuzz Chat moderation queue */
+/* Novaris Chat moderation queue */
 .chat-report-modal { width: min(720px, calc(100vw - 30px)); }
 .chat-report-modal > header > div p { margin: 0 0 4px; color: var(--fuzz-accent); font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .14em; }
 .chat-report-modal > header > div h2 { margin: 0; }

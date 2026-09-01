@@ -150,7 +150,7 @@
 
     applyPreferences(payload.preferences);
 
-    // Fuzz 6.0 uses the universal left sidebar. The old top-nav profile menu
+    // Novaris 6.0 uses the universal left sidebar. The old top-nav profile menu
     // remains only as a compatibility fallback for cached legacy pages.
     if (document.querySelector(".fuzz-sidebar")) return;
 

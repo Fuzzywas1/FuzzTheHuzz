@@ -1,0 +1,13 @@
+Novaris 8.0
+
+Major update:
+- Full user-facing rebrand from FuzzTheHuzz to Novaris.
+- Novaris AI, Novaris Cloud, Novaris Control, account/auth/status/maintenance text updated.
+- New NOVA invite-code prefix for newly generated codes; old invite codes still work.
+- New Novaris Control command-center dashboard.
+- Grouped and collapsible admin sidebar.
+- Back to Novaris button added to both admin sidebar and top bar.
+- Live feature/service/Cloud/maintenance status shown on the dashboard.
+- Simpler direct-noVNC Cloud administration.
+- Existing compatibility-sensitive Fuzz* JavaScript globals, CSS classes, localStorage keys and legacy FUZZ_CLOUD_* env vars remain supported internally to prevent regressions.
+- Includes the 7.1 Game Fullscreen / GeForce Escape improvements.

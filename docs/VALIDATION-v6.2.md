@@ -1,4 +1,4 @@
-# Fuzz 6.2 Validation
+# Novaris 6.2 Validation
 
 Validated locally:
 
@@ -7,7 +7,7 @@ Validated locally:
 - `node --check static/assets/js/settings.js`
 - `node --check static/assets/js/account.js`
 - `npm run check`
-- Patch application against a clean Fuzz 6.1 project
+- Patch application against a clean Novaris 6.1 project
 - Full ZIP and patch ZIP integrity
 
 Live account, Supabase Storage, and deployment testing still requires the project's real environment variables.

@@ -1,4 +1,4 @@
-# Fuzz 6.1 — Sidebar + Fuzz AI Refresh
+# Novaris 6.1 — Sidebar + Novaris AI Refresh
 
 ## Shared interface
 
@@ -11,12 +11,12 @@
 
 ## Page integration
 
-- Corrected Home, Apps, Account, Status, Settings, Chat, Tabs, Proxy, and Fuzz AI spacing for the left sidebar.
-- Updated fixed Tabs, Proxy, Chat, and Fuzz AI layouts so they resize when the sidebar expands or collapses.
+- Corrected Home, Apps, Account, Status, Settings, Chat, Tabs, Proxy, and Novaris AI spacing for the left sidebar.
+- Updated fixed Tabs, Proxy, Chat, and Novaris AI layouts so they resize when the sidebar expands or collapses.
 - Added mobile menu clearance at the same breakpoint used by the shared sidebar.
 - Removed large empty top gaps left behind by the former top navigation.
 
-## Fuzz AI
+## Novaris AI
 
 - Rebuilt `/ai` as a full workspace with a conversation-history panel and focused chat area.
 - Added searchable saved chats, chat counts, timestamps, rename/delete controls, and active-chat titles.
@@ -28,4 +28,4 @@
 ## Compatibility
 
 - No new environment variables or Supabase migrations are required.
-- Existing Fuzz 6.0 Chat, Feedback, customization, account, Apps, Tabs, proxy, and admin features remain in place.
+- Existing Novaris 6.0 Chat, Feedback, customization, account, Apps, Tabs, proxy, and admin features remain in place.

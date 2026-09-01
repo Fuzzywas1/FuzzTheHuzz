@@ -69,7 +69,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       showMessage(
         messageElement,
-        "Signed in successfully. Opening FuzzTheHuzz...",
+        "Signed in successfully. Opening Novaris...",
         "success",
       );
 

@@ -207,7 +207,7 @@
               <span><strong>${esc(user.username || "Unknown user")}</strong><small>${esc(user.role || "user")}</small></span>
               <button type="button" data-unblock-user="${esc(user.id)}">Unblock</button>
             </article>`).join("")
-          : '<div class="blocked-users-empty"><i class="fa-regular fa-circle-check"></i><strong>No blocked users</strong><small>People you block in Fuzz Chat will appear here.</small></div>';
+          : '<div class="blocked-users-empty"><i class="fa-regular fa-circle-check"></i><strong>No blocked users</strong><small>People you block in Novaris Chat will appear here.</small></div>';
         $$('[data-unblock-user]').forEach((button) => {
           button.addEventListener("click", async () => {
             button.disabled = true;

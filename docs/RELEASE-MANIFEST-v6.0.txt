@@ -1,4 +1,4 @@
-FuzzTheHuzz v6.0 Community + Customization
+Novaris v6.0 Community + Customization
 
 Major new areas
 - Universal collapsible left sidebar

@@ -46,7 +46,7 @@
                 <p style="margin:0;color:#727c9d;font-size:12px;line-height:1.6;text-align:center;">
                   You received this email because an account was created using this address. If that was not you, you can ignore this email.
                 </p>
-                <p style="margin:10px 0 0;color:#59627f;font-size:11px;text-align:center;">FuzzTheHuzz</p>
+                <p style="margin:10px 0 0;color:#59627f;font-size:11px;text-align:center;">Novaris</p>
               </td>
             </tr>
           </table>

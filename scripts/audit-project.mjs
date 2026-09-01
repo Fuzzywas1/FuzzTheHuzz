@@ -283,7 +283,7 @@ for (const [file, ids] of htmlHookChecks) {
   }
 }
 
-console.log("Fuzz project audit");
+console.log("Novaris project audit");
 console.log(`  JavaScript files checked: ${checked.javascript}`);
 console.log(`  HTML files checked:       ${checked.html}`);
 console.log(`  Local asset references:   ${checked.localAssets}`);
@@ -313,7 +313,7 @@ const cloudClientPath = path.join(root, "static", "assets", "js", "cloud.js");
 if (fs.existsSync(cloudClientPath)) {
   const cloudClientSource = fs.readFileSync(cloudClientPath, "utf8");
   if (/const\s+(?:GUACAMOLE|NOVNC)_URL\s*=/.test(cloudClientSource)) {
-    fail("Fuzz Cloud client contains a hardcoded remote-desktop URL; use /api/cloud/config instead.");
+    fail("Novaris Cloud client contains a hardcoded remote-desktop URL; use /api/cloud/config instead.");
   }
 }
 

@@ -271,7 +271,7 @@ function openEditor(container) {
       <section class="history-modal announcement-editor" role="dialog" aria-modal="true">
         <header class="history-modal-header">
           <div>
-            <p class="eyebrow">FuzzTheHuzz communications</p>
+            <p class="eyebrow">Novaris communications</p>
             <h2>${editingAnnouncement ? "Edit announcement" : "New announcement"}</h2>
             <span>Choose when, where and how the banner appears.</span>
           </div>
@@ -296,7 +296,7 @@ function openEditor(container) {
                 maxlength="120"
                 required
                 value="${escapeHtml(announcement.title || "")}"
-                placeholder="New Fuzz AI update"
+                placeholder="New Novaris AI update"
               />
             </label>
 

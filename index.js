@@ -42,21 +42,20 @@ Object.assign(wispServer.options, {
 const CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
 const cache = new Map();
 
-const FUZZ_RELEASE = Object.freeze({
-  version: "7.1.0",
-  releasedAt: "2026-08-25T00:00:00.000Z",
+const NOVARIS_RELEASE = Object.freeze({
+  version: "8.0.0",
+  date: "2026-08-31",
+  title: "Welcome to Novaris",
   summary:
-    "Game Fullscreen update for the Fuzz proxy with real browser fullscreen and improved streaming controls.",
+    "Full Novaris rebrand with a redesigned owner control center and a simpler platform experience.",
   items: [
-    "Added real browser fullscreen to the normal and standalone Fuzz proxy.",
-    "Added Chromium keyboard-lock support so Escape can be used by fullscreen games and streaming apps.",
-    "Added an auto-hiding Exit fullscreen control plus Shift+Escape as a Fuzz-specific exit shortcut.",
-    "Improved Scramjet iframe permissions for fullscreen, gamepad, microphone, camera, autoplay, and clipboard use.",
-    "Automatically migrates the old default Guacamole hostname to the new noVNC hostname.",
-    "Added Games and Fuzz Cloud to the Home quick-launch area.",
-    "Updated Admin, Status, documentation, and health messages for noVNC.",
-    "Restored the missing .env.example so the project audit can validate the repository correctly.",
-    "Kept the current Games loader, back-navigation fixes, and Escape/fullscreen fixes intact.",
+    "Rebranded the complete user-facing platform from FuzzTheHuzz to Novaris.",
+    "Redesigned Novaris Control with grouped navigation, a collapsible sidebar, and a direct Back to Novaris button.",
+    "Added a command-center dashboard with live platform, feature, Cloud, uptime, and service status at a glance.",
+    "Simplified Novaris Cloud administration around the direct noVNC launch flow.",
+    "Updated invite codes, account text, AI branding, status pages, maintenance screens, exports, and diagnostics branding.",
+    "Preserved compatibility-sensitive internal storage keys and legacy Cloud environment variables so existing setups keep working.",
+    "Includes the 7.1 real Game Fullscreen and Escape-key improvements.",
   ],
 });
 
@@ -90,7 +89,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 if (!openaiApiKey) {
   console.warn(
-    "OPENAI_API_KEY is not configured. Fuzz AI will return a setup error, but the rest of the site can still run.",
+    "OPENAI_API_KEY is not configured. Novaris AI will return a setup error, but the rest of the site can still run.",
   );
 }
 
@@ -291,8 +290,8 @@ app.use(
 app.get("/health", (_req, res) => {
   res.status(200).json({
     success: true,
-    service: "FuzzTheHuzz",
-    version: FUZZ_RELEASE.version,
+    service: "Novaris",
+    version: NOVARIS_RELEASE.version,
     uptime: process.uptime(),
     configured: {
       supabase: Boolean(supabaseUrl && supabaseAnonKey),
@@ -304,7 +303,7 @@ app.get("/health", (_req, res) => {
 
 app.get("/api/release", (_req, res) => {
   res.setHeader("Cache-Control", "public, max-age=300");
-  return res.json(FUZZ_RELEASE);
+  return res.json(NOVARIS_RELEASE);
 });
 
 /* =======================================================
@@ -843,7 +842,7 @@ function createInvitePart(length = 4) {
 }
 
 function createInviteCode() {
-  return `FUZZ-${createInvitePart()}-${createInvitePart()}`;
+  return `NOVA-${createInvitePart()}-${createInvitePart()}`;
 }
 
 function startOfUtcDay(value = new Date()) {
@@ -980,7 +979,7 @@ const DEFAULT_PLATFORM_SETTINGS = Object.freeze({
   id: 1,
   maintenance_enabled: false,
   maintenance_message:
-    "Fuzz is temporarily undergoing maintenance. Please check back soon.",
+    "Novaris is temporarily undergoing maintenance. Please check back soon.",
   maintenance_end_at: null,
   allow_admin_bypass: true,
   ai_enabled: true,
@@ -991,9 +990,10 @@ const DEFAULT_PLATFORM_SETTINGS = Object.freeze({
   image_uploads_enabled: true,
   cloud_enabled: true,
   cloud_owner_only: true,
-  cloud_name: String(process.env.FUZZ_CLOUD_NAME || "Gaming PC").trim() || "Gaming PC",
+  cloud_name: String(process.env.NOVARIS_CLOUD_NAME || process.env.FUZZ_CLOUD_NAME || "Gaming PC").trim() || "Gaming PC",
   cloud_base_url: String(
-    process.env.FUZZ_CLOUD_BASE_URL ||
+    process.env.NOVARIS_CLOUD_BASE_URL ||
+      process.env.FUZZ_CLOUD_BASE_URL ||
       DEFAULT_NOVNC_CLOUD_BASE_URL,
   ).trim(),
   cloud_hide_ui: true,
@@ -1486,7 +1486,7 @@ app.get(
     if (!settings.cloud_enabled) {
       return featureUnavailableResponse(
         res,
-        "Fuzz Cloud",
+        "Novaris Cloud",
       );
     }
 
@@ -1498,7 +1498,7 @@ app.get(
     ) {
       return res.status(403).json({
         error:
-          "Fuzz Cloud is currently limited to the site owner.",
+          "Novaris Cloud is currently limited to the site owner.",
       });
     }
 
@@ -1508,7 +1508,7 @@ app.get(
     if (!launchUrl) {
       return res.status(503).json({
         error:
-          "Fuzz Cloud has not been fully configured yet.",
+          "Novaris Cloud has not been fully configured yet.",
         configurationRequired: true,
       });
     }
@@ -1638,7 +1638,7 @@ app.use(async (req, res, next) => {
     ) {
       return featureUnavailableResponse(
         res,
-        "Fuzz AI",
+        "Novaris AI",
       );
     }
 
@@ -2658,7 +2658,7 @@ function sendSuspensionResponse(
 function usageLimitMessage(blockedType) {
   const labels = {
     ai_messages_daily:
-      "You have reached your daily Fuzz AI message limit.",
+      "You have reached your daily Novaris AI message limit.",
     ai_images_daily:
       "You have reached your daily AI image-upload limit.",
     proxy_requests_minute:
@@ -3993,7 +3993,7 @@ function parseAccountCenterPreferences(body = {}) {
     )
   ) {
     throw new Error(
-      "That Fuzz AI response style is not supported.",
+      "That Novaris AI response style is not supported.",
     );
   }
 
@@ -4092,8 +4092,8 @@ app.get("/api/setup-test", async (_req, res) => {
       communityReady,
       modules,
       message: communityReady
-        ? "FuzzTheHuzz and Fuzz 6.0 community features are connected to Supabase."
-        : "FuzzTheHuzz is connected, but the Fuzz 6.0 community migration still needs to be run.",
+        ? "Novaris and Novaris 6.0 community features are connected to Supabase."
+        : "Novaris is connected, but the Novaris 6.0 community migration still needs to be run.",
     });
   } catch (error) {
     console.error(
@@ -4512,7 +4512,7 @@ if (accessToken) {
   action: "auth.logout",
   status: "success",
   description:
-    "A user signed out of FuzzTheHuzz.",
+    "A user signed out of Novaris.",
   responseStatus: 200,
 });
 
@@ -4716,7 +4716,7 @@ app.post("/api/auth/signup", async (req, res) => {
   action: "auth.signup_success",
   status: "success",
   description:
-    `${username} created a FuzzTheHuzz account.`,
+    `${username} created a Novaris account.`,
   resourceType: "user",
   resourceId: createdUserId,
   responseStatus: 201,
@@ -7200,7 +7200,7 @@ async function loadDogeGamesCatalog() {
         signal: controller.signal,
         headers: {
           Accept: "application/json",
-          "User-Agent": "FuzzTheHuzz/1.0",
+          "User-Agent": "Novaris/8.0",
         },
       },
     );
@@ -7441,7 +7441,7 @@ function bookmarkSetupError(res, error) {
   console.error("Bookmark storage failed:", error);
   return res.status(503).json({
     error:
-      "Synced bookmarks are not configured yet. Fuzz will use this browser's local bookmark storage.",
+      "Synced bookmarks are not configured yet. Novaris will use this browser's local bookmark storage.",
     code: "BOOKMARKS_SETUP_REQUIRED",
   });
 }
@@ -7698,7 +7698,7 @@ async function runSystemHealthChecks() {
 
   return {
     overall: criticalOffline ? "degraded" : "online",
-    version: FUZZ_RELEASE.version,
+    version: NOVARIS_RELEASE.version,
     checkedAt: new Date().toISOString(),
     uptime: process.uptime(),
     memory: process.memoryUsage().rss,
@@ -7722,10 +7722,10 @@ async function runSystemHealthChecks() {
               : "offline",
         message:
           platform?.cloud_enabled === false
-            ? "Fuzz Cloud is disabled in platform settings."
+            ? "Novaris Cloud is disabled in platform settings."
             : platform && buildCloudLaunchUrl(platform)
-              ? "Fuzz Cloud has a valid HTTPS noVNC gateway."
-              : "Fuzz Cloud needs a valid HTTPS noVNC gateway URL.",
+              ? "Novaris Cloud has a valid HTTPS noVNC gateway."
+              : "Novaris Cloud needs a valid HTTPS noVNC gateway URL.",
         critical: false,
       },
     },
@@ -10515,7 +10515,7 @@ app.post(
         action: "ai.chat_created",
         status: "success",
         description:
-          "A new Fuzz AI chat was created.",
+          "A new Novaris AI chat was created.",
         resourceType: "ai_chat",
         resourceId: chat.id,
         chatId: chat.id,
@@ -10589,7 +10589,7 @@ app.get(
         action: "ai.chat_opened",
         status: "informational",
         description:
-          "A saved Fuzz AI chat was opened.",
+          "A saved Novaris AI chat was opened.",
         resourceType: "ai_chat",
         resourceId: chatId,
         chatId,
@@ -10681,7 +10681,7 @@ app.patch(
         action: "ai.chat_renamed",
         status: "success",
         description:
-          "A Fuzz AI chat was renamed.",
+          "A Novaris AI chat was renamed.",
         resourceType: "ai_chat",
         resourceId: chatId,
         chatId,
@@ -10767,7 +10767,7 @@ app.delete(
         action: "ai.chat_deleted",
         status: "success",
         description:
-          "A Fuzz AI chat was deleted.",
+          "A Novaris AI chat was deleted.",
         resourceType: "ai_chat",
         resourceId: chatId,
         responseStatus: 200,
@@ -10904,7 +10904,7 @@ app.post(
             : "ai.assistant_message_saved",
         status: "success",
         description:
-          `${role} message saved in a Fuzz AI chat.`,
+          `${role} message saved in a Novaris AI chat.`,
         resourceType: "ai_message",
         resourceId: String(message.id),
         chatId,
@@ -10953,7 +10953,7 @@ app.post(
     if (!openai) {
       return res.status(503).json({
         error:
-          "Fuzz AI is not configured. Add OPENAI_API_KEY to the Cloud Run service and redeploy.",
+          "Novaris AI is not configured. Add OPENAI_API_KEY to the Cloud Run service and redeploy.",
       });
     }
 
@@ -11128,7 +11128,7 @@ app.post(
         await openai.responses.create({
           model: openaiModel,
           instructions:
-            `You are Fuzz AI, the helpful AI assistant built into FuzzTheHuzz. Give clear, accurate, natural answers. Analyze attached images when provided. Use markdown when helpful. ${accountCenterAiInstruction(accountAiBehavior)}`,
+            `You are Novaris AI, the helpful AI assistant built into Novaris. Give clear, accurate, natural answers. Analyze attached images when provided. Use markdown when helpful. ${accountCenterAiInstruction(accountAiBehavior)}`,
           input: cleanedMessages,
           max_output_tokens: 2000,
           store: false,
@@ -11142,7 +11142,7 @@ app.post(
         action: "ai.response_started",
         status: "informational",
         description:
-          "Fuzz AI started generating a response.",
+          "Novaris AI started generating a response.",
         aiModel: openaiModel,
         messageRole: "user",
         messageLength:
@@ -11185,7 +11185,7 @@ app.post(
         action: "ai.response_completed",
         status: "success",
         description:
-          "Fuzz AI completed a response.",
+          "Novaris AI completed a response.",
         aiModel: openaiModel,
         messageRole: "user",
         messageLength:
@@ -11210,7 +11210,7 @@ app.post(
         action: "ai.response_failed",
         status: "failure",
         description:
-          "Fuzz AI failed to complete a response.",
+          "Novaris AI failed to complete a response.",
         aiModel: openaiModel,
         messageLength:
           finalPromptPreview.length,
@@ -11229,19 +11229,19 @@ app.post(
       });
 
       console.error(
-        "Fuzz AI request failed:",
+        "Novaris AI request failed:",
         error,
       );
 
       if (!res.headersSent) {
         return res.status(500).json({
           error:
-            "Fuzz AI could not generate a response.",
+            "Novaris AI could not generate a response.",
         });
       }
 
       res.write(
-        "\n\nFuzz AI could not finish the response.",
+        "\n\nNovaris AI could not finish the response.",
       );
 
       return res.end();
@@ -13812,7 +13812,7 @@ async function buildAdminExportDataset(dataset, range) {
     return {
       json: {
         metadata: {
-          application: "FuzzTheHuzz",
+          application: "Novaris",
           backupVersion: 1,
           generatedAt: new Date().toISOString(),
           notes: [
@@ -14195,7 +14195,7 @@ app.get("/api/personalization", requireApiAuth, async (req, res) => {
     return res.json({ preferences: await v6GetPersonalization(req.auth.user.id) });
   } catch (error) {
     console.error("Personalization load failed:", error);
-    return res.status(500).json({ error: "Your customization settings could not be loaded. Run the Fuzz 6.0 database migration." });
+    return res.status(500).json({ error: "Your customization settings could not be loaded. Run the Novaris 6.0 database migration." });
   }
 });
 
@@ -14600,14 +14600,14 @@ app.get("/api/chat/bootstrap", requireApiAuth, async (req, res) => {
     });
   } catch (error) {
     console.error("Chat bootstrap failed:", error);
-    return res.status(500).json({ error: "Fuzz Chat could not be loaded. Run the Fuzz 6.0 database migration." });
+    return res.status(500).json({ error: "Novaris Chat could not be loaded. Run the Novaris 6.0 database migration." });
   }
 });
 
 app.post("/api/chat/dms", requireApiAuth, async (req, res) => {
   const otherUserId = v6CleanText(req.body.userId, 100);
   const userId = req.auth.user.id;
-  if (!otherUserId || otherUserId === userId) return res.status(400).json({ error: "Choose another Fuzz user." });
+  if (!otherUserId || otherUserId === userId) return res.status(400).json({ error: "Choose another Novaris user." });
   try {
     const { data: target, error: targetError } = await supabaseAdmin
       .from("profiles")
@@ -15162,7 +15162,7 @@ app.get("/api/feedback", requireApiAuth, async (req, res) => {
     });
   } catch (error) {
     console.error("Feedback list failed:", error);
-    return res.status(500).json({ error: "Feedback could not be loaded. Run the Fuzz 6.0 migration." });
+    return res.status(500).json({ error: "Feedback could not be loaded. Run the Novaris 6.0 migration." });
   }
 });
 
@@ -15228,7 +15228,7 @@ app.get("/api/feedback/:feedbackId", requireApiAuth, async (req, res) => {
     const profileMap = new Map((profiles || []).map((item) => [item.id, item.username]));
     return res.json({
       feedback: await v6FeedbackWithSignedUrl(found.row, found.username),
-      comments: (comments || []).map((item) => ({ id: item.id, body: item.body, isStaff: item.is_staff, username: profileMap.get(item.user_id) || (item.is_staff ? "Fuzz team" : "User"), createdAt: item.created_at })),
+      comments: (comments || []).map((item) => ({ id: item.id, body: item.body, isStaff: item.is_staff, username: profileMap.get(item.user_id) || (item.is_staff ? "Novaris team" : "User"), createdAt: item.created_at })),
     });
   } catch (error) {
     return res.status(500).json({ error: "That feedback could not be loaded." });
@@ -15276,7 +15276,7 @@ app.get("/api/admin/feedback/:feedbackId", requireRole("moderator"), async (req,
     const userIds = [...new Set((comments || []).map((item) => item.user_id).filter(Boolean))];
     const { data: profiles } = userIds.length ? await supabaseAdmin.from("profiles").select("id, username").in("id", userIds) : { data: [] };
     const profileMap = new Map((profiles || []).map((item) => [item.id, item.username]));
-    return res.json({ feedback: await v6FeedbackWithSignedUrl(found.row, found.username), comments: (comments || []).map((item) => ({ id: item.id, body: item.body, isStaff: item.is_staff, username: profileMap.get(item.user_id) || "Fuzz team", createdAt: item.created_at })) });
+    return res.json({ feedback: await v6FeedbackWithSignedUrl(found.row, found.username), comments: (comments || []).map((item) => ({ id: item.id, body: item.body, isStaff: item.is_staff, username: profileMap.get(item.user_id) || "Novaris team", createdAt: item.created_at })) });
   } catch {
     return res.status(500).json({ error: "That feedback could not be loaded." });
   }
@@ -15332,7 +15332,7 @@ async function requireCloudAccess(
     return next();
   } catch (error) {
     console.error(
-      "Fuzz Cloud access check failed:",
+      "Novaris Cloud access check failed:",
       error,
     );
 

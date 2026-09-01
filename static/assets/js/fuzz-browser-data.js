@@ -262,7 +262,7 @@
   async function exportBookmarks() {
     const { bookmarks } = await listBookmarks();
     return {
-      product: "FuzzTheHuzz",
+      product: "Novaris",
       type: "bookmarks",
       exportedAt: new Date().toISOString(),
       bookmarks,

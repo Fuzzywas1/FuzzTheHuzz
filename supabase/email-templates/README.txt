@@ -14,7 +14,7 @@ The template uses {{ .ConfirmationURL }}. Do not remove it.
 
 For production, configure custom SMTP under Authentication -> SMTP Settings.
 Suggested sender:
-  FuzzTheHuzz <no-reply@yourdomain.com>
+  Novaris <no-reply@yourdomain.com>
 
 Disable link tracking in your SMTP provider because rewritten authentication
 links can fail.

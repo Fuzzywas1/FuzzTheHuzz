@@ -246,3 +246,75 @@
   max-width: 1680px;
   margin: 0 auto;
 }
+
+
+/* Novaris 8.0 admin shell */
+.admin-shell {
+  transition: grid-template-columns 180ms cubic-bezier(.22,1,.36,1);
+}
+.brand-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.brand-row .brand { flex: 1; min-width: 0; }
+.sidebar-collapse-button {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-soft);
+  background: rgba(255,255,255,.035);
+  font-size: 20px;
+  transition: .16s ease;
+}
+.sidebar-collapse-button:hover { color: #fff; background: rgba(127,140,255,.12); border-color: rgba(127,140,255,.28); }
+.novaris-orbit-mark { position: relative; overflow: visible; }
+.novaris-orbit-mark::before {
+  position: absolute;
+  inset: -5px 5px;
+  border: 1px solid rgba(96,205,255,.55);
+  border-radius: 50%;
+  content: "";
+  transform: rotate(-35deg);
+  box-shadow: 0 0 20px rgba(96,205,255,.15);
+}
+.novaris-orbit-mark span { position: relative; z-index: 1; }
+.back-to-novaris {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 12px;
+  margin: 2px 0 12px;
+  padding: 0 13px;
+  border: 1px solid rgba(80,215,255,.14);
+  border-radius: 12px;
+  color: #cceaff;
+  background: linear-gradient(90deg, rgba(80,215,255,.08), rgba(127,140,255,.045));
+  font-size: 12px;
+  font-weight: 700;
+}
+.back-to-novaris:hover { border-color: rgba(80,215,255,.3); background: linear-gradient(90deg, rgba(80,215,255,.13), rgba(127,140,255,.08)); }
+.topbar-copy { min-width: 0; }
+.eyebrow { display: flex; align-items: center; gap: 7px; }
+.breadcrumb-separator { color: #404a67; }
+.topbar-home-button { min-width: auto; }
+
+body.admin-sidebar-collapsed { --sidebar-width: 86px; }
+body.admin-sidebar-collapsed .sidebar { padding-inline: 12px; }
+body.admin-sidebar-collapsed .brand { justify-content: center; padding-inline: 0; }
+body.admin-sidebar-collapsed .brand-copy,
+body.admin-sidebar-collapsed .sidebar-label,
+body.admin-sidebar-collapsed .nav-divider span,
+body.admin-sidebar-collapsed .account-copy,
+body.admin-sidebar-collapsed #logout-button { display: none; }
+body.admin-sidebar-collapsed .brand-row { flex-direction: column; gap: 5px; }
+body.admin-sidebar-collapsed .sidebar-collapse-button { width: 42px; }
+body.admin-sidebar-collapsed .back-to-novaris,
+body.admin-sidebar-collapsed .nav-item { justify-content: center; padding-inline: 0; }
+body.admin-sidebar-collapsed .nav-icon { width: 28px; font-size: 19px; }
+body.admin-sidebar-collapsed .nav-divider { margin-block: 11px 7px; }
+body.admin-sidebar-collapsed .nav-divider::after { width: 100%; }
+body.admin-sidebar-collapsed .account-card { justify-content: center; padding: 8px 0; }
+body.admin-sidebar-collapsed .nav-count { position: absolute; top: 3px; right: 4px; }

@@ -159,10 +159,10 @@ function paint(container, systemPayload, platformPayload) {
                   class="field textarea-field"
                   id="maintenance-message"
                   maxlength="500"
-                  placeholder="Fuzz is temporarily undergoing maintenance."
+                  placeholder="Novaris is temporarily undergoing maintenance."
                 >${escapeHtml(
                   settings.maintenanceMessage ||
-                    "Fuzz is temporarily undergoing maintenance. Please check back soon.",
+                    "Novaris is temporarily undergoing maintenance. Please check back soon.",
                 )}</textarea>
               </label>
 
@@ -194,12 +194,12 @@ function paint(container, systemPayload, platformPayload) {
 
         ${panel({
           title: "Feature switches",
-          subtitle: "Disable individual parts of FuzzTheHuzz without taking down the entire site",
+          subtitle: "Disable individual parts of Novaris without taking down the entire site",
           body: `
             <div class="feature-toggle-grid">
               ${featureToggle(
                 "ai-enabled",
-                "Fuzz AI",
+                "Novaris AI",
                 "AI chat, saved chats and AI API responses.",
                 "✦",
                 settings.aiEnabled !== false,
@@ -235,13 +235,13 @@ function paint(container, systemPayload, platformPayload) {
               ${featureToggle(
                 "image-uploads-enabled",
                 "AI image uploads",
-                "Images attached to Fuzz AI prompts.",
+                "Images attached to Novaris AI prompts.",
                 "▧",
                 settings.imageUploadsEnabled !== false,
               )}
               ${featureToggle(
                 "cloud-enabled",
-                "Fuzz Cloud",
+                "Novaris Cloud",
                 "Your private browser-based Windows desktop launcher.",
                 "▣",
                 settings.cloudEnabled !== false,
@@ -253,7 +253,7 @@ function paint(container, systemPayload, platformPayload) {
         <div style="height:14px"></div>
 
         ${panel({
-          title: "Fuzz Cloud",
+          title: "Novaris Cloud",
           subtitle: "Configure the private noVNC gateway used by the Cloud page",
           body: `
             <div class="cloud-admin-summary">
@@ -305,19 +305,14 @@ function paint(container, systemPayload, platformPayload) {
                 ${toggleSetting(
                   "cloud-owner-only",
                   "Owner only",
-                  "Hide and block Fuzz Cloud for every non-owner account.",
+                  "Hide and block Novaris Cloud for every non-owner account.",
                   settings.cloudOwnerOnly !== false,
                 )}
               </div>
 
               <div class="field-group">
-                <span>Launch view</span>
-                ${toggleSetting(
-                  "cloud-hide-ui",
-                  "Integrated workspace",
-                  "Show noVNC inside Fuzz Cloud. Turn this off if you always want a separate noVNC tab.",
-                  settings.cloudFullscreen !== false,
-                )}
+                <span>Launch mode</span>
+                <div class="cloud-launch-mode"><strong>Direct noVNC</strong><small>Novaris opens the Cloudflare noVNC session directly for the most reliable WebSocket connection.</small></div>
               </div>
             </div>
 
@@ -325,7 +320,7 @@ function paint(container, systemPayload, platformPayload) {
               <button class="button button-secondary" id="test-cloud-button" type="button">
                 Test current launch
               </button>
-              <span>Saving these settings updates the Fuzz Cloud page and sidebar access.</span>
+              <span>Changes apply to Novaris Cloud and sidebar access immediately after saving.</span>
             </div>
           `,
         })}
@@ -418,7 +413,7 @@ function bindPlatformForm(container) {
       cloudOwnerOnly: container.querySelector("#cloud-owner-only").checked,
       cloudName: container.querySelector("#cloud-name").value.trim(),
       cloudBaseUrl: container.querySelector("#cloud-base-url").value.trim(),
-      cloudFullscreen: container.querySelector("#cloud-fullscreen").checked,
+      cloudFullscreen: false,
     };
 
     if (payload.maintenanceEnabled && !payload.maintenanceMessage) {
@@ -427,7 +422,7 @@ function bindPlatformForm(container) {
     }
 
     if (payload.cloudEnabled && !payload.cloudBaseUrl) {
-      showToast("Add the noVNC gateway URL before enabling Fuzz Cloud.", "error");
+      showToast("Add the noVNC gateway URL before enabling Novaris Cloud.", "error");
       return;
     }
 
@@ -435,7 +430,7 @@ function bindPlatformForm(container) {
       const cloudUrl = new URL(payload.cloudBaseUrl);
       if (cloudUrl.protocol !== "https:") throw new Error();
     } catch {
-      showToast("Fuzz Cloud requires a valid HTTPS noVNC URL.", "error");
+      showToast("Novaris Cloud requires a valid HTTPS noVNC URL.", "error");
       return;
     }
 

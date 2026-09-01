@@ -1,4 +1,4 @@
-# FuzzTheHuzz v6.0 Validation
+# Novaris v6.0 Validation
 
 ## Completed static checks
 
@@ -11,7 +11,7 @@ npm run check
 Result:
 
 ```text
-Fuzz project audit
+Novaris project audit
   JavaScript files checked: 53
   HTML files checked:       19
   Local asset references:   140

@@ -2,18 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#050814" />
-  <title>Home</title>
+  <title>Novaris Control</title>
 
-  <link
-    rel="stylesheet"
-    href="/assets/css/admin/admin.css?v=6"
-  />
+  <link rel="stylesheet" href="/assets/css/admin/admin.css?v=8" />
   <link rel="stylesheet" href="/assets/css/fuzz-ui.css?v=1" />
   <script src="/assets/js/fuzz-ui.js?v=1"></script>
   <script src="/assets/js/fuzz-diagnostics.js?v=1"></script>
@@ -29,214 +23,93 @@
 
   <div class="admin-shell">
     <aside class="sidebar" id="sidebar">
-      <a class="brand" href="#dashboard" aria-label="Fuzz Control dashboard">
-        <span class="brand-mark">F</span>
+      <div class="brand-row">
+        <a class="brand" href="#dashboard" aria-label="Novaris Control dashboard">
+          <span class="brand-mark novaris-orbit-mark" aria-hidden="true"><span>N</span></span>
+          <span class="brand-copy">
+            <strong>Novaris Control</strong>
+            <small>Owner command center</small>
+          </span>
+        </a>
+        <button class="sidebar-collapse-button" id="sidebar-collapse-button" type="button" title="Collapse sidebar" aria-label="Collapse sidebar">‹</button>
+      </div>
 
-        <span class="brand-copy">
-          <strong>Fuzz Control</strong>
-          <small>Owner console</small>
-        </span>
+      <a class="back-to-novaris" href="/" title="Back to Novaris">
+        <span class="nav-icon">←</span><span class="sidebar-label">Back to Novaris</span>
       </a>
 
-      <nav class="sidebar-nav" aria-label="Control panel">
-        <button class="nav-item is-active" data-route="dashboard" type="button">
-          <span class="nav-icon">⌂</span>
-          <span>Dashboard</span>
-        </button>
+      <nav class="sidebar-nav" aria-label="Novaris Control">
+        <div class="nav-divider"><span>Overview</span></div>
+        <button class="nav-item is-active" data-route="dashboard" type="button" title="Dashboard"><span class="nav-icon">⌂</span><span class="sidebar-label">Dashboard</span></button>
+        <button class="nav-item" data-route="analytics" type="button" title="Analytics"><span class="nav-icon">⌁</span><span class="sidebar-label">Analytics</span></button>
 
-        <button class="nav-item" data-route="users" type="button">
-          <span class="nav-icon">◎</span>
-          <span>Users</span>
-        </button>
+        <div class="nav-divider"><span>People</span></div>
+        <button class="nav-item" data-route="users" type="button" title="Users"><span class="nav-icon">◎</span><span class="sidebar-label">Users</span></button>
+        <button class="nav-item" data-route="invites" type="button" title="Invite Codes"><span class="nav-icon">◇</span><span class="sidebar-label">Invite Codes</span></button>
 
-        <button class="nav-item" data-route="activity" type="button">
-          <span class="nav-icon">◌</span>
-          <span>Activity</span>
-        </button>
+        <div class="nav-divider"><span>Operations</span></div>
+        <button class="nav-item" data-route="activity" type="button" title="Activity"><span class="nav-icon">◌</span><span class="sidebar-label">Activity</span></button>
+        <button class="nav-item" data-route="security" type="button" title="Security Center"><span class="nav-icon">⊙</span><span class="sidebar-label">Security Center</span><span class="nav-count is-hidden" id="security-nav-count">0</span></button>
+        <button class="nav-item" data-route="limits" type="button" title="Limits & Abuse"><span class="nav-icon">⌁</span><span class="sidebar-label">Limits & Abuse</span></button>
+        <button class="nav-item" data-route="announcements" type="button" title="Announcements"><span class="nav-icon">◒</span><span class="sidebar-label">Announcements</span></button>
 
-        <button class="nav-item" data-route="security" type="button">
-          <span class="nav-icon">⊙</span>
-          <span>Security Center</span>
-          <span class="nav-count is-hidden" id="security-nav-count">0</span>
-        </button>
+        <div class="nav-divider"><span>Intelligence</span></div>
+        <button class="nav-item" data-route="ai" type="button" title="Novaris AI"><span class="nav-icon">✦</span><span class="sidebar-label">Novaris AI</span></button>
+        <button class="nav-item" data-route="proxy" type="button" title="Proxy"><span class="nav-icon">◈</span><span class="sidebar-label">Proxy</span></button>
+        <button class="nav-item" data-route="history" type="button" title="History"><span class="nav-icon">⌕</span><span class="sidebar-label">History</span></button>
 
-        <button class="nav-item" data-route="limits" type="button">
-          <span class="nav-icon">⌁</span>
-          <span>Limits & Abuse</span>
-        </button>
-
-        <button class="nav-item" data-route="health" type="button">
-          <span class="nav-icon">♥</span>
-          <span>System Health</span>
-        </button>
-
-        <button class="nav-item" data-route="history" type="button">
-          <span class="nav-icon">⌕</span>
-          <span>History</span>
-        </button>
-
-        <button class="nav-item" data-route="invites" type="button">
-          <span class="nav-icon">◇</span>
-          <span>Invite Codes</span>
-        </button>
-
-        <button class="nav-item" data-route="announcements" type="button">
-          <span class="nav-icon">◒</span>
-          <span>Announcements</span>
-        </button>
-
-        <div class="nav-divider">
-          <span>Intelligence</span>
-        </div>
-
-        <button class="nav-item" data-route="ai" type="button">
-          <span class="nav-icon">✦</span>
-          <span>Fuzz AI</span>
-        </button>
-
-        <button class="nav-item" data-route="proxy" type="button">
-          <span class="nav-icon">◈</span>
-          <span>Proxy</span>
-        </button>
-
-        <button class="nav-item" data-route="analytics" type="button">
-          <span class="nav-icon">⌁</span>
-          <span>Analytics</span>
-        </button>
-
-        <button class="nav-item" data-route="exports" type="button">
-          <span class="nav-icon">⇩</span>
-          <span>Backups & Export</span>
-        </button>
-
-        <button class="nav-item" data-route="settings" type="button">
-          <span class="nav-icon">⚙</span>
-          <span>Settings</span>
-        </button>
+        <div class="nav-divider"><span>System</span></div>
+        <button class="nav-item" data-route="health" type="button" title="System Health"><span class="nav-icon">♥</span><span class="sidebar-label">System Health</span></button>
+        <button class="nav-item" data-route="exports" type="button" title="Backups & Export"><span class="nav-icon">⇩</span><span class="sidebar-label">Backups & Export</span></button>
+        <button class="nav-item" data-route="settings" type="button" title="Settings"><span class="nav-icon">⚙</span><span class="sidebar-label">Settings</span></button>
       </nav>
 
       <div class="sidebar-footer">
         <div class="account-card">
-          <div class="account-avatar" id="account-avatar">F</div>
-
-          <div class="account-copy">
-            <strong id="account-name">Loading...</strong>
-            <span id="account-role">Owner</span>
-          </div>
-
-          <button
-            class="icon-button"
-            id="logout-button"
-            type="button"
-            aria-label="Sign out"
-            title="Sign out"
-          >
-            ↗
-          </button>
+          <div class="account-avatar" id="account-avatar">N</div>
+          <div class="account-copy"><strong id="account-name">Loading...</strong><span id="account-role">Owner</span></div>
+          <button class="icon-button" id="logout-button" type="button" aria-label="Sign out" title="Sign out">↗</button>
         </div>
       </div>
     </aside>
 
     <section class="workspace">
       <header class="topbar">
-        <div>
-          <p class="eyebrow">FuzzTheHuzz administration</p>
+        <div class="topbar-copy">
+          <p class="eyebrow"><span>Novaris Control</span><span class="breadcrumb-separator">/</span><span id="breadcrumb-page">Dashboard</span></p>
           <h1 id="page-title">Dashboard</h1>
-          <p class="page-subtitle" id="page-subtitle">
-            A live overview of your platform.
-          </p>
+          <p class="page-subtitle" id="page-subtitle">A live overview of your platform.</p>
         </div>
 
         <div class="topbar-actions">
-          <button
-            class="notification-trigger"
-            id="notification-button"
-            type="button"
-            aria-label="Open security notifications"
-            title="Security notifications"
-          >
-            <span class="notification-bell">◉</span>
-            <span class="notification-count is-hidden" id="notification-count">0</span>
-          </button>
-
-          <button
-            class="command-trigger"
-            id="command-trigger"
-            type="button"
-          >
-            <span>Search control panel</span>
-            <kbd>Ctrl K</kbd>
-          </button>
-
-          <button
-            class="button button-secondary"
-            id="refresh-button"
-            type="button"
-          >
-            <span class="button-icon">↻</span>
-            Refresh
-          </button>
-
-          <div class="online-pill" title="Server connection">
-            <span class="online-dot"></span>
-            Online
-          </div>
+          <a class="button button-secondary topbar-home-button" href="/" title="Back to Novaris"><span class="button-icon">←</span><span>Novaris</span></a>
+          <button class="notification-trigger" id="notification-button" type="button" aria-label="Open security notifications" title="Security notifications"><span class="notification-bell">◉</span><span class="notification-count is-hidden" id="notification-count">0</span></button>
+          <button class="command-trigger" id="command-trigger" type="button"><span>Search</span><kbd>Ctrl K</kbd></button>
+          <button class="button button-secondary" id="refresh-button" type="button"><span class="button-icon">↻</span>Refresh</button>
+          <div class="online-pill" title="Server connection"><span class="online-dot"></span>Online</div>
         </div>
       </header>
 
       <main class="content" id="app-view" tabindex="-1">
-        <div class="page-loading">
-          <span class="spinner"></span>
-          <p>Loading Fuzz Control...</p>
-        </div>
+        <div class="page-loading"><span class="spinner"></span><p>Loading Novaris Control...</p></div>
       </main>
     </section>
   </div>
 
-  <div
-    class="command-overlay"
-    id="command-overlay"
-    aria-hidden="true"
-  >
-    <div
-      class="command-palette"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="command-title"
-    >
+  <div class="command-overlay" id="command-overlay" aria-hidden="true">
+    <div class="command-palette" role="dialog" aria-modal="true" aria-labelledby="command-title">
       <div class="command-input-wrap">
         <span class="command-search-icon">⌕</span>
-
-        <input
-          id="command-input"
-          type="search"
-          autocomplete="off"
-          placeholder="Search pages or users..."
-          aria-label="Search control panel"
-        />
-
+        <input id="command-input" type="search" autocomplete="off" placeholder="Search pages or users..." aria-label="Search control panel" />
         <kbd>Esc</kbd>
       </div>
-
       <div class="command-results" id="command-results">
-        <div class="command-empty">
-          <strong id="command-title">Quick navigation</strong>
-          <span>Start typing to search Fuzz Control.</span>
-        </div>
+        <div class="command-empty"><strong id="command-title">Quick navigation</strong><span>Start typing to search Novaris Control.</span></div>
       </div>
     </div>
   </div>
 
-  <div
-    class="toast-region"
-    id="toast-region"
-    aria-live="polite"
-    aria-atomic="true"
-  ></div>
-
-  <script
-    type="module"
-    src="/assets/js/admin/main.js?v=5"
-  ></script>
+  <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+  <script type="module" src="/assets/js/admin/main.js?v=8"></script>
 </body>
 </html>

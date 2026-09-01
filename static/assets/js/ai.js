@@ -40,7 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
     !newChatButton ||
     !stopButton
   ) {
-    console.error("Fuzz AI could not initialize because required page controls are missing.");
+    console.error("Novaris AI could not initialize because required page controls are missing.");
     return;
   }
 
@@ -198,7 +198,7 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (saveError) {
           console.error("User message save failed:", saveError);
           showTemporaryComposerError(
-            `${saveError.message} Fuzz AI will still try to answer.`,
+            `${saveError.message} Novaris AI will still try to answer.`,
           );
         }
       }
@@ -221,7 +221,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }));
 
         throw new Error(
-          result.error || "Fuzz AI request failed.",
+          result.error || "Novaris AI request failed.",
         );
       }
 
@@ -253,7 +253,7 @@ document.addEventListener("DOMContentLoaded", () => {
       renderAssistantMarkdown(assistantBody, fullReply);
 
       if (!fullReply.trim()) {
-        throw new Error("Fuzz AI returned an empty response.");
+        throw new Error("Novaris AI returned an empty response.");
       }
 
       conversation.push({
@@ -296,11 +296,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
         setAiStatus("Stopped", "ready");
       } else {
-        console.error("Fuzz AI error:", error);
+        console.error("Novaris AI error:", error);
 
         assistantBody.textContent =
           error.message ||
-          "Fuzz AI could not answer. Try again.";
+          "Novaris AI could not answer. Try again.";
 
         assistantBody.classList.remove("thinking");
         assistantBody.classList.add("error");
@@ -555,7 +555,7 @@ function addMessage(role, content) {
 
   const label = document.createElement("strong");
   label.className = "message-label";
-  label.textContent = role === "user" ? "You" : "Fuzz AI";
+  label.textContent = role === "user" ? "You" : "Novaris AI";
 
   const body = document.createElement("div");
   body.className = "message-body";

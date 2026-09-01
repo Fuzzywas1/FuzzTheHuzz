@@ -20,7 +20,7 @@
   <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js" defer></script>
   <script src="/assets/js/fuzz-ui.js?v=1"></script>
   <script src="/assets/js/fuzz-diagnostics.js?v=1"></script>
-  <script src="/assets/js/m1.js?v=14" defer></script>
+  <script src="/assets/js/m1.js?v=15" defer></script>
   <script src="/assets/js/ai.js?v=11" defer></script>
 </head>
 
@@ -28,14 +28,14 @@
   <div class="f-nav"></div>
 
   <main id="ai-page" class="ai-app">
-    <aside id="ai-history" class="ai-history" aria-label="Fuzz AI chat history">
+    <aside id="ai-history" class="ai-history" aria-label="Novaris AI chat history">
       <header class="ai-history-header">
         <div class="ai-history-brand">
           <span class="ai-mark" aria-hidden="true">
             <svg viewBox="0 0 24 24"><path d="m12 3 1.25 3.55L16.8 8l-3.55 1.3L12 12.8l-1.25-3.5L7.2 8l3.55-1.45L12 3Z"/><path d="m18.3 14 .75 2.05 2.05.75-2.05.75-.75 2.05-.75-2.05-2.05-.75 2.05-.75.75-2.05Z"/></svg>
           </span>
           <span>
-            <strong>Fuzz AI</strong>
+            <strong>Novaris AI</strong>
             <small>Powered by your private workspace</small>
           </span>
         </div>
@@ -68,7 +68,7 @@
         <span class="ai-history-footer-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M12 3.2 19 6v5.4c0 4.2-2.8 8-7 9.4-4.2-1.4-7-5.2-7-9.4V6l7-2.8Z"/><path d="m8.9 12 2 2 4.2-4.4"/></svg>
         </span>
-        <span><strong>Saved to your account</strong><small>Your chat history follows your Fuzz login.</small></span>
+        <span><strong>Saved to your account</strong><small>Your chat history follows your Novaris login.</small></span>
       </footer>
     </aside>
 
@@ -82,7 +82,7 @@
           </button>
           <div class="ai-active-chat">
             <strong id="active-chat-title">New conversation</strong>
-            <small>Fuzz AI</small>
+            <small>Novaris AI</small>
           </div>
         </div>
 
@@ -101,7 +101,7 @@
       <div class="ai-conversation">
         <section id="welcome-screen" class="ai-welcome">
           <div class="ai-welcome-inner">
-            <div class="ai-welcome-kicker"><span></span> Fuzz AI workspace</div>
+            <div class="ai-welcome-kicker"><span></span> Novaris AI workspace</div>
             <h1>What are we working on?</h1>
             <p>Ask a question, plan a project, debug code, or attach an image. Your conversations can be saved and reopened from the history panel.</p>
 
@@ -143,7 +143,7 @@
                 <i class="fa-solid fa-paperclip"></i>
               </button>
 
-              <textarea id="chat-input" rows="1" maxlength="12000" placeholder="Message Fuzz AI" aria-label="Message Fuzz AI"></textarea>
+              <textarea id="chat-input" rows="1" maxlength="12000" placeholder="Message Novaris AI" aria-label="Message Novaris AI"></textarea>
 
               <button id="stop-button" class="composer-button stop-button" type="button" aria-label="Stop generating" title="Stop generating" hidden>
                 <i class="fa-solid fa-stop"></i>
@@ -156,7 +156,7 @@
 
             <footer class="composer-footer">
               <span><kbd>Enter</kbd> send · <kbd>Shift Enter</kbd> new line</span>
-              <span>Fuzz AI can make mistakes. Check important information.</span>
+              <span>Novaris AI can make mistakes. Check important information.</span>
             </footer>
           </form>
         </div>
