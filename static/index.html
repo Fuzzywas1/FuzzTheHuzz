@@ -11,9 +11,9 @@
   <title>Home</title>
 
   <link rel="stylesheet" href="/assets/css/global.css?v=6" />
-  <link rel="stylesheet" href="/assets/css/h.css?v=14" />
+  <link rel="stylesheet" href="/assets/css/h.css?v=15" />
   <link rel="stylesheet" href="/assets/css/fuzz-ui.css?v=1" />
-  <link rel="stylesheet" href="/assets/css/nav.css?v=13" />
+  <link rel="stylesheet" href="/assets/css/nav.css?v=14" />
   <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
@@ -25,195 +25,175 @@
 
 <body class="home-page">
   <canvas id="stars" aria-hidden="true"></canvas>
+  <div class="home-nebula home-nebula-one" aria-hidden="true"></div>
+  <div class="home-nebula home-nebula-two" aria-hidden="true"></div>
   <div class="home-grid" aria-hidden="true"></div>
-  <div class="home-glow home-glow-one" aria-hidden="true"></div>
-  <div class="home-glow home-glow-two" aria-hidden="true"></div>
 
   <div class="f-nav"></div>
 
   <main class="home-main">
     <section class="home-hero" aria-labelledby="home-title">
-      <div class="home-brand-block">
-        <div class="home-eyebrow">
-          <span class="home-eyebrow-dot"></span>
-          Your digital universe
-        </div>
+      <div class="home-hero-copy">
+        <a class="home-brand-lockup" href="/" aria-label="Novaris Home">
+          <img src="/assets/media/brand/novaris-mark.svg" alt="" />
+          <span class="home-brand-copy">
+            <strong>Novaris</strong>
+            <small>Your digital universe</small>
+          </span>
+        </a>
+
+        <div class="home-eyebrow"><span></span>Explore without the clutter</div>
 
         <h1 id="home-title" class="home-title">
-          <span>Nova</span><strong>ris</strong>
+          Everything you need,<br /><span>in one orbit.</span>
         </h1>
 
         <p id="splash" class="home-subtitle">
-          Browse, play, create, and connect — all from one space.
+          Search the web, open your apps, play, create, and connect from one simple space.
         </p>
+
+        <section class="home-command" aria-label="Search and browse">
+          <form id="fv" class="home-search-form" method="POST" autocomplete="off">
+            <label class="sr-only" for="input">Search or enter a URL</label>
+            <span class="home-search-icon" aria-hidden="true"><i class="fa-solid fa-magnifying-glass"></i></span>
+            <input
+              id="input"
+              class="home-search-input"
+              name="query"
+              placeholder="Search or enter a URL"
+              type="text"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <span class="home-search-shortcut"><kbd>/</kbd></span>
+            <button class="home-search-button" type="submit" aria-label="Search">
+              <span>Launch</span>
+              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+            </button>
+          </form>
+
+          <div class="home-command-footer">
+            <div class="home-engine-label">
+              <span class="home-live-dot"></span>
+              <span>Browse engine</span>
+            </div>
+
+            <div class="home-proxy-grid" data-home-proxy-grid>
+              <button class="home-proxy-card" type="button" data-home-engine="scramjet">
+                <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+                <span>Scramjet</span>
+                <small>Recommended</small>
+              </button>
+              <button class="home-proxy-card" type="button" data-home-engine="ultraviolet">
+                <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                <span>Ultraviolet</span>
+              </button>
+            </div>
+
+            <select data-proxy-engine-select aria-label="Choose proxy engine" hidden>
+              <option value="scramjet">Scramjet</option>
+              <option value="ultraviolet">Ultraviolet</option>
+            </select>
+          </div>
+        </section>
+
+        <div class="home-utility-links" aria-label="Utilities">
+          <a href="/d"><i class="fa-regular fa-window-restore"></i><span>Tabs</span></a>
+          <a href="/c"><i class="fa-solid fa-sliders"></i><span>Settings</span></a>
+          <a href="/status"><i class="fa-solid fa-signal"></i><span>Status</span></a>
+        </div>
       </div>
 
-      <section class="home-search-card" aria-label="Search and connection settings">
-        <div class="home-search-card-topline">
-          <span>
-            <i class="fa-solid fa-compass" aria-hidden="true"></i>
-            Browse with Novaris
-          </span>
-          <span class="home-search-shortcut"><kbd>/</kbd> Focus search</span>
+      <aside class="home-orbit-card" aria-label="Novaris platform shortcuts">
+        <div class="home-orbit-haze" aria-hidden="true"></div>
+        <div class="home-orbit-ring home-orbit-ring-one" aria-hidden="true"></div>
+        <div class="home-orbit-ring home-orbit-ring-two" aria-hidden="true"></div>
+        <div class="home-orbit-ring home-orbit-ring-three" aria-hidden="true"></div>
+
+        <div class="home-orbit-core" aria-hidden="true">
+          <span class="home-orbit-core-glow"></span>
+          <img src="/assets/media/brand/novaris-mark.svg" alt="" />
         </div>
 
-        <form id="fv" class="home-search-form" method="POST" autocomplete="off">
-          <label class="sr-only" for="input">Search or enter a URL</label>
-          <i class="fa-solid fa-magnifying-glass home-search-icon" aria-hidden="true"></i>
-          <input
-            id="input"
-            class="home-search-input"
-            name="query"
-            placeholder="Search or enter a URL"
-            type="text"
-            autocomplete="off"
-            spellcheck="false"
-          />
-          <button class="home-search-button" type="submit" aria-label="Search">
-            <span>Go</span>
-            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-          </button>
-        </form>
+        <a class="home-orbit-node home-orbit-node-ai" href="/ai">
+          <span><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+          <strong>AI</strong>
+        </a>
+        <a class="home-orbit-node home-orbit-node-apps" href="/b">
+          <span><i class="fa-solid fa-table-cells-large"></i></span>
+          <strong>Apps</strong>
+        </a>
+        <a class="home-orbit-node home-orbit-node-games" href="/a">
+          <span><i class="fa-solid fa-gamepad"></i></span>
+          <strong>Games</strong>
+        </a>
+        <a class="home-orbit-node home-orbit-node-cloud" href="/cloud">
+          <span><i class="fa-solid fa-desktop"></i></span>
+          <strong>Cloud</strong>
+        </a>
 
-        <div class="home-proxy-chooser">
-          <div class="home-proxy-heading">
-            <span>Connection mode</span>
-            <small>Your choice is saved automatically</small>
-          </div>
-
-          <div class="home-proxy-grid" data-home-proxy-grid>
-            <button class="home-proxy-card" type="button" data-home-engine="scramjet">
-              <span class="home-proxy-radio" aria-hidden="true"></span>
-              <span class="home-proxy-symbol" aria-hidden="true">
-                <i class="fa-solid fa-bolt"></i>
-              </span>
-              <span class="home-proxy-copy">
-                <strong>Scramjet</strong>
-                <small>Fastest for most modern sites</small>
-              </span>
-              <span class="home-proxy-badge">Recommended</span>
-            </button>
-
-            <button class="home-proxy-card" type="button" data-home-engine="ultraviolet">
-              <span class="home-proxy-radio" aria-hidden="true"></span>
-              <span class="home-proxy-symbol" aria-hidden="true">
-                <i class="fa-solid fa-shield-halved"></i>
-              </span>
-              <span class="home-proxy-copy">
-                <strong>Ultraviolet</strong>
-                <small>Compatibility fallback for difficult sites</small>
-              </span>
-            </button>
-          </div>
-
-          <select data-proxy-engine-select aria-label="Choose proxy engine" hidden>
-            <option value="scramjet">Scramjet</option>
-            <option value="ultraviolet">Ultraviolet</option>
-          </select>
+        <div class="home-orbit-caption">
+          <span class="home-orbit-caption-dot"></span>
+          <span><strong>Novaris</strong><small>One platform. Four core spaces.</small></span>
         </div>
-      </section>
+      </aside>
+    </section>
+
+    <section class="home-section" aria-labelledby="home-spaces-title">
+      <header class="home-section-header">
+        <div>
+          <span class="home-section-kicker">Your spaces</span>
+          <h2 id="home-spaces-title">Jump back in.</h2>
+        </div>
+        <span class="home-section-hint">Everything stays one click away.</span>
+      </header>
 
       <nav class="home-actions" aria-label="Quick links">
-        <a class="home-action home-action-ai" href="/ai">
-          <span class="home-action-icon">
-            <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
-          </span>
-          <span class="home-action-copy">
-            <strong>Novaris AI</strong>
-            <small>Ask, create, and explore</small>
-          </span>
-          <i class="fa-solid fa-arrow-up-right-from-square home-action-arrow" aria-hidden="true"></i>
+        <a class="home-action home-action-featured" href="/ai">
+          <span class="home-action-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+          <span class="home-action-copy"><small>CREATE</small><strong>Novaris AI</strong><span>Ask questions, upload images, and build ideas.</span></span>
+          <i class="fa-solid fa-arrow-up-right-from-square home-action-arrow"></i>
         </a>
-
         <a class="home-action" href="/b">
-          <span class="home-action-icon">
-            <i class="fa-solid fa-table-cells-large" aria-hidden="true"></i>
-          </span>
-          <span class="home-action-copy">
-            <strong>Apps</strong>
-            <small>Launch your favorite sites</small>
-          </span>
-          <i class="fa-solid fa-arrow-up-right-from-square home-action-arrow" aria-hidden="true"></i>
+          <span class="home-action-icon"><i class="fa-solid fa-table-cells-large"></i></span>
+          <span class="home-action-copy"><small>OPEN</small><strong>Apps</strong><span>Launch your favorite web apps instantly.</span></span>
+          <i class="fa-solid fa-arrow-up-right-from-square home-action-arrow"></i>
         </a>
-
         <a class="home-action" href="/a">
-          <span class="home-action-icon">
-            <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
-          </span>
-          <span class="home-action-copy">
-            <strong>Games</strong>
-            <small>Open the DogeUB game library</small>
-          </span>
-          <i class="fa-solid fa-arrow-up-right-from-square home-action-arrow" aria-hidden="true"></i>
+          <span class="home-action-icon"><i class="fa-solid fa-gamepad"></i></span>
+          <span class="home-action-copy"><small>PLAY</small><strong>Games</strong><span>Browse the game library and start playing.</span></span>
+          <i class="fa-solid fa-arrow-up-right-from-square home-action-arrow"></i>
         </a>
-
         <a class="home-action" href="/cloud">
-          <span class="home-action-icon">
-            <i class="fa-solid fa-desktop" aria-hidden="true"></i>
-          </span>
-          <span class="home-action-copy">
-            <strong>Novaris Cloud</strong>
-            <small>Connect to your Windows PC</small>
-          </span>
-          <i class="fa-solid fa-arrow-up-right-from-square home-action-arrow" aria-hidden="true"></i>
-        </a>
-
-        <a class="home-action" href="/d">
-          <span class="home-action-icon">
-            <i class="fa-regular fa-window-restore" aria-hidden="true"></i>
-          </span>
-          <span class="home-action-copy">
-            <strong>Tabs</strong>
-            <small>Continue your browsing</small>
-          </span>
-          <i class="fa-solid fa-arrow-up-right-from-square home-action-arrow" aria-hidden="true"></i>
-        </a>
-
-        <a class="home-action" href="/c">
-          <span class="home-action-icon">
-            <i class="fa-solid fa-sliders" aria-hidden="true"></i>
-          </span>
-          <span class="home-action-copy">
-            <strong>Settings</strong>
-            <small>Personalize your Novaris experience</small>
-          </span>
-          <i class="fa-solid fa-arrow-up-right-from-square home-action-arrow" aria-hidden="true"></i>
+          <span class="home-action-icon"><i class="fa-solid fa-desktop"></i></span>
+          <span class="home-action-copy"><small>CONNECT</small><strong>Novaris Cloud</strong><span>Open your Windows PC through noVNC.</span></span>
+          <i class="fa-solid fa-arrow-up-right-from-square home-action-arrow"></i>
         </a>
       </nav>
+    </section>
 
-      <section class="home-library" aria-label="Saved and recent browsing">
-        <article class="home-library-column">
-          <header>
-            <div class="home-library-title">
-              <span class="home-library-heading-icon">
-                <i class="fa-solid fa-star" aria-hidden="true"></i>
-              </span>
-              <span>
-                <strong>Bookmarks</strong>
-                <small>Your saved shortcuts</small>
-              </span>
-            </div>
-            <a href="/d">Manage <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
-          </header>
-          <div class="home-library-list" id="home-bookmarks"></div>
-        </article>
+    <section class="home-library" aria-label="Saved and recent browsing">
+      <article class="home-library-column">
+        <header>
+          <div class="home-library-title">
+            <span class="home-library-heading-icon"><i class="fa-solid fa-star"></i></span>
+            <span><strong>Bookmarks</strong><small>Your saved shortcuts</small></span>
+          </div>
+          <a href="/d">Manage <i class="fa-solid fa-arrow-right"></i></a>
+        </header>
+        <div class="home-library-list" id="home-bookmarks"></div>
+      </article>
 
-        <article class="home-library-column">
-          <header>
-            <div class="home-library-title">
-              <span class="home-library-heading-icon">
-                <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
-              </span>
-              <span>
-                <strong>Recently visited</strong>
-                <small>Continue where you left off</small>
-              </span>
-            </div>
-            <a href="/d">Open tabs <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
-          </header>
-          <div class="home-library-list" id="home-recents"></div>
-        </article>
-      </section>
+      <article class="home-library-column">
+        <header>
+          <div class="home-library-title">
+            <span class="home-library-heading-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
+            <span><strong>Recently visited</strong><small>Continue where you left off</small></span>
+          </div>
+          <a href="/d">Open tabs <i class="fa-solid fa-arrow-right"></i></a>
+        </header>
+        <div class="home-library-list" id="home-recents"></div>
+      </article>
     </section>
   </main>
 
@@ -221,13 +201,12 @@
   <script src="/scram/scramjet.all.js"></script>
   <script src="/assets/js/proxy-engine.js?v=4"></script>
   <script src="/assets/js/fuzz-browser-data.js?v=1"></script>
-
   <script src="/assets/js/index-3.js?v=10"></script>
   <script src="/assets/js/home-upgrade.js?v=1"></script>
   <script src="/assets/js/h1.js?v=6"></script>
   <script src="/assets/mathematics/bundle.js"></script>
   <script src="/assets/mathematics/config.js"></script>
-  <script src="/assets/js/m1.js?v=15"></script>
+  <script src="/assets/js/m1.js?v=16"></script>
 
   <script>
     (() => {
@@ -252,37 +231,30 @@
         width = window.innerWidth;
         height = window.innerHeight;
         pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
-
         canvas.width = Math.floor(width * pixelRatio);
         canvas.height = Math.floor(height * pixelRatio);
         canvas.style.width = `${width}px`;
         canvas.style.height = `${height}px`;
         context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-
-        const starCount = Math.max(70, Math.min(180, Math.floor((width * height) / 8500)));
+        const starCount = Math.max(70, Math.min(175, Math.floor((width * height) / 9000)));
         stars = Array.from({ length: starCount }, () => ({
           x: Math.random() * width,
           y: Math.random() * height,
-          radius: Math.random() * 1.3 + 0.2,
-          speed: Math.random() * 0.11 + 0.025,
-          opacity: Math.random() * 0.62 + 0.18,
+          radius: Math.random() * 1.25 + 0.2,
+          speed: Math.random() * 0.08 + 0.018,
+          opacity: Math.random() * 0.55 + 0.16,
           pulse: Math.random() * Math.PI * 2,
         }));
       }
 
       function draw(time = 0) {
         context.clearRect(0, 0, width, height);
-
         for (const star of stars) {
-          const twinkle = reduceMotion
-            ? star.opacity
-            : star.opacity + Math.sin(time * 0.0012 + star.pulse) * 0.11;
-
+          const twinkle = reduceMotion ? star.opacity : star.opacity + Math.sin(time * 0.0011 + star.pulse) * 0.1;
           context.beginPath();
-          context.fillStyle = `rgba(221, 231, 255, ${Math.max(0.08, twinkle)})`;
+          context.fillStyle = `rgba(222, 231, 255, ${Math.max(0.07, twinkle)})`;
           context.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
           context.fill();
-
           if (!reduceMotion) {
             star.y += star.speed;
             if (star.y > height + 3) {
@@ -291,10 +263,7 @@
             }
           }
         }
-
-        if (!reduceMotion) {
-          window.requestAnimationFrame(draw);
-        }
+        if (!reduceMotion) window.requestAnimationFrame(draw);
       }
 
       resizeCanvas();

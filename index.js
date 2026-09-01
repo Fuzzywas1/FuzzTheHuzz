@@ -43,19 +43,18 @@ const CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
 const cache = new Map();
 
 const NOVARIS_RELEASE = Object.freeze({
-  version: "8.0.0",
+  version: "8.1.0",
   date: "2026-08-31",
-  title: "Welcome to Novaris",
+  title: "Novaris, redesigned",
   summary:
-    "Full Novaris rebrand with a redesigned owner control center and a simpler platform experience.",
+    "A new orbital Novaris home experience, a real brand mark, and improved Control navigation.",
   items: [
-    "Rebranded the complete user-facing platform from FuzzTheHuzz to Novaris.",
-    "Redesigned Novaris Control with grouped navigation, a collapsible sidebar, and a direct Back to Novaris button.",
-    "Added a command-center dashboard with live platform, feature, Cloud, uptime, and service status at a glance.",
-    "Simplified Novaris Cloud administration around the direct noVNC launch flow.",
-    "Updated invite codes, account text, AI branding, status pages, maintenance screens, exports, and diagnostics branding.",
-    "Preserved compatibility-sensitive internal storage keys and legacy Cloud environment variables so existing setups keep working.",
-    "Includes the 7.1 real Game Fullscreen and Escape-key improvements.",
+    "Redesigned the Novaris home page around a simpler orbital command-center layout.",
+    "Introduced the new Novaris orbit-star brand mark and added it to the home page, main sidebar, and Novaris Control.",
+    "Made search and proxy-engine selection faster and less cluttered while keeping the existing browser behavior.",
+    "Added a visual orbit launcher for Novaris AI, Apps, Games, and Cloud plus cleaner quick-space cards.",
+    "Fixed Novaris Control navigation so long sidebars scroll independently while the account/footer controls stay available.",
+    "Preserved all existing Games, noVNC, proxy, account, admin, and Game Fullscreen functionality.",
   ],
 });
 

@@ -106,10 +106,12 @@ body.has-fuzz-sidebar.fuzz-sidebar-collapsed {
     inset 0 1px rgba(255, 255, 255, .09);
 }
 
-.fuzz-sidebar-logo span {
-  font-size: 15px;
-  font-weight: 950;
-  letter-spacing: -.05em;
+.fuzz-sidebar-logo img {
+  display: block;
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  filter: drop-shadow(0 5px 12px rgba(var(--fuzz-accent-rgb), .2));
 }
 
 .fuzz-sidebar-brand-copy,
