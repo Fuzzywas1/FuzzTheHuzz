@@ -43,18 +43,19 @@ const CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
 const cache = new Map();
 
 const NOVARIS_RELEASE = Object.freeze({
-  version: "8.1.2",
+  version: "8.2.0",
   date: "2026-08-31",
-  title: "Novaris proxy branding fix",
+  title: "Novaris motion update",
   summary:
-    "Replaced the final old proxy F branding with the Novaris orbital mark.",
+    "More motion, smoother transitions, animated loading screens, and improved game loading feedback.",
   items: [
-    "Replaced the old F logo in the tabbed proxy toolbar with the Novaris orbital mark.",
-    "Replaced the F on the proxy new-tab screen with the Novaris orbital mark.",
-    "Replaced the start-tab F favicon fallback with the Novaris orbital mark.",
-    "Double-checked first-level HTML titles remain exactly Home.",
-    "Scanned the current frontend for leftover visible FuzzTheHuzz/Fuzz branding.",
-    "Kept compatibility-sensitive internal Fuzz-prefixed JavaScript APIs and storage keys unchanged.",
+    "Added a site-wide Novaris motion system with smoother page, card, button, and navigation animations.",
+    "Added animated loading screens for page transitions and game launches.",
+    "Added animated game loading feedback for local and web games.",
+    "Added shimmer loading states and staggered game-card entrances.",
+    "Added subtle orbital, glow, and floating animations to the Novaris home page.",
+    "Added reduced-motion support through the existing Novaris UI settings and browser preference.",
+    "Kept the existing proxy, Games, noVNC, fullscreen, account, and admin functionality intact.",
   ],
 });
 

@@ -86,6 +86,7 @@
 
   function openLocalGame(url, title = "Game") {
     currentUrl = url;
+    window.NovarisMotion?.show("Loading game", `Preparing ${title}…`, "game");
     input.value = title;
     input.readOnly = true;
     select.disabled = true;
@@ -104,6 +105,8 @@
     );
 
     host.appendChild(frame);
+    frame.addEventListener("load", () => window.NovarisMotion?.hide(), { once: true });
+    window.setTimeout(() => window.NovarisMotion?.hide(), 7000);
 
     view = {
       element: frame,
@@ -115,6 +118,7 @@
 
   async function open(url, engine = currentEngine) {
     currentUrl = window.FuzzProxy.normalizeInput(url);
+    window.NovarisMotion?.show("Opening", `Loading ${currentUrl}…`, "page");
     currentEngine = engine;
     input.value = currentUrl;
     select.value = engine;
@@ -136,7 +140,9 @@
         "",
         "standalone-proxy",
       );
+      window.setTimeout(() => window.NovarisMotion?.hide(), 180);
     } catch (error) {
+      window.NovarisMotion?.hide();
       host.innerHTML = `<section class="proxy-error"><i class="fa-solid fa-triangle-exclamation"></i><h1>Page could not open</h1><p>${String(error.message || error)}</p>${currentEngine === "scramjet" ? '<button id="retry-uv" type="button">Retry with Ultraviolet</button>' : ""}</section>`;
 
       document

@@ -238,6 +238,11 @@
 
     state.launching = game.id;
     render();
+    window.NovarisMotion?.show(
+      game.local ? "Preparing game" : "Opening game",
+      game.local ? `Preparing ${game.name}…` : `Opening ${game.name} through Novaris…`,
+      "game",
+    );
 
     try {
       if (game.local) {
@@ -246,6 +251,7 @@
         openWebGame(game);
       }
     } catch (error) {
+      window.NovarisMotion?.hide();
       state.launching = "";
       render();
       el.status.textContent = "Game could not start";

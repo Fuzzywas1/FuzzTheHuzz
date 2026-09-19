@@ -1,0 +1,296 @@
+/* Novaris Motion System — lightweight UI motion, loading states, and transitions. */
+
+:root {
+  --novaris-motion-fast: 160ms;
+  --novaris-motion: 260ms;
+  --novaris-motion-slow: 620ms;
+  --novaris-ease: cubic-bezier(.22, 1, .36, 1);
+}
+
+@keyframes novaris-fade-up {
+  from { opacity: 0; transform: translate3d(0, 14px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes novaris-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes novaris-pulse {
+  0%, 100% { opacity: .42; transform: scale(.96); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+@keyframes novaris-spin { to { transform: rotate(360deg); } }
+
+@keyframes novaris-shimmer {
+  0% { background-position: 220% 0; }
+  100% { background-position: -120% 0; }
+}
+
+@keyframes novaris-orbit {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes novaris-loading-bars {
+  0%, 100% { transform: scaleY(.45); opacity: .38; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
+body.novaris-motion-ready .main,
+body.novaris-motion-ready .apps-shell,
+body.novaris-motion-ready .admin-shell,
+body.novaris-motion-ready .settings-container,
+body.novaris-motion-ready .account-shell,
+body.novaris-motion-ready .status-shell,
+body.novaris-motion-ready .feedback-shell,
+body.novaris-motion-ready .cloud-shell {
+  animation: novaris-fade-up 520ms var(--novaris-ease) both;
+}
+
+/* Common interactive surfaces */
+.f-nav,
+.apps-category-chip,
+.apps-secondary-button,
+.app-card,
+.app-card-main,
+.home-action,
+.home-proxy-card,
+.home-utility-links a,
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app-card,
+.home-action,
+.home-proxy-card,
+.apps-category-chip,
+.apps-secondary-button {
+  transition:
+    transform var(--novaris-motion) var(--novaris-ease),
+    border-color var(--novaris-motion-fast) ease,
+    box-shadow var(--novaris-motion) ease,
+    background var(--novaris-motion) ease,
+    opacity var(--novaris-motion-fast) ease;
+}
+
+.app-card:hover,
+.home-action:hover {
+  transform: translateY(-4px);
+}
+
+.app-card:active,
+.home-action:active,
+.home-proxy-card:active,
+.apps-category-chip:active,
+.apps-secondary-button:active {
+  transform: translateY(0) scale(.985);
+}
+
+/* Stagger loaded cards without requiring page-specific JS. */
+.apps-grid > * {
+  animation: novaris-fade-up 420ms var(--novaris-ease) both;
+}
+
+.apps-grid > *:nth-child(2) { animation-delay: 35ms; }
+.apps-grid > *:nth-child(3) { animation-delay: 70ms; }
+.apps-grid > *:nth-child(4) { animation-delay: 105ms; }
+.apps-grid > *:nth-child(5) { animation-delay: 140ms; }
+.apps-grid > *:nth-child(6) { animation-delay: 175ms; }
+.apps-grid > *:nth-child(7) { animation-delay: 210ms; }
+.apps-grid > *:nth-child(8) { animation-delay: 245ms; }
+
+/* Loading skeleton shimmer. */
+.apps-loading-grid > span,
+.apps-loading-grid::before,
+.apps-loading-grid::after {
+  background: linear-gradient(
+    105deg,
+    rgba(255,255,255,.045) 25%,
+    rgba(255,255,255,.11) 42%,
+    rgba(255,255,255,.045) 60%
+  );
+  background-size: 260% 100%;
+  animation: novaris-shimmer 1.55s linear infinite;
+}
+
+/* Small animated status dots. */
+.home-live-dot,
+.apps-status-row::before {
+  animation: novaris-pulse 1.8s ease-in-out infinite;
+}
+
+/* Global loading overlay used for navigation and game launch. */
+.novaris-loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(95, 111, 255, .13), transparent 34%),
+    rgba(2, 4, 12, .96);
+  backdrop-filter: blur(16px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease;
+}
+
+.novaris-loading-screen.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.novaris-loading-card {
+  width: min(420px, 100%);
+  padding: 30px 28px 26px;
+  text-align: center;
+  border: 1px solid rgba(147, 158, 255, .16);
+  border-radius: 24px;
+  background: rgba(10, 14, 31, .84);
+  box-shadow: 0 28px 90px rgba(0,0,0,.45), 0 0 55px rgba(87,99,255,.08);
+  transform: translateY(8px) scale(.98);
+  transition: transform 320ms var(--novaris-ease);
+}
+
+.novaris-loading-screen.is-visible .novaris-loading-card {
+  transform: translateY(0) scale(1);
+}
+
+.novaris-loading-logo {
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+  margin-bottom: 15px;
+  filter: drop-shadow(0 12px 28px rgba(105, 122, 255, .28));
+  animation: novaris-pulse 2s ease-in-out infinite;
+}
+
+.novaris-loading-title {
+  margin: 0;
+  color: #f7f9ff;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -.025em;
+}
+
+.novaris-loading-message {
+  margin: 8px 0 20px;
+  color: #8e99b7;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.novaris-loading-bars {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  height: 20px;
+}
+
+.novaris-loading-bars span {
+  width: 4px;
+  height: 16px;
+  border-radius: 99px;
+  background: #8c9aff;
+  transform-origin: center;
+  animation: novaris-loading-bars 900ms ease-in-out infinite;
+}
+
+.novaris-loading-bars span:nth-child(2) { animation-delay: 100ms; }
+.novaris-loading-bars span:nth-child(3) { animation-delay: 200ms; }
+.novaris-loading-bars span:nth-child(4) { animation-delay: 300ms; }
+.novaris-loading-bars span:nth-child(5) { animation-delay: 400ms; }
+
+/* Game launch screen gets a subtle animated ring. */
+.novaris-loading-screen[data-loading-kind="game"] .novaris-loading-logo {
+  animation: novaris-pulse 1.35s ease-in-out infinite;
+}
+
+.novaris-loading-game-ring {
+  position: absolute;
+  width: 92px;
+  height: 92px;
+  margin-top: -73px;
+  border: 1px solid rgba(135, 149, 255, .18);
+  border-top-color: rgba(135, 149, 255, .75);
+  border-radius: 50%;
+  animation: novaris-spin 1.7s linear infinite;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+  }
+}
+
+html[data-fuzz-motion="reduced"] *,
+html[data-fuzz-motion="reduced"] *::before,
+html[data-fuzz-motion="reduced"] *::after {
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 1ms !important;
+}
+
+/* Home atmosphere */
+.home-nebula-one { animation: novaris-nebula-drift 16s ease-in-out infinite alternate; }
+.home-nebula-two { animation: novaris-nebula-drift 21s ease-in-out infinite alternate-reverse; }
+.home-orbit-ring-one { animation: novaris-orbit 34s linear infinite; }
+.home-orbit-ring-two { animation: novaris-orbit 48s linear infinite reverse; }
+.home-orbit-ring-three { animation: novaris-orbit 62s linear infinite; }
+.home-orbit-core { animation: novaris-core-float 4.8s ease-in-out infinite; }
+.home-orbit-core-glow { animation: novaris-core-glow 2.8s ease-in-out infinite; }
+.home-orbit-node { animation: novaris-node-float 4s ease-in-out infinite; }
+.home-orbit-node-apps { animation-delay: 500ms; }
+.home-orbit-node-games { animation-delay: 1s; }
+.home-orbit-node-cloud { animation-delay: 1.5s; }
+.home-action-icon { transition: transform var(--novaris-motion) var(--novaris-ease); }
+.home-action:hover .home-action-icon { transform: translateY(-2px) rotate(-4deg) scale(1.06); }
+.home-search-button i { transition: transform var(--novaris-motion) var(--novaris-ease); }
+.home-search-button:hover i { transform: translateX(4px); }
+
+@keyframes novaris-nebula-drift {
+  from { transform: translate3d(-12px, -8px, 0) scale(.96); }
+  to { transform: translate3d(18px, 14px, 0) scale(1.06); }
+}
+@keyframes novaris-core-float {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-7px) scale(1.025); }
+}
+@keyframes novaris-core-glow {
+  0%, 100% { opacity: .35; transform: scale(.88); }
+  50% { opacity: .8; transform: scale(1.08); }
+}
+@keyframes novaris-node-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+/* Navigation and admin polish */
+.f-nav {
+  transition: background var(--novaris-motion) ease, box-shadow var(--novaris-motion) ease, border-color var(--novaris-motion) ease;
+}
+.f-nav:hover { box-shadow: 0 20px 70px rgba(0,0,0,.28); }
+.admin-nav-item,
+.admin-card,
+.admin-stat-card,
+.admin-quick-action {
+  transition: transform var(--novaris-motion) var(--novaris-ease), box-shadow var(--novaris-motion) ease, border-color var(--novaris-motion-fast) ease;
+}
+.admin-nav-item:hover,
+.admin-quick-action:hover { transform: translateX(3px); }
+.admin-card:hover,
+.admin-stat-card:hover { transform: translateY(-2px); }
+
+/* Generic loading buttons */
+button[data-loading="true"] { cursor: wait; }
+button[data-loading="true"] > i:first-child { animation: novaris-spin 800ms linear infinite; }
