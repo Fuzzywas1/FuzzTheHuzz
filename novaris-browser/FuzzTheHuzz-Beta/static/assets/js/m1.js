@@ -15,6 +15,7 @@
       label: "Browser",
       items: [
         { href: "/b", match: ["/b", "/apps.html"], label: "Apps", icon: "apps" },
+        { href: "/cloud-browser", match: ["/cloud-browser", "/cloud-browser.html"], label: "Cloud Browser", icon: "globe", feature: "cloudBrowser" },
         { href: "/a", match: ["/a", "/games.html"], label: "Games", icon: "gamepad", feature: "games" },
         { href: "/d", match: ["/d", "/tabs.html"], label: "Tabs", icon: "tabs" },
         { href: "/p", match: ["/p", "/proxy.html"], label: "Proxy", icon: "globe" },
@@ -426,6 +427,10 @@
 
     if (platformConfig.features?.[item.feature] === false) {
       return false;
+    }
+
+    if (item.feature === "cloudBrowser") {
+      return platformConfig.cloudBrowser?.allowed === true;
     }
 
     if (item.feature === "cloud") {

@@ -70,6 +70,14 @@ export const api = {
 
   users: () => request("/api/admin/users"),
 
+  cloudBrowserPermissions: () => request("/api/admin/cloud-browser/permissions"),
+
+  updateCloudBrowser: (userId, enabled) =>
+    request(`/api/admin/users/${encodeURIComponent(userId)}/cloud-browser`, {
+      method: "PATCH",
+      body: JSON.stringify({ enabled }),
+    }),
+
   updateRole: (userId, role) =>
     request(`/api/admin/users/${encodeURIComponent(userId)}/role`, {
       method: "PATCH",

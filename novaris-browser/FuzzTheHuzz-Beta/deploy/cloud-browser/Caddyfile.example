@@ -1,0 +1,4 @@
+# Replace with the real Novaris hostname. Caddy provides HTTPS and passes WebSockets.
+novaris.example.com {
+    reverse_proxy 127.0.0.1:8080
+}

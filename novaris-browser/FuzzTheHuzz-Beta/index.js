@@ -19,12 +19,17 @@ import mime from "mime";
 import fetch from "node-fetch";
 import OpenAI from "openai";
 
+import { createCloudBrowserStore } from "./lib/cloud-browser-store.js";
+import { registerCloudBrowser } from "./lib/cloud-browser.js";
+import { createBrowserHost } from "./lib/cloud-browser-host.js";
+
 import { supabaseAdmin } from "./lib/supabaseAdmin.js";
 
 console.log(chalk.yellow("🚀 Starting server..."));
 
 const __dirname = process.cwd();
 const app = express();
+const cloudBrowserStore = createCloudBrowserStore(supabaseAdmin);
 const server = http.createServer();
 
 app.disable("x-powered-by");
@@ -198,6 +203,8 @@ const APPLICATION_PAGE_PATHS = new Set([
   "/c",
   "/settings",
   "/ai",
+  "/cloud-browser",
+  "/cloud-browser.html",
   "/cloud",
   "/chat",
   "/feedback",
@@ -1449,6 +1456,10 @@ app.get(
           settings.image_uploads_enabled,
         cloud:
           settings.cloud_enabled,
+      },
+      cloudBrowser: {
+        allowed: Boolean(auth && !auth.suspension?.active &&
+          await cloudBrowserStore.allowed(auth.user.id).catch(() => false)),
       },
       cloud: {
         name: settings.cloud_name,
@@ -15308,6 +15319,24 @@ app.patch("/api/admin/feedback/:feedbackId", requireRole("moderator"), async (re
 });
 
 
+const cloudBrowser = registerCloudBrowser(app, {
+  store: cloudBrowserStore, requirePageAuth, requireApiAuth, requireRole,
+  host: createBrowserHost(),
+  authenticateStream: async (request) => {
+    const cookies = {};
+    for (const item of String(request.headers.cookie || "").split(";")) {
+      const at = item.indexOf("=");
+      if (at > 0) { try { cookies[item.slice(0, at).trim()] = decodeURIComponent(item.slice(at + 1)); } catch {} }
+    }
+    // WebSockets reconnect through HTTP when tokens expire; never rotate cookies invisibly.
+    delete cookies[REFRESH_COOKIE];
+    const authRequest = { headers: request.headers, cookies, socket: request.socket,
+      get: (name) => request.headers[name.toLowerCase()], ip: request.socket.remoteAddress };
+    return getAuthenticatedUser(authRequest, { clearCookie() {}, cookie() {} });
+  },
+  pagePath: path.join(__dirname, "views", "cloud-browser.html"), writeActivityLog,
+});
+
 async function requireCloudAccess(
   req,
   res,
@@ -15710,6 +15739,11 @@ server.on(
       ).pathname;
     } catch {
       upgradePath = req.url || "";
+    }
+
+    if (upgradePath.startsWith("/cloud-browser/stream/")) {
+      void cloudBrowser.upgrade(req, socket, head);
+      return;
     }
 
     if (

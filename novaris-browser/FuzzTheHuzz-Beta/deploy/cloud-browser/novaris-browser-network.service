@@ -1,0 +1,14 @@
+[Unit]
+Description=Novaris cloud browser network isolation
+Requires=docker.service
+After=docker.service
+PartOf=docker.service
+Before=novaris.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/novaris-browser-network
+
+[Install]
+WantedBy=multi-user.target

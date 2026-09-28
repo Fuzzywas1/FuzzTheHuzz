@@ -1,0 +1,19 @@
+{
+  "modified": [
+    "index.js",
+    "package.json",
+    "scripts/audit-project.mjs",
+    "static/assets/js/admin/api.js",
+    "static/assets/js/admin/users.js",
+    "static/assets/js/m1.js"
+  ],
+  "added": [
+    "docs/CLOUD-GAMING-FOUNDATION.md",
+    "lib/cloud-gaming.js",
+    "scripts/test-cloud-gaming.mjs",
+    "static/assets/css/cloud-games.css",
+    "supabase/NOVARIS_CLOUD_GAMING_SCHEMA.sql",
+    "views/cloud-games.html"
+  ],
+  "deleted": []
+}

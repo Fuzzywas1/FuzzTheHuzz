@@ -23,6 +23,13 @@ export async function renderUsers(container) {
   try {
     const payload = await api.users();
     users = payload.users || [];
+    try {
+      const { permissions } = await api.cloudBrowserPermissions();
+      users.forEach(user => { user.cloudBrowser = permissions[user.id] === true; });
+    } catch (error) {
+      users.forEach(user => { user.cloudBrowser = null; });
+      showToast(error.message, "error");
+    }
     paint(container);
   } catch (error) {
     container.innerHTML = errorState(error.message);
@@ -179,6 +186,7 @@ function renderTable(
             <th>User</th>
             <th>Role</th>
             <th>Status</th>
+            <th>Cloud Browser</th>
             <th>Verified</th>
             <th>Last sign-in</th>
             <th>Created</th>
@@ -192,6 +200,26 @@ function renderTable(
       </table>
     </div>
   `;
+
+  table.querySelectorAll("[data-cloud-browser]").forEach(button => {
+    button.addEventListener("click", async () => {
+      const user = users.find(item => item.id === button.dataset.cloudBrowser);
+      if (!user || user.cloudBrowser === null) return;
+      button.disabled = true;
+      try {
+        const result = await api.updateCloudBrowser(user.id, !user.cloudBrowser);
+        user.cloudBrowser = result.enabled;
+        button.setAttribute("aria-checked", String(result.enabled));
+        button.textContent = result.enabled ? "ON" : "OFF";
+        button.classList.toggle("button-primary", result.enabled);
+        showToast("Cloud Browser permission saved.", "success");
+      } catch (error) {
+        showToast(error.message, "error");
+      } finally {
+        button.disabled = false;
+      }
+    });
+  });
 
   table
     .querySelectorAll("[data-open-user]")
@@ -409,6 +437,14 @@ function userRow(user) {
       </td>
 
       <td>${userStatus(user)}</td>
+      <td>
+        <button type="button" role="switch" class="button button-small button-secondary ${user.cloudBrowser ? "button-primary" : ""}"
+          data-cloud-browser="${escapeHtml(user.id)}" aria-checked="${user.cloudBrowser === true}"
+          aria-label="Cloud Browser for ${escapeHtml(user.username || user.email || user.id)}"
+          ${user.cloudBrowser === null ? "disabled" : ""}>
+          ${user.cloudBrowser === null ? "Unavailable" : user.cloudBrowser ? "ON" : "OFF"}
+        </button>
+      </td>
 
       <td>
         ${

@@ -56,6 +56,13 @@ function stripQueryAndHash(value) {
 const requiredFiles = [
   "index.js",
   "lib/supabaseAdmin.js",
+  "lib/cloud-browser.js",
+  "lib/cloud-browser-host.js",
+  "lib/cloud-browser-store.js",
+  "static/assets/js/cloud-browser.js",
+  "views/cloud-browser.html",
+  "static/assets/css/cloud-browser.css",
+  "supabase/NOVARIS_CLOUD_BROWSER_SCHEMA.sql",
   "static/index.html",
   "static/login.html",
   "static/apps.html",

@@ -1,0 +1,119 @@
+.browser-launch-card {
+   display: grid;
+   grid-template-columns: minmax(200px, 0.8fr) minmax(0, 1.2fr);
+   max-width: 960px;
+   overflow: hidden;
+   border: 1px solid var(--apps-border-strong);
+   border-radius: var(--apps-radius);
+   background: var(--apps-panel);
+   box-shadow: var(--apps-shadow);
+}
+.browser-art {
+   position: relative;
+   display: grid;
+   place-items: center;
+   min-height: 310px;
+   overflow: hidden;
+   background: radial-gradient(circle, #353f78 0%, #151b3b 46%, #090e22 80%);
+}
+.browser-globe {
+   color: #dce5ff;
+   font-size: 155px;
+   line-height: 1;
+   text-shadow: 0 0 70px #9da7ff;
+}
+.browser-orbit {
+   position: absolute;
+   width: 240px;
+   height: 240px;
+   border: 1px solid #aab7ff66;
+   border-radius: 50%;
+   transform: rotateX(55deg) rotate(-30deg);
+}
+.browser-copy {
+   padding: clamp(24px, 5vw, 48px);
+   align-self: center;
+}
+.browser-copy h2 {
+   margin: 22px 0 14px;
+   font-size: clamp(24px, 3vw, 32px);
+}
+.browser-copy p,
+.browser-status,
+.browser-session-note {
+   color: var(--apps-soft);
+   line-height: 1.7;
+}
+.browser-copy p {
+   margin-bottom: 26px;
+}
+.browser-status {
+   min-height: 28px;
+   margin: 20px 0;
+}
+.browser-status.is-error {
+   color: var(--apps-red);
+}
+.cloud-browser-page button:disabled {
+   cursor: not-allowed;
+   opacity: 0.65;
+}
+.browser-workspace {
+   overflow: hidden;
+   border: 1px solid var(--apps-border-strong);
+   border-radius: var(--apps-radius);
+   background: #080b19;
+}
+.browser-toolbar {
+   display: flex;
+   align-items: center;
+   justify-content: space-between;
+   gap: 12px;
+   padding: 14px;
+}
+.browser-toolbar small {
+   color: var(--apps-soft);
+   margin-left: 10px;
+}
+.browser-toolbar > div {
+   display: flex;
+   gap: 8px;
+}
+#browser-frame {
+   width: 100%;
+   height: max(480px, 70vh);
+   border: 0;
+   display: block;
+   background: #080b19;
+}
+.browser-session-note {
+   padding: 0 16px;
+   font-size: 13px;
+}
+.browser-workspace:fullscreen {
+   border-radius: 0;
+   display: flex;
+   flex-direction: column;
+}
+.browser-workspace:fullscreen #browser-frame {
+   flex: 1;
+   min-height: 0;
+   height: auto;
+}
+.browser-workspace:fullscreen .browser-session-note {
+   display: none;
+}
+@media (max-width: 600px) {
+   .browser-launch-card {
+      grid-template-columns: 1fr;
+   }
+   .browser-art {
+      min-height: 180px;
+   }
+   .browser-globe {
+      font-size: 120px;
+   }
+   .browser-toolbar {
+      flex-wrap: wrap;
+   }
+}
