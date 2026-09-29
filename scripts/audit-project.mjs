@@ -56,6 +56,7 @@ function stripQueryAndHash(value) {
 const requiredFiles = [
   "index.js",
   "lib/supabaseAdmin.js",
+  "lib/rammerhead.js",
   "lib/cloud-browser.js",
   "lib/cloud-browser-host.js",
   "lib/cloud-browser-store.js",

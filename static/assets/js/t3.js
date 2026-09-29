@@ -78,6 +78,7 @@
   }
 
   function engineDetails(engine) {
+    if (engine === "rammerhead") return { name: "Rammerhead", description: "Alternative" };
     return engine === "ultraviolet"
       ? { name: "Ultraviolet", description: "Compatibility" }
       : { name: "Scramjet", description: "Recommended" };
@@ -344,7 +345,7 @@
   }
 
   function showError(tab, url, engine, error) {
-    const otherEngine = engine === "scramjet" ? "ultraviolet" : "scramjet";
+    const alternatives = Object.values(window.FuzzProxy.engines).filter(item => item.id !== engine);
     const errorId = window.FuzzDiagnostics?.report?.(error, {
       prefix: "PX",
       component: "tabs",
@@ -366,12 +367,12 @@
       <section class="tabs-error-card">
         <div class="tabs-error-content">
           <div class="tabs-error-icon">${icons.warning}</div>
-          <h2>${engine === "scramjet" ? "Scramjet" : "Ultraviolet"} could not open this page</h2>
+          <h2>${engineDetails(engine).name} could not open this page</h2>
           <p>${escapeHtml(error?.message || error || "The page could not be loaded.")}</p>
           ${errorId ? `<p><strong>Error ID: ${escapeHtml(errorId)}</strong></p>` : ""}
           <div class="tabs-error-actions">
             <button type="button" data-retry-current>Try again</button>
-            <button type="button" data-retry-other>Try ${otherEngine === "scramjet" ? "Scramjet" : "Ultraviolet"}</button>
+            ${alternatives.map(item => `<button type="button" data-retry-engine="${item.id}">Try ${item.name}</button>`).join("")}
             <button type="button" data-open-start>New tab</button>
             <button type="button" data-open-status>Status</button>
           </div>
@@ -379,10 +380,11 @@
       </section>`;
 
     tab.host.querySelector("[data-retry-current]")?.addEventListener("click", () => navigateTab(tab, url, engine, { log: false }));
-    tab.host.querySelector("[data-retry-other]")?.addEventListener("click", () => {
-      window.FuzzProxy.setEngine(otherEngine);
-      navigateTab(tab, url, otherEngine, { log: false });
-    });
+    tab.host.querySelectorAll("[data-retry-engine]").forEach(button => { button.addEventListener("click", () => {
+      const nextEngine = button.dataset.retryEngine;
+      window.FuzzProxy.setEngine(nextEngine);
+      navigateTab(tab, url, nextEngine, { log: false });
+    }); });
     tab.host.querySelector("[data-open-start]")?.addEventListener("click", () => showStartPage(tab));
     tab.host.querySelector("[data-open-status]")?.addEventListener("click", () => location.assign("/status"));
 

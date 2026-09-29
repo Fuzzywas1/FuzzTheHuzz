@@ -8,6 +8,7 @@
   },
   "scripts": {
     "start": "node index.js",
+    "test:rammerhead": "node --test scripts/test-rammerhead.mjs",
     "test:cloud-browser": "node --test scripts/test-cloud-browser.mjs",
     "check": "node scripts/audit-project.mjs",
     "format": "biome format --write .",

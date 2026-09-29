@@ -52,7 +52,7 @@
       id: String(entry.id || ""),
       url,
       title: cleanTitle(entry.title, url),
-      engine: entry.engine === "ultraviolet" ? "ultraviolet" : "scramjet",
+      engine: ["scramjet", "ultraviolet", "rammerhead"].includes(entry.engine) ? entry.engine : "scramjet",
       pinned: entry.pinned === true,
       createdAt: entry.createdAt || entry.created_at || new Date().toISOString(),
       updatedAt: entry.updatedAt || entry.updated_at || new Date().toISOString(),

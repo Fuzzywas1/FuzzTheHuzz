@@ -203,8 +203,8 @@
       },
       {
         title: "Choose your default proxy",
-        text: "Scramjet is recommended. Ultraviolet remains available as a compatibility fallback.",
-        body: () => `<div class="fuzz-onboarding-options"><button class="fuzz-onboarding-option ${selectedProxy === "scramjet" ? "is-selected" : ""}" type="button" data-onboarding-proxy="scramjet"><strong>Scramjet</strong><small>Recommended for modern and JavaScript-heavy websites.</small></button><button class="fuzz-onboarding-option ${selectedProxy === "ultraviolet" ? "is-selected" : ""}" type="button" data-onboarding-proxy="ultraviolet"><strong>Ultraviolet</strong><small>Legacy fallback for sites that behave differently.</small></button></div>`,
+        text: "Scramjet is recommended. Ultraviolet and Rammerhead are compatibility alternatives.",
+        body: () => `<div class="fuzz-onboarding-options"><button class="fuzz-onboarding-option ${selectedProxy === "scramjet" ? "is-selected" : ""}" type="button" data-onboarding-proxy="scramjet"><strong>Scramjet</strong><small>Recommended for modern and JavaScript-heavy websites.</small></button><button class="fuzz-onboarding-option ${selectedProxy === "ultraviolet" ? "is-selected" : ""}" type="button" data-onboarding-proxy="ultraviolet"><strong>Ultraviolet</strong><small>Legacy fallback for sites that behave differently.</small></button><button class="fuzz-onboarding-option ${selectedProxy === "rammerhead" ? "is-selected" : ""}" type="button" data-onboarding-proxy="rammerhead"><strong>Rammerhead</strong><small>Session-based compatibility alternative.</small></button></div>`,
       },
       {
         title: "Make Novaris yours",

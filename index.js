@@ -1,3 +1,4 @@
+import { registerRammerhead } from "./lib/rammerhead.js";
 import "dotenv/config";
 
 import crypto from "node:crypto";
@@ -1655,7 +1656,7 @@ app.use(async (req, res, next) => {
 
     if (
       req.method === "POST" &&
-      req.path === "/api/proxy/log" &&
+      ["/api/proxy/log", "/api/rammerhead/launch"].includes(req.path) &&
       !settings.proxy_enabled
     ) {
       return featureUnavailableResponse(
@@ -3879,6 +3880,7 @@ const ACCOUNT_CENTER_PROXY_ENGINES = Object.freeze({
 });
 
 const ACCOUNT_CENTER_PROXY_TECHNOLOGIES = new Set([
+  "rammerhead",
   "scramjet",
   "ultraviolet",
 ]);
@@ -4995,6 +4997,7 @@ app.get(
         proxyEngines:
           ACCOUNT_CENTER_PROXY_ENGINES,
         proxyTechnologies: {
+          rammerhead: { name: "Rammerhead", description: "Session-based compatibility alternative." },
           scramjet: {
             name: "Scramjet",
             description: "Recommended for modern websites.",
@@ -7438,9 +7441,7 @@ function serializeBookmark(row) {
     title: row.title,
     url: row.url,
     engine:
-      row.engine === "ultraviolet"
-        ? "ultraviolet"
-        : "scramjet",
+      ACCOUNT_CENTER_PROXY_TECHNOLOGIES.has(row.engine) ? row.engine : "scramjet",
     pinned: row.pinned === true,
     position: Number(row.position || 0),
     createdAt: row.created_at,
@@ -7494,9 +7495,7 @@ app.post(
       title: cleanBookmarkTitle(req.body.title, url),
       url,
       engine:
-        req.body.engine === "ultraviolet"
-          ? "ultraviolet"
-          : "scramjet",
+        ACCOUNT_CENTER_PROXY_TECHNOLOGIES.has(req.body.engine) ? req.body.engine : "scramjet",
       pinned: req.body.pinned === true,
       position: clampInteger(req.body.position, 0, 0, 100000),
       updated_at: new Date().toISOString(),
@@ -7548,7 +7547,7 @@ app.patch(
       updates.url = url;
     }
     if (Object.hasOwn(req.body, "engine")) {
-      updates.engine = req.body.engine === "ultraviolet" ? "ultraviolet" : "scramjet";
+      updates.engine = ACCOUNT_CENTER_PROXY_TECHNOLOGIES.has(req.body.engine) ? req.body.engine : "scramjet";
     }
     if (Object.hasOwn(req.body, "pinned")) {
       updates.pinned = req.body.pinned === true;
@@ -7665,6 +7664,11 @@ async function runSystemHealthChecks() {
       message: fs.existsSync(path.join(__dirname, "static", "assets", "mathematics", "bundle.js"))
         ? "Ultraviolet client files are installed."
         : "Ultraviolet client files are missing.",
+      critical: false,
+    },
+    rammerhead: {
+      status: rammerhead.configured ? "configured" : "offline",
+      message: rammerhead.configured ? "Backend settings are configured; connectivity has not been checked." : "Optional Rammerhead backend is not configured. See docs/RAMMERHEAD.md.",
       critical: false,
     },
     wisp: {
@@ -15318,6 +15322,8 @@ app.patch("/api/admin/feedback/:feedbackId", requireRole("moderator"), async (re
   }
 });
 
+
+const rammerhead = registerRammerhead(app, { requireApiAuth });
 
 const cloudBrowser = registerCloudBrowser(app, {
   store: cloudBrowserStore, requirePageAuth, requireApiAuth, requireRole,

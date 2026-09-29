@@ -4,6 +4,7 @@
   const STORAGE_KEY = "fuzz_proxy_engine";
   const DEFAULT_ENGINE = "scramjet";
   const ENGINES = Object.freeze({
+    rammerhead: { id: "rammerhead", name: "Rammerhead", shortName: "RH", description: "Session-based alternative" },
     scramjet: {
       id: "scramjet",
       name: "Scramjet",
@@ -366,6 +367,31 @@
         go: (nextUrl) => frame.go(normalizeInput(nextUrl)),
         destroy: () => frame.frame.remove(),
       };
+    }
+
+    if (engine === "rammerhead") {
+      const iframe = createPlainIframe();
+      iframe.classList.add("fuzz-proxy-frame");
+      iframe.dataset.proxyEngine = engine;
+      iframe.referrerPolicy = "no-referrer";
+      let destroyed = false;
+      let navigation = 0;
+      async function go(value) {
+        const current = ++navigation;
+        const response = await fetch("/api/rammerhead/launch", {
+          method: "POST", credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: normalizeInput(value) }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || "Rammerhead could not connect.");
+        const remote = new URL(result.url);
+        if (remote.origin !== result.origin || remote.origin === location.origin || !["http:", "https:"].includes(remote.protocol)) throw new Error("Invalid Rammerhead response.");
+        if (!destroyed && current === navigation) iframe.src = remote.href;
+      }
+      await go(url);
+      container.appendChild(iframe);
+      return { engine, url, element: iframe, frame: null, go, destroy() { destroyed = true; iframe.remove(); } };
     }
 
     await ensureUltravioletWorker();

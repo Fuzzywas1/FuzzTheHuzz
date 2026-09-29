@@ -170,8 +170,9 @@
       <div class="start-proxy-grid">
         ${engineCard("scramjet", "Scramjet", "Recommended for modern websites")}
         ${engineCard("ultraviolet", "Ultraviolet", "Compatibility fallback")}
+        ${engineCard("rammerhead", "Rammerhead", "Session-based alternative")}
       </div>
-      <p class="start-proxy-help">When Scramjet fails, the error screen can retry the page with Ultraviolet.</p>
+      <p class="start-proxy-help">If a page fails, try another engine from the error screen.</p>
     `;
     search.insertAdjacentElement("afterend", chooser);
 

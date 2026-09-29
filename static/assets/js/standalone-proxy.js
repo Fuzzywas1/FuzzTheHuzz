@@ -143,14 +143,20 @@
       window.setTimeout(() => window.NovarisMotion?.hide(), 180);
     } catch (error) {
       window.NovarisMotion?.hide();
-      host.innerHTML = `<section class="proxy-error"><i class="fa-solid fa-triangle-exclamation"></i><h1>Page could not open</h1><p>${String(error.message || error)}</p>${currentEngine === "scramjet" ? '<button id="retry-uv" type="button">Retry with Ultraviolet</button>' : ""}</section>`;
-
-      document
-        .getElementById("retry-uv")
-        ?.addEventListener("click", () => {
-          window.FuzzProxy.setEngine("ultraviolet");
-          void open(currentUrl, "ultraviolet");
+      const alternatives = Object.values(window.FuzzProxy.engines).filter(item => item.id !== currentEngine);
+      host.innerHTML = '<section class="proxy-error"><i class="fa-solid fa-triangle-exclamation"></i><h1>Page could not open</h1><p></p></section>';
+      const panel = host.querySelector(".proxy-error");
+      panel.querySelector("p").textContent = String(error.message || error);
+      for (const item of alternatives) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = `Retry with ${item.name}`;
+        button.addEventListener("click", () => {
+          window.FuzzProxy.setEngine(item.id);
+          void open(currentUrl, item.id);
         });
+        panel.appendChild(button);
+      }
     }
   }
 

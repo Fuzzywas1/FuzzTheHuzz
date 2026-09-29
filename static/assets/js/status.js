@@ -89,6 +89,7 @@
         card("OpenAI", "fa-solid fa-wand-magic-sparkles", payload.checks.openai),
         card("Scramjet", "fa-solid fa-bolt", payload.checks.scramjet),
         card("Ultraviolet", "fa-solid fa-layer-group", payload.checks.ultraviolet),
+        card("Rammerhead", "fa-solid fa-globe", payload.checks.rammerhead),
         card("Wisp transport", "fa-solid fa-wave-square", payload.checks.wisp),
       ].join("");
     } catch (error) {

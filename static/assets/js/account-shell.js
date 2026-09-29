@@ -89,9 +89,7 @@
         localStorage.setItem("enginename", engine.name);
       }
       const proxyTechnology =
-        preferences?.proxyTechnology === "ultraviolet"
-          ? "ultraviolet"
-          : "scramjet";
+        ["scramjet", "ultraviolet", "rammerhead"].includes(preferences?.proxyTechnology) ? preferences.proxyTechnology : "scramjet";
       localStorage.setItem("fuzz_proxy_engine", proxyTechnology);
       localStorage.setItem("uv", String(proxyTechnology === "ultraviolet"));
       localStorage.setItem("dy", "false");

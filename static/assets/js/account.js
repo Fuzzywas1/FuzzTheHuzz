@@ -453,7 +453,7 @@ function readBrowserSettings() {
     backgroundImage:
       localStorage.getItem("backgroundImage") || "",
     proxyMode:
-      ["scramjet", "ultraviolet"].includes(
+      ["scramjet", "ultraviolet", "rammerhead"].includes(
         localStorage.getItem("fuzz_proxy_engine"),
       )
         ? localStorage.getItem("fuzz_proxy_engine")
@@ -523,9 +523,7 @@ function saveBrowserSettings(values) {
   localStorage.setItem("backgroundImage", values.backgroundImage || "");
 
   const proxyMode =
-    values.proxyMode === "ultraviolet"
-      ? "ultraviolet"
-      : "scramjet";
+    ["scramjet", "ultraviolet", "rammerhead"].includes(values.proxyMode) ? values.proxyMode : "scramjet";
   localStorage.setItem("fuzz_proxy_engine", proxyMode);
   localStorage.setItem("uv", String(proxyMode === "ultraviolet"));
   localStorage.setItem("dy", "false");
@@ -790,7 +788,7 @@ async function renderPreferences() {
             <div class="account-form">
               <label class="account-label">Appearance<select class="account-select" id="pref-appearance"><option value="space" ${p.appearance === "space" ? "selected" : ""}>Space</option><option value="midnight" ${p.appearance === "midnight" ? "selected" : ""}>Midnight</option><option value="dim" ${p.appearance === "dim" ? "selected" : ""}>Dim</option></select></label>
               <label class="account-label">Default search engine<select class="account-select" id="pref-engine">${Object.entries(payload.proxyEngines || {}).map(([key, engine]) => `<option value="${escapeHtml(key)}" ${p.defaultProxyEngine === key ? "selected" : ""}>${escapeHtml(engine.name)}</option>`).join("")}</select></label>
-              <label class="account-label">Default proxy<select class="account-select" id="pref-proxy-technology"><option value="scramjet" ${p.proxyTechnology !== "ultraviolet" ? "selected" : ""}>Scramjet · Recommended</option><option value="ultraviolet" ${p.proxyTechnology === "ultraviolet" ? "selected" : ""}>Ultraviolet · Legacy fallback</option></select></label>
+              <label class="account-label">Default proxy<select class="account-select" id="pref-proxy-technology"><option value="scramjet" ${!["ultraviolet", "rammerhead"].includes(p.proxyTechnology) ? "selected" : ""}>Scramjet · Recommended</option><option value="ultraviolet" ${p.proxyTechnology === "ultraviolet" ? "selected" : ""}>Ultraviolet · Legacy fallback</option><option value="rammerhead" ${p.proxyTechnology === "rammerhead" ? "selected" : ""}>Rammerhead · Alternative</option></select></label>
               <label class="account-label">Novaris AI response style<select class="account-select" id="pref-ai"><option value="balanced" ${p.aiBehavior === "balanced" ? "selected" : ""}>Balanced</option><option value="concise" ${p.aiBehavior === "concise" ? "selected" : ""}>Concise</option><option value="detailed" ${p.aiBehavior === "detailed" ? "selected" : ""}>Detailed</option><option value="creative" ${p.aiBehavior === "creative" ? "selected" : ""}>Creative</option></select></label>
             </div>
           `)}

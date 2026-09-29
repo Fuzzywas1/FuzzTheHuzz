@@ -1,0 +1,43 @@
+{
+  "name": "novaris-rammerhead-cloudrun",
+  "version": "1.2.64",
+  "description": "User friendly web proxy powered by testcafe-hammerhead",
+  "main": "src/index.js",
+  "scripts": {
+    "build": "node src/build.js",
+    "start": "node start.cjs",
+    "test": "node --test test.cjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/binary-person/rammerhead.git"
+  },
+  "author": "Simon Cheng <simoncheng559@gmail.com> (https://github.com/binary-person)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/binary-person/rammerhead/issues"
+  },
+  "homepage": "https://github.com/binary-person/rammerhead#readme",
+  "dependencies": {
+    "lru-cache": "^7.14.1",
+    "mime": "^2.5.2",
+    "testcafe-hammerhead": "31.6.2",
+    "uglify-js": "^3.15.3",
+    "uuid": "11.1.1",
+    "ws": "^8.2.0",
+    "ipaddr.js": "2.2.0"
+  },
+  "files": [
+    "src/*",
+    "CHANGELOG.md",
+    "package.json",
+    "README.md"
+  ],
+  "private": true,
+  "overrides": {
+    "underscore": "^1.13.8"
+  },
+  "devDependencies": {
+    "dotenv-flow": "^3.2.0"
+  }
+}
