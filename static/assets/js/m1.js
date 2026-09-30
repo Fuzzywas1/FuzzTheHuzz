@@ -8,7 +8,7 @@
         { href: "/", match: ["/", "/index.html"], label: "Home", icon: "home" },
         { href: "/chat", match: ["/chat", "/chat.html"], label: "Chat", icon: "chat", badge: "chat" },
         { href: "/ai", match: ["/ai", "/ai.html"], label: "Novaris AI", icon: "sparkles" },
-        { href: "/cloud", match: ["/cloud", "/cloud.html"], label: "Novaris Cloud", icon: "desktop", feature: "cloud" },
+        { href: "https://novaris-play-wn3uanp7fq-vp.a.run.app", newTab: true, match: ["/cloud", "/cloud.html"], label: "Novaris Cloud", icon: "desktop", feature: "cloud" },
       ],
     },
     {
@@ -291,7 +291,7 @@
   }
 
   function renderRoute(item) {
-    return `<a class="fuzz-sidebar-link${isActive(item) ? " is-active" : ""}" href="${item.href}" data-tooltip="${escapeHtml(item.label)}" title="${escapeHtml(item.label)}" ${isActive(item) ? 'aria-current="page"' : ""}>
+    return `<a class="fuzz-sidebar-link${isActive(item) ? " is-active" : ""}" href="${item.href}" ${item.newTab ? 'target="_blank" rel="noopener noreferrer"' : ""} data-tooltip="${escapeHtml(item.label)}" title="${escapeHtml(item.label)}" ${isActive(item) ? 'aria-current="page"' : ""}>
       <span class="fuzz-sidebar-icon">${iconSvg(item.icon)}</span>
       <span class="fuzz-sidebar-label">${escapeHtml(item.label)}</span>
       ${item.badge ? `<span class="fuzz-sidebar-badge" data-fuzz-badge="${item.badge}" hidden>0</span>` : ""}
