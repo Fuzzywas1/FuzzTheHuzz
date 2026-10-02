@@ -33,7 +33,7 @@
     session = value;
     card.hidden = true;
     workspace.hidden = false;
-    frame.src = value.url;
+    frame.src = value.url + (value.provider === "neko" ? "?embed=1&usr=Novaris&pwd=novaris-account" : "");
     message("Your browser is open. Your profile will be kept when the session ends.");
     clearInterval(heartbeat);
     heartbeat = setInterval(async () => {

@@ -23,6 +23,7 @@ import OpenAI from "openai";
 import { createCloudBrowserStore } from "./lib/cloud-browser-store.js";
 import { registerCloudBrowser } from "./lib/cloud-browser.js";
 import { createBrowserHost } from "./lib/cloud-browser-host.js";
+import { createRemoteBrowserHost } from "./lib/cloud-browser-remote.js";
 
 import { supabaseAdmin } from "./lib/supabaseAdmin.js";
 
@@ -15327,7 +15328,7 @@ const rammerhead = registerRammerhead(app, { requireApiAuth });
 
 const cloudBrowser = registerCloudBrowser(app, {
   store: cloudBrowserStore, requirePageAuth, requireApiAuth, requireRole,
-  host: createBrowserHost(),
+  host: process.env.CLOUD_BROWSER_HOST_URL ? createRemoteBrowserHost() : createBrowserHost(),
   authenticateStream: async (request) => {
     const cookies = {};
     for (const item of String(request.headers.cookie || "").split(";")) {

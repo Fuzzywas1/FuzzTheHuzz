@@ -1,3 +1,5 @@
+> **Windows PC + Cloud Run:** use [CLOUD-BROWSER-WINDOWS.md](CLOUD-BROWSER-WINDOWS.md). The instructions below describe the older single Linux host deployment.
+
 # Novaris Cloud Browser
 
 This replaces the Cloud Gaming placeholder with admin-controlled Chromium sessions. Each account has a persistent Docker profile volume. It uses LinuxServer Selkies WebSocket/WebCodecs streaming, not WebRTC or noVNC. The existing /cloud feature is unchanged.

@@ -13,7 +13,8 @@
     "check": "node scripts/audit-project.mjs",
     "format": "biome format --write .",
     "lint": "biome lint .",
-    "precommit": "npm run check && biome check ."
+    "precommit": "npm run check && biome check .",
+    "test:browser-host": "node --test scripts/test-browser-host.mjs"
   },
   "author": "InterstellarNetwork",
   "license": "GPL-3.0-or-later",

@@ -14,3 +14,9 @@ node_modules/
 coverage/
 dist/
 build/
+
+# Private Windows browser-host configuration and profile backups
+**/host-config.json
+**/host-config.*.json
+**/novaris-neko-profile-*.tar.gz
+**/__pycache__/
